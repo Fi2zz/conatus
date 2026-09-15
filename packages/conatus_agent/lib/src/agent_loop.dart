@@ -1,0 +1,197 @@
+/// agent 插件：Agent Loop —— 调模型、跑工具、回填结果，直到收口。
+/// 组装 system（[SystemPrompt] + 摘要 + 计划 + [MemoryStore]）→ 调模型（带
+/// [ToolRegistry.describe]）→ 执行工具（可经 [Reflector] 反思重试）并回填 → 收口。
+library;
+
+import 'package:conatus_foundation/conatus_foundation.dart';
+import 'package:conatus_llm/conatus_llm.dart';
+import 'agent_events.dart';
+import 'agent_types.dart';
+import 'compaction.dart';
+import 'plan.dart';
+import 'reflection.dart';
+
+/// Agent Loop。
+class AgentLoop {
+  AgentLoop({
+    required this.llm,
+    required this.tools,
+    this.session,
+    this.systemPrompt,
+    this.compactor,
+    this.memory,
+    this.reflector,
+    this.onEvent,
+    this.maxSteps = 8,
+    this.memoryLimit = 5,
+    this.planning = false,
+    this.defaultSystemPrompt = '你是一个可靠的助手。需要外部信息或操作时调用工具；否则直接回答。',
+  });
+
+  /// 模型接入。
+  final LlmProvider llm;
+
+  /// 工具注册表。
+  final ToolRegistry tools;
+
+  /// 绑定的会话；null 表示不落事件（临时对话）。
+  final Session? session;
+
+  /// system prompt 注册表；null 时用 [defaultSystemPrompt]。
+  final SystemPrompt? systemPrompt;
+
+  /// 历史压缩器；null 表示不压缩。
+  final Compactor? compactor;
+
+  /// 长记忆库；null 表示不召回/不记录。
+  final MemoryStore? memory;
+
+  /// 工具执行后的自省器；null 表示不反思。
+  final Reflector? reflector;
+
+  /// 每轮的观察口（Observability 埋点）：`agent.round` / `agent.finished`。
+  final void Function(String type, Map<String, Object?> data)? onEvent;
+
+  /// 单轮最大模型调用步数。
+  final int maxSteps;
+
+  /// 每轮召回的长期记忆条数。
+  final int memoryLimit;
+
+  /// 是否在无计划时先跑一次规划轮（需注册 `plan_write`）。
+  final bool planning;
+
+  /// 未提供 [systemPrompt] 时的兜底人设。
+  final String defaultSystemPrompt;
+
+  int _historyStart = 0;
+  bool _needsReplan = false;
+
+  /// 跑一轮：从 [userInput] 到最终文本回复。
+  Future<AgentTurn> run(String userInput) async {
+    final Session? session = this.session;
+    ensureSessionOpen(session);
+    session
+        ?.append(kUserMessageEvent, data: <String, Object?>{'text': userInput});
+    final MemoryStore? memory = this.memory;
+    if (memory != null) await memory.load();
+    _historyStart = await compactSession(
+      session: session,
+      compactor: compactor,
+      llm: llm,
+      historyStart: _historyStart,
+    );
+
+    Future<ToolResult> invoke(LlmToolCall call) => tools.call(ToolCall(
+          name: call.name,
+          callId: call.id,
+          arguments: parseToolArguments(call.arguments),
+        ));
+
+    final List<LlmMessage> messages = <LlmMessage>[
+      LlmMessage('system', _systemText(userInput)),
+      ...deriveAgentMessages(recentAgentEvents(session, _historyStart)),
+    ];
+    if (planning && session != null && readPlan(session) == null) {
+      await runPlanningPhase(
+        llm: llm,
+        tools: tools,
+        session: session,
+        messages: messages,
+        systemText: () => _systemText(userInput),
+      );
+    }
+    final List<AgentStep> steps = <AgentStep>[];
+    for (int step = 0; step < maxSteps; step++) {
+      ensureSessionOpen(session);
+      if (_needsReplan && planning && session != null) {
+        _needsReplan = false;
+        await runPlanningPhase(
+          llm: llm,
+          tools: tools,
+          session: session,
+          messages: messages,
+          systemText: () => _systemText(userInput),
+        );
+      }
+      final LlmResult result =
+          await llm.chat(messages, tools: tools.describe());
+      onEvent?.call('agent.round', <String, Object?>{
+        'step': step,
+        'toolCalls': result.toolCalls.length,
+        'contentLength': result.content.length,
+      });
+      if (result.toolCalls.isEmpty) {
+        return _finish(
+            session, messages, steps, result.content.trim(), userInput);
+      }
+      messages.add(
+        LlmMessage('assistant', result.content, toolCalls: result.toolCalls),
+      );
+      session?.append(kAssistantMessageEvent, data: <String, Object?>{
+        'text': result.content,
+        'toolCalls': toolCallsToJson(result.toolCalls),
+      });
+      for (final LlmToolCall call in result.toolCalls) {
+        ToolResult outcome = await invoke(call);
+        final Reflector? reflector = this.reflector;
+        if (reflector != null) {
+          outcome = await reflectAndRetry(
+            reflector: reflector,
+            tools: tools,
+            task: userInput,
+            call: call,
+            initial: outcome,
+            invoke: invoke,
+            plan: session == null ? null : readPlan(session),
+            onReplan: () => _needsReplan = true,
+          );
+        }
+        messages.add(LlmMessage('tool', outcome.content, toolCallId: call.id));
+        session?.append(kToolResultEvent, data: <String, Object?>{
+          'callId': call.id,
+          'name': call.name,
+          'content': outcome.content,
+          'isError': outcome.isError,
+        });
+        steps.add(AgentStep(call: call, result: outcome));
+      }
+    }
+    return _finish(
+        session, messages, steps, '（已达到最大步数 $maxSteps，未收口）', userInput);
+  }
+
+  Future<AgentTurn> _finish(
+    Session? session,
+    List<LlmMessage> messages,
+    List<AgentStep> steps,
+    String reply,
+    String userInput,
+  ) async {
+    onEvent?.call('agent.finished', <String, Object?>{
+      'replyLength': reply.length,
+      'steps': steps.length,
+    });
+    messages.add(LlmMessage('assistant', reply));
+    session?.append(kAssistantMessageEvent,
+        data: <String, Object?>{'text': reply});
+    final MemoryStore? memory = this.memory;
+    if (memory != null && reply.isNotEmpty) {
+      await memory.remember(
+        '用户：$userInput\n助手：$reply',
+        tags: <String>{'conversation'},
+      );
+    }
+    return AgentTurn(reply: reply, steps: steps, messages: messages);
+  }
+
+  String _systemText(String userInput) => buildSystemText(
+        userInput: userInput,
+        defaultSystemPrompt: defaultSystemPrompt,
+        systemPrompt: systemPrompt,
+        compactor: compactor,
+        memory: memory,
+        session: session,
+        memoryLimit: memoryLimit,
+      );
+}

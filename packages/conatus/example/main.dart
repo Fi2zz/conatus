@@ -1,0 +1,90 @@
+// 演示：Agent Loop 完整闭环 —— 会话 + prompt 装配 + 压缩 + 长记忆 + 工具。
+//
+// 运行前设置环境变量（二选一或都设）：
+//   export ARK_API_KEY="你的火山方舟 API Key"
+//   export DEEPSEEK_API_KEY="你的 DeepSeek API Key"
+//
+// 运行：
+//   dart run example/main.dart
+//
+// 输入 "exit" 结束。试试「现在几点？」观察模型调用 get_time 并回填。
+
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:conatus/conatus.dart';
+
+Future<void> main() async {
+  final app = Context.root(name: 'app');
+
+  // ── 基础设施：工具 / LLM / 会话 / 提示词 / 记忆 / 压缩 ──────────
+  provideTools(app);
+  app.effect(() => app.tools.fn(
+        'get_time',
+        description: '返回当前时间',
+        handler: (ToolContext ctx) async =>
+            ToolResult.success(DateTime.now().toIso8601String()),
+      ));
+
+  // 可观测性：控制台导出 + 工具埋点（tool.called）。
+  provideTelemetry(app, telemetry: ConsoleTelemetry());
+  instrumentTools(app);
+
+  // fs 能力缝 + read_file 工具 + 大结果驱逐（超阈值落盘，模型按路径读回）。
+  provideFileSystemLocal(app);
+  provideFsTools(app);
+  provideToolResultEviction(app);
+
+  provideLlm(app);
+
+  // 工具失败时自省并重试（默认 onError）。
+  provideReflection(app);
+
+  // 子 Agent 委托：spawn_agent 在隔离上下文里用白名单工具跑独立循环。
+  provideSpawnAgent(app, defaultTools: <String>['get_time', 'read_file']);
+
+  final SessionStore sessions = provideSessions(app);
+  final Session session = sessions.create(id: 'cli');
+
+  final SystemPrompt prompt = provideSystemPrompt(app);
+  prompt.section(PromptSection(
+    name: 'persona',
+    text: () => '你是"助手"，一位耐心的助手。需要实时信息时调用工具；否则直接简洁回答。',
+  ));
+
+  provideMemory(app);
+  provideCompaction(app);
+
+  // ── ask_user：把 stdin 每一行投递给最早等待中的提问 ────────────
+  final CliAskUser ask = CliAskUser();
+  provideAskUser(app, askUser: ask);
+  final StreamSubscription<String> inputSub = stdin
+      .transform(utf8.decoder)
+      .transform(const LineSplitter())
+      .listen(ask.submit);
+  app.onDispose(inputSub.cancel);
+
+  // ── Agent Loop：读取已就绪的服务自动接入 ─────────────────────
+  final AgentLoop agent = provideAgentLoop(app, session: session);
+
+  print('Agent 已启动。输入 "exit" 结束。');
+  while (true) {
+    final String line = await ask.ask('你 >');
+    if (line.trim().toLowerCase() == 'exit') break;
+    if (line.trim().isEmpty) continue;
+
+    try {
+      final AgentTurn turn = await agent.run(line);
+      for (final AgentStep step in turn.steps) {
+        final String mark = step.result.isError ? '✗' : '✓';
+        print('· 工具 $mark ${step.call.name}');
+      }
+      print('AI > ${turn.reply}');
+    } on LlmException catch (e) {
+      print('错误 > ${e.message}');
+    }
+  }
+
+  app.dispose();
+}

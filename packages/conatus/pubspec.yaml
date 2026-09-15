@@ -1,0 +1,31 @@
+name: conatus
+description: >-
+  时空可组合性（Spatiotemporal Composability）编程范式的 Dart 实现。
+  本包为伞包（umbrella），统一再导出 conatus_core / conatus_foundation /
+  conatus_llm / conatus_search / conatus_agent，保持
+  `package:conatus/conatus.dart` 的完整公开 API。
+version: 0.15.0
+repository: https://github.com/Fi2zz/conatus
+issue_tracker: https://github.com/Fi2zz/conatus/issues
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+dependencies:
+  conatus_agent: ^0.15.0
+  conatus_core: ^0.15.0
+  conatus_foundation: ^0.15.0
+  conatus_llm: ^0.15.0
+  conatus_search: ^0.15.0
+
+dev_dependencies:
+  lints: ^4.0.0
+
+topics:
+  - plugin
+  - architecture
+  - composability
+  - di
+  - llm

@@ -1,0 +1,21 @@
+name: conatus_core
+description: >-
+  时空可组合性（Spatiotemporal Composability）的核心机制：可逆效应
+  （EffectScope）、反应式共效应（Reactor）与统一上下文（Context）。
+version: 0.15.0
+repository: https://github.com/Fi2zz/conatus
+issue_tracker: https://github.com/Fi2zz/conatus/issues
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+dev_dependencies:
+  lints: ^4.0.0
+  test: ^1.25.0
+
+topics:
+  - architecture
+  - composability
+  - di

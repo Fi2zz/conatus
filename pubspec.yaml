@@ -1,0 +1,13 @@
+name: conatus_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.6.0
+
+workspace:
+  - packages/conatus
+  - packages/conatus_agent
+  - packages/conatus_core
+  - packages/conatus_foundation
+  - packages/conatus_llm
+  - packages/conatus_search
