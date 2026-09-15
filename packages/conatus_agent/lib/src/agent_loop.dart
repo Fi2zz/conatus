@@ -3,8 +3,11 @@
 /// [ToolRegistry.describe]）→ 执行工具（可经 [Reflector] 反思重试）并回填 → 收口。
 library;
 
+import 'dart:async';
+
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
+import 'agent_cancel.dart';
 import 'agent_events.dart';
 import 'agent_types.dart';
 import 'compaction.dart';
@@ -73,7 +76,10 @@ class AgentLoop {
   bool _needsReplan = false;
 
   /// 跑一轮：从 [userInput] 到最终文本回复。
-  Future<AgentTurn> run(String userInput) async {
+  ///
+  /// [cancel] 非空时，模型调用、工具执行与路由都与其竞速；取消后本方法以
+  /// [AgentCancelled] 结束（结果丢弃，调用方可立即开始新一轮）。
+  Future<AgentTurn> run(String userInput, {AgentCancel? cancel}) async {
     final Session? session = this.session;
     ensureSessionOpen(session);
     session
@@ -87,11 +93,14 @@ class AgentLoop {
       historyStart: _historyStart,
     );
 
-    Future<ToolResult> invoke(LlmToolCall call) => tools.call(ToolCall(
-          name: call.name,
-          callId: call.id,
-          arguments: parseToolArguments(call.arguments),
-        ));
+    Future<ToolResult> invoke(LlmToolCall call) => _race(
+          tools.call(ToolCall(
+            name: call.name,
+            callId: call.id,
+            arguments: parseToolArguments(call.arguments),
+          )),
+          cancel,
+        );
 
     final List<LlmMessage> messages = <LlmMessage>[
       LlmMessage('system', _systemText(userInput)),
@@ -111,7 +120,7 @@ class AgentLoop {
     // 未命中（或未装配 router）行为与无路由完全一致。
     final Router? router = this.router;
     if (router != null) {
-      final RouteDecision routed = await router.route(userInput);
+      final RouteDecision routed = await _race(router.route(userInput), cancel);
       switch (routed) {
         case RouteReply(:final String text):
           return _finish(session, messages, steps, text, userInput);
@@ -133,8 +142,10 @@ class AgentLoop {
           systemText: () => _systemText(userInput),
         );
       }
-      final LlmResult result =
-          await llm.chat(messages, tools: tools.describe());
+      final LlmResult result = await _race(
+        llm.chat(messages, tools: tools.describe()),
+        cancel,
+      );
       onEvent?.call('agent.round', <String, Object?>{
         'step': step,
         'toolCalls': result.toolCalls.length,
@@ -178,6 +189,32 @@ class AgentLoop {
     }
     return _finish(
         session, messages, steps, '（已达到最大步数 $maxSteps，未收口）', userInput);
+  }
+
+  /// 把 [work] 与取消信号竞速：取消后立即以 [AgentCancelled] 结束，其迟到结果
+  /// 被 [Completer] 丢弃（不再向上升级为未处理错误）。[cancel] 为空时原样返回。
+  Future<T> _race<T>(Future<T> work, AgentCancel? cancel) {
+    if (cancel == null) {
+      return work;
+    }
+    if (cancel.cancelled) {
+      return Future<T>.error(const AgentCancelled());
+    }
+    final Completer<T> completer = Completer<T>();
+    work.then<void>(
+      (T value) {
+        if (!completer.isCompleted) completer.complete(value);
+      },
+      onError: (Object error, StackTrace stack) {
+        if (!completer.isCompleted) completer.completeError(error, stack);
+      },
+    );
+    cancel.whenCancelled.then<void>((_) {
+      if (!completer.isCompleted) {
+        completer.completeError(const AgentCancelled());
+      }
+    });
+    return completer.future;
   }
 
   /// 执行一组预置工具调用：作为一条 assistant 消息 + 若干 tool 结果写入历史，

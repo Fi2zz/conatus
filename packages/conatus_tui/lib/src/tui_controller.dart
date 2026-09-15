@@ -62,6 +62,9 @@ class ConatusTuiController {
   AgentLoop? _agent;
   Disposer? _eventSub;
 
+  /// 在飞轮次的取消句柄（Esc / 打断）；null = 无在飞轮次。
+  AgentCancel? _cancel;
+
   /// 是否有在途轮次。
   bool busy = false;
 
@@ -97,10 +100,13 @@ class ConatusTuiController {
     await submit(line);
   }
 
+  /// 打断在飞轮次（Esc / barge-in）：取消模型与工具等待，盘上记录保留。
+  void interrupt() => _cancel?.cancel();
+
   /// 提交一轮对话。
   Future<void> submit(String text) async {
     if (busy) {
-      transcript.add(TuiRole.system, '正在回复，请稍候（Ctrl+C 可退出）。');
+      transcript.add(TuiRole.system, '正在回复，请稍候（Esc 可打断）。');
       _refresh();
       return;
     }
@@ -110,15 +116,20 @@ class ConatusTuiController {
       _refresh();
       return;
     }
+    final AgentCancel cancel = AgentCancel();
+    _cancel = cancel;
     busy = true;
     _refresh();
     try {
-      await agent.run(text);
+      await agent.run(text, cancel: cancel);
+    } on AgentCancelled {
+      transcript.add(TuiRole.system, '已打断这一轮。');
     } on LlmException catch (error) {
       transcript.add(TuiRole.system, '模型调用失败：${error.message}');
     } catch (error) {
       transcript.add(TuiRole.system, '出错：$error');
     } finally {
+      _cancel = null;
       busy = false;
       await _afterTurn();
       _refresh();

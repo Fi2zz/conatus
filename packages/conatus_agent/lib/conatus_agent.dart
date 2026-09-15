@@ -1,3 +1,4 @@
+export 'src/agent_cancel.dart' show AgentCancel, AgentCancelled;
 export 'src/agent_events.dart'
     show
         buildSystemText,

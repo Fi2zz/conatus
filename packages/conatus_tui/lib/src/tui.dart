@@ -106,9 +106,14 @@ class _AgentTuiState extends State<AgentTui> {
     setState(() {});
   }
 
-  /// 输入框按键拦截：`/` 菜单打开时用 ↑↓ 选择、Enter 运行、Tab 补全、Esc 关闭。
+  /// 输入框按键拦截：`/` 菜单打开时用 ↑↓ 选择、Enter 运行、Tab 补全、Esc 关闭；
+  /// 菜单未打开时 Esc 打断在飞轮次。
   bool _onInputKey(KeyboardEvent event) {
     if (!_menu.open) {
+      if (event.logicalKey == LogicalKey.escape) {
+        _controller.interrupt();
+        return true;
+      }
       return false;
     }
     if (event.logicalKey == LogicalKey.arrowUp) {
