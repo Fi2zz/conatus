@@ -16,7 +16,7 @@
 ///     name: 'remote',
 ///     type: McpTransportType.http,
 ///     url: 'https://mcp.example.com/mcp',
-///     headers: <String, String>{'Authorization': 'Bearer ${REMOTE_TOKEN}'},
+///     headers: <String, String>{'Authorization': r'Bearer ${REMOTE_TOKEN}'},
 ///   ),
 /// ]);
 /// ```

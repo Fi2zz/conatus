@@ -36,7 +36,7 @@
 - 🔌 **MCP 生态**：`mcp`（MCP 客户端：stdio / HTTP / SSE 传输 + 握手与工具发现），外部 server 的工具以 `server__tool` 接入同一张工具表，风险缺省 `medium` 走审批
 - 🗜️ **分层压缩与缓存度量**：`content-classifier`（内容分类器能力缝）、`layered-compaction`（按类别分层折叠：工具结果压成指针、用户偏好留原文）、`context-cache`（可缓存前缀指纹 + 命中遥测）
 - 🔭 **产品化**：`telemetry`（事件导出 + 埋点）、`evaluation`（用例评估 + 基线对比）、`approval`（高危工具审批）、`skill`（技能沉淀）、`recovery`（会话快照恢复）
-- ✅ **完整测试覆盖**：593 个单元测试
+- ✅ **完整测试覆盖**：596 个单元测试
 
 ---
 
@@ -365,7 +365,7 @@ await provideMcp(app, <McpServerConfig>[
     name: 'remote',
     type: McpTransportType.http,
     url: 'https://mcp.example.com/mcp',
-    headers: <String, String>{'Authorization': 'Bearer ${REMOTE_TOKEN}'},
+    headers: <String, String>{'Authorization': r'Bearer ${REMOTE_TOKEN}'},
   ),
 ], credentials: credentials, aliases: <String, String>{'read_file': 'fs__read_file'});
 ```
@@ -378,7 +378,8 @@ await provideMcp(app, <McpServerConfig>[
 - 风险映射：非标准 `riskLevel`（`readonly` / `read` → `low`，`write` / `mutating` →
   `medium`，`destructive` / `admin` → `high`）、`annotations.destructiveHint` → `high`、
   `annotations.readOnlyHint` → `low`，**什么都没声明则缺省 `medium`**（默认需要审批）；
-- `env` / `headers` 的值支持 `${KEY}` 占位符，用 `Credentials` 解析；解析不了时
+- `env` / `headers` 的值支持 `${KEY}` 占位符，用 `Credentials` 解析（Dart 源码里要写成
+  原始字符串 `r'...'` 或转义 `\$`，否则会被当成字符串插值）；解析不了时
   占位符原样保留，且**解析结果不得写进日志**（要排查就用键名）；
 - `McpToolAlias` 给已注册工具加短名；连接登记为可逆效应，`ctx.dispose()` 断开全部
   连接并注销工具，某个 server 崩溃只注销它自己的工具，其余 server 不受影响。

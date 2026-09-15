@@ -43,7 +43,7 @@ await provideMcp(app, <McpServerConfig>[
     name: 'remote',
     type: McpTransportType.http,
     url: 'https://mcp.example.com/mcp',
-    headers: <String, String>{'Authorization': 'Bearer ${REMOTE_TOKEN}'},
+    headers: <String, String>{'Authorization': r'Bearer ${REMOTE_TOKEN}'},
   ),
 ], credentials: credentials, aliases: <String, String>{
   'read_file': 'fs__read_file',
@@ -53,6 +53,9 @@ await provideMcp(app, <McpServerConfig>[
 `env` 与 `headers` 的值支持 `${KEY}` 占位符，由 `credentials.get('KEY')` 解析；
 解析不了（没有凭据服务、键不存在、取凭据抛错）时**占位符原样保留**，不抛错、
 不打印。也可以手动调用 `resolveCredentialPlaceholders(raw, credentials)`。
+
+> **在 Dart 源码里要写成原始字符串**（`r'Bearer ${REMOTE_TOKEN}'`，或 `\$` 转义），
+> 否则会被当成字符串插值而编译不过。
 
 > **注意**：解析后的映射可能含明文凭据，**不得**把它写进日志、事件、会话记录或
 > 任何模型可见的字段。要排查就用键名（`REMOTE_TOKEN`），不要用值。
