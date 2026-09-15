@@ -55,7 +55,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(tester.terminalState, containsText('conatus TUI'));
+      expect(tester.terminalState, containsText('Conatus TUI'));
       expect(tester.terminalState, containsText('会话：smoke'));
       expect(tester.terminalState, containsText('输入文字开始对话'));
     } finally {

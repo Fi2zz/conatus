@@ -35,7 +35,7 @@ class TuiHeader extends StatelessComponent {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Component>[
           Text(
-            'conatus TUI · $name',
+            'Conatus TUI · $name',
             style: const TextStyle(
               color: Colors.brightWhite,
               fontWeight: FontWeight.bold,
