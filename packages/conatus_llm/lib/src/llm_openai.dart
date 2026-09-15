@@ -14,26 +14,63 @@ library;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:conatus_credentials/conatus_credentials.dart';
 import 'package:http/http.dart' as http;
 import 'llm.dart';
 
 /// 处理 OpenAI 兼容端点的公共逻辑。
 abstract class _OpenAiCompatibleProvider implements LlmProvider {
   _OpenAiCompatibleProvider({
-    required this.apiKey,
+    required String? apiKey,
     required this.baseUrl,
     required this.model,
+    required this.credentialKey,
     this.apiStyle = LlmApiStyle.chat,
     http.Client? client,
+    Credentials? credentials,
     this.timeout = const Duration(seconds: 60),
-  }) : _client = client ?? http.Client();
+  })  : apiKey = _resolveApiKey(apiKey, credentials, credentialKey),
+        _client = client ?? http.Client() {
+    _watchCredentials(credentials);
+  }
 
-  final String apiKey;
+  /// 当前 API Key。构造期按 `apiKey` → 凭据服务 → 环境变量解析；
+  /// 之后由凭据服务的变更流就地轮换，故不是 `final`。
+  String apiKey;
+
+  /// 凭据服务里对应的键名（如 `ARK_API_KEY`）。
+  final String credentialKey;
   final String baseUrl;
   final String model;
   final LlmApiStyle apiStyle;
   final Duration timeout;
+
+  /// HTTP client。Key 轮换只改 [apiKey]，而 `_headers` 每次请求重算，因此
+  /// **不**因轮换重建 client——重建反而会在 [close] 后留下悬挂实例。
   final http.Client _client;
+  StreamSubscription<Credential>? _credentialsSubscription;
+
+  /// 构造期解析顺序：显式 `apiKey` → 凭据服务 → 环境变量。
+  static String _resolveApiKey(
+    String? apiKey,
+    Credentials? credentials,
+    String credentialKey,
+  ) =>
+      apiKey ??
+      credentials?.get(credentialKey)?.value ??
+      Platform.environment[credentialKey] ??
+      '';
+
+  void _watchCredentials(Credentials? credentials) {
+    if (credentials == null || credentialKey.isEmpty) return;
+    _credentialsSubscription = credentials.changes.listen(_applyCredential);
+  }
+
+  void _applyCredential(Credential credential) {
+    if (credential.key != credentialKey) return;
+    if (credential.expired) return;
+    apiKey = credential.value;
+  }
 
   bool get _responses => apiStyle == LlmApiStyle.responses;
 
@@ -452,8 +489,13 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
     }
   }
 
+  /// 释放：取消凭据变更订阅，并关闭 HTTP client。
   @override
-  void close() => _client.close();
+  void close() {
+    unawaited(_credentialsSubscription?.cancel());
+    _credentialsSubscription = null;
+    _client.close();
+  }
 }
 
 /// 流式累积状态：用量、结束原因与工具调用分片可能晚于增量到达，收尾时统一产出。
@@ -563,16 +605,18 @@ Stream<String> _sseData(Stream<List<int>> byteStream) async* {
 ///
 /// 环境变量：`ARK_API_KEY`
 /// 默认模型：`doubao-seed-1-8-251228`
+/// 传入 `credentials` 时优先从凭据服务同步取键，并订阅其变更流做轮换。
 class DoubaoProvider extends _OpenAiCompatibleProvider {
   DoubaoProvider({
-    String? apiKey,
+    super.apiKey,
     String? baseUrl,
     String? model,
     super.apiStyle,
     super.client,
+    super.credentials,
+    super.credentialKey = 'ARK_API_KEY',
     Duration? timeout,
   }) : super(
-          apiKey: apiKey ?? Platform.environment['ARK_API_KEY'] ?? '',
           baseUrl: baseUrl ?? 'https://ark.cn-beijing.volces.com/api/v3',
           model: model ?? 'doubao-seed-1-8-251228',
           timeout: timeout ?? const Duration(seconds: 60),
@@ -590,16 +634,18 @@ class DoubaoProvider extends _OpenAiCompatibleProvider {
 ///
 /// 环境变量：`DEEPSEEK_API_KEY`
 /// 默认模型：`deepseek-flash`
+/// 传入 `credentials` 时优先从凭据服务同步取键，并订阅其变更流做轮换。
 class DeepSeekProvider extends _OpenAiCompatibleProvider {
   DeepSeekProvider({
-    String? apiKey,
+    super.apiKey,
     String? baseUrl,
     String? model,
     super.apiStyle,
     super.client,
+    super.credentials,
+    super.credentialKey = 'DEEPSEEK_API_KEY',
     Duration? timeout,
   }) : super(
-          apiKey: apiKey ?? Platform.environment['DEEPSEEK_API_KEY'] ?? '',
           baseUrl: baseUrl ?? 'https://api.deepseek.com',
           model: model ?? 'deepseek-flash',
           timeout: timeout ?? const Duration(seconds: 60),
