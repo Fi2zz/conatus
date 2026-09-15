@@ -94,14 +94,41 @@ class MemoryStore {
         .toList(growable: false);
   }
 
-  /// 按 id 遗忘一条。返回是否确实删除了。
+  /// 按 id 遗忘一条。返回是否确实删除了。首次调用会自动 [load]。
   Future<bool> forget(String id) async {
+    await load();
     final int before = _entries.length;
     _entries.removeWhere((MemoryEntry entry) => entry.id == id);
     if (_entries.length == before) return false;
     await _backend.save(_entries);
     _notify();
     return true;
+  }
+
+  /// 按正文**完全一致**遗忘（删除所有匹配条目），返回删除条数。
+  Future<int> forgetByText(String text) =>
+      _forgetWhere((MemoryEntry entry) => entry.text == text);
+
+  /// 按正文**包含** [query]（不区分大小写）遗忘，返回删除条数。
+  ///
+  /// [query] 为空时不删除任何条目。
+  Future<int> forgetMatching(String query) {
+    final String needle = query.trim().toLowerCase();
+    if (needle.isEmpty) return Future<int>.value(0);
+    return _forgetWhere(
+      (MemoryEntry entry) => entry.text.toLowerCase().contains(needle),
+    );
+  }
+
+  Future<int> _forgetWhere(bool Function(MemoryEntry entry) test) async {
+    await load();
+    final int before = _entries.length;
+    _entries.removeWhere(test);
+    final int deleted = before - _entries.length;
+    if (deleted == 0) return 0;
+    await _backend.save(_entries);
+    _notify();
+    return deleted;
   }
 
   /// 清空全部记忆。

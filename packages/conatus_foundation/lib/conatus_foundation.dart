@@ -40,6 +40,13 @@ export 'src/logger_console.dart'
 export 'src/memory.dart' show MemoryStore, provideMemory;
 export 'src/memory_backend.dart'
     show InMemoryMemoryBackend, JsonMemoryBackend, MemoryBackend;
+export 'src/memory_tools.dart'
+    show
+        ForgetTool,
+        RememberTool,
+        provideForgetTool,
+        provideMemoryTools,
+        provideRememberTool;
 export 'src/memory_types.dart' show MemoryEntry;
 export 'src/prompt_types.dart'
     show

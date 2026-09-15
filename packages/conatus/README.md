@@ -29,7 +29,7 @@
 - 🛡️ **循环依赖检测**：无法收敛时快速失败，而非死循环
 - 📦 **零运行时依赖**：核心仅用 Dart 核心库（`llm` / `search` 插件依赖 `http`）
 - 🧰 **基础设施插件**：`timer`（定时器即效应）、`logger-console`（分级日志）、`loader`（注册表 + 配置树）、`tools`（`Tool` 基类 + `ParamSpec` + 注册表/执行管线/分组/分级）、`shell` / `fs`（能力缝 + 本地实现）、`search`（搜索能力缝 + web 工具）、`asr`（语音识别能力缝 + `transcribe_audio`）、`tts`（语音合成能力缝 + 音频输出接口）
-- 🗂️ **会话与上下文**：`session`（事件日志 + 仓库 + JSONL 持久化）、`system-prompt`（prompt 段装配）、`compaction`（滚动摘要）、`memory`（长记忆库）
+- 🗂️ **会话与上下文**：`session`（事件日志 + 仓库 + JSONL 持久化）、`system-prompt`（prompt 段装配）、`compaction`（滚动摘要）、`memory`（长记忆库 + 显式记住/遗忘能力与工具）
 - 🗄️ **持久化**：`database`（KV 存储 hub + 可插拔后端 + JSON 本地实现）
 - 🤖 **Agent Loop**：`agent`（会话事件 + prompt 装配 + 压缩 + 记忆 + 工具闭环）、`tool-result-eviction`（大结果落盘）、`plan`（结构化计划）、`sub-agent`（`spawn_agent` 隔离委托）、`reflection`（工具后自省重试）
 - 🔭 **产品化**：`telemetry`（事件导出 + 埋点）、`evaluation`（用例评估 + 基线对比）、`approval`（高危工具审批）、`skill`（技能沉淀）、`recovery`（会话快照恢复）
@@ -548,16 +548,29 @@ final result = await compaction.compact(session, (events, previous) async {
 });
 ```
 
-### `memory` — 长记忆库
+### `memory` — 长记忆库 + 显式记住 / 遗忘
 
 服务键 `'memory'`。`remember` / `recall` / `forget` / `clear`：召回按查询词元与记忆
 文本/标签的重叠数打分（英文按词、中文按二元组），同分按新→旧；超过 `maxEntries`
 逐出最旧一条。存储经 `MemoryBackend` 端口，默认纯内存，`JsonMemoryBackend` 落盘。
 
+显式遗忘另有两个方法：`forgetByText(text)`（正文完全一致）与 `forgetMatching(query)`
+（正文包含，不区分大小写），均返回删除条数。这些都是**能力**，宿主/用户可直接调用；
+模型侧由 `remember` / `forget` 两个工具调用同一能力（`provideRememberTool` /
+`provideForgetTool` / `provideMemoryTools`）。
+
 ```dart
 final memory = provideMemory(app); // 或 provideMemory(app, backend: JsonMemoryBackend(file: File('memory.json')))
 await memory.remember('用户喜欢京剧', tags: {'偏好'});
 for (final e in memory.recall('京剧', limit: 3)) print(e.text);
+
+// 直接调用能力（不经模型）
+await memory.forgetByText('用户喜欢京剧');
+await memory.forgetMatching('京剧');
+await memory.forget(id);
+
+// 交给模型：注册 remember / forget 工具
+provideMemoryTools(app);
 ```
 
 ### `database` — KV 存储 hub + 可插拔后端
@@ -874,8 +887,10 @@ root.provide('x', 1);
 |------|------|
 | `provideMemory(ctx, {memory, backend})` | 提供 `'memory'` |
 | `remember(text, {tags}) → Future<MemoryEntry>` / `recall(query, {limit}) → List<MemoryEntry>` | 写入 / 关键词召回 |
-| `forget(id)` / `clear()` `/ `load()` | 删除 / 清空 / 从后端加载 |
+| `forget(id) → Future<bool>` / `forgetByText(text)` / `forgetMatching(query) → Future<int>` | 按 id / 正文精确 / 正文包含 遗忘（返回删除条数） |
+| `clear()` / `load()` | 清空 / 从后端加载 |
 | `entries` / `length` / `onChange(fn)` | 只读视图 / 条数 / 变更监听 |
+| `RememberTool` / `ForgetTool` / `provideRememberTool` / `provideForgetTool` / `provideMemoryTools` | 给模型用的 `remember` / `forget` 工具 |
 | `MemoryBackend` / `InMemoryMemoryBackend` / `JsonMemoryBackend({file})` | 存储端口与两种本地实现 |
 
 ### `Database`（`database`）

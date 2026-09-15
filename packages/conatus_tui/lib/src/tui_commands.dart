@@ -39,6 +39,16 @@ const List<TuiCommand> tuiCommands = <TuiCommand>[
   ),
   TuiCommand(name: 'sessions', description: '打开会话选择面板（↑↓ 选择，Enter 切换）'),
   TuiCommand(name: 'tools', description: '列出当前已注册的工具'),
+  TuiCommand(
+    name: 'remember',
+    description: '直接记住一段信息（不经模型）',
+    argHint: '<内容>',
+  ),
+  TuiCommand(
+    name: 'forget',
+    description: '直接遗忘记忆（不经模型）',
+    argHint: '<id 或 关键字>',
+  ),
   TuiCommand(name: 'telemetry', description: '显示最近的可观测性事件'),
   TuiCommand(name: 'clear', description: '清空屏上记录（不改动会话数据）'),
   TuiCommand(name: 'exit', description: '退出并关闭 TUI（同 /quit、Ctrl+C）'),

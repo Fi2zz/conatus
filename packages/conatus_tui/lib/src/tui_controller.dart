@@ -188,6 +188,10 @@ class ConatusTuiController {
         }
       case 'tools':
         _showTools();
+      case 'remember':
+        await _remember(arg);
+      case 'forget':
+        await _forget(arg);
       case 'telemetry':
         _showTelemetry();
       case 'clear':
@@ -208,6 +212,46 @@ class ConatusTuiController {
       TuiRole.system,
       '已注册工具（${tools.names.length}）：${tools.names.join('、')}',
     );
+  }
+
+  /// `/remember <内容>`：直接调用记忆能力，绕过模型。
+  Future<void> _remember(String arg) async {
+    final MemoryStore? memory = _app.get<MemoryStore>('memory');
+    if (memory == null) {
+      transcript.add(TuiRole.system, '记忆服务不可用。');
+      return;
+    }
+    final String text = arg.trim();
+    if (text.isEmpty) {
+      transcript.add(TuiRole.system, '用法：/remember <要记住的内容>');
+      return;
+    }
+    final MemoryEntry entry = await memory.remember(text, tags: {'explicit'});
+    transcript.add(TuiRole.system, '已记住（id=${entry.id}）。');
+  }
+
+  /// `/forget <id 或 关键字>`：直接调用遗忘能力，绕过模型。
+  Future<void> _forget(String arg) async {
+    final MemoryStore? memory = _app.get<MemoryStore>('memory');
+    if (memory == null) {
+      transcript.add(TuiRole.system, '记忆服务不可用。');
+      return;
+    }
+    final String query = arg.trim();
+    if (query.isEmpty) {
+      transcript.add(TuiRole.system, '用法：/forget <id 或 关键字>');
+      return;
+    }
+    if (await memory.forget(query)) {
+      transcript.add(TuiRole.system, '已遗忘 id="$query"。');
+      return;
+    }
+    final int deleted = await memory.forgetMatching(query);
+    if (deleted == 0) {
+      transcript.add(TuiRole.system, '未找到匹配 "$query" 的记忆。');
+      return;
+    }
+    transcript.add(TuiRole.system, '已遗忘 $deleted 条匹配 "$query" 的记忆。');
   }
 
   void _showTelemetry() {

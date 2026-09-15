@@ -45,6 +45,7 @@ Future<(ConatusTuiController, Context)> _build(List<LlmResult> replies) async {
         handler: (ToolContext ctx) async => ToolResult.success('12:00'),
       ));
   provideLlm(app, llm: FallbackLlm(<LlmProvider>[_ScriptedProvider(replies)]));
+  provideMemory(app);
   final SessionStore sessions = provideSessions(app);
   final ConatusTuiController controller = ConatusTuiController(
     app: app,
@@ -159,5 +160,32 @@ void main() {
     expect(isValidSessionId('a b'), isFalse);
     expect(isValidSessionId(''), isFalse);
     expect(isValidSessionId('x' * 65), isFalse);
+  });
+
+  test('/remember 直接记住，不经模型', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+    );
+    final MemoryStore memory = app.require<MemoryStore>('memory');
+
+    await controller.handleLine('/remember 用户喜欢京剧');
+
+    expect(controller.transcript.messages.single.text, contains('已记住'));
+    expect(memory.entries.single.text, '用户喜欢京剧');
+    app.dispose();
+  });
+
+  test('/forget 直接遗忘，不经模型', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+    );
+    final MemoryStore memory = app.require<MemoryStore>('memory');
+    await memory.remember('用户喜欢京剧');
+
+    await controller.handleLine('/forget 京剧');
+
+    expect(controller.transcript.messages.single.text, contains('已遗忘'));
+    expect(memory.length, 0);
+    app.dispose();
   });
 }

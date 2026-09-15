@@ -9,7 +9,7 @@ conatus 的基础设施插件（仅依赖 `conatus_core`，零外部依赖）：
 - `shell` / `fs` — 命令执行与文件系统能力缝 + 本地实现
 - `session` — append-only 事件日志 + 会话仓库 + JSONL 持久化
 - `system-prompt` — prompt 段装配
-- `memory` — 长记忆库
+- `memory` — 长记忆库（`remember` / `recall` / `forget` / `forgetByText` / `forgetMatching`），另有 `remember` / `forget` 工具
 - `database` — KV 存储 hub + 可插拔后端
 - `ask_user` — 声明式提问
 

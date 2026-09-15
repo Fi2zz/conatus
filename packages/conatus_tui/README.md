@@ -43,7 +43,7 @@ dart run packages/conatus_tui/example/deepseek_demo.dart \
 - **对话 + 工具闭环**：`AgentLoop` 自动接入 llm / tools / system-prompt /
   memory / compaction / reflection，工具调用与结果实时回显到记录区。
 - **斜杠命令**：输入 `/` 弹出命令菜单（`↑↓` 选择、`Enter` 运行、`Tab` 补全）：
-  `/help` `/new` `/session <id>` `/sessions` `/tools` `/telemetry` `/clear` `/exit`。
+  `/help` `/new` `/session <id>` `/sessions` `/tools` `/remember <内容>` `/forget <id 或 关键字>` `/telemetry` `/clear` `/exit`。
 - **会话选择面板**：`/sessions` 打开，`↑↓` 选择、`Enter` 切换、`Esc` 关闭；
   会话事件以 JSONL 持久化到 `.conatus/sessions`，重启后 `open` 即恢复历史。
 - **长记忆**：`.conatus/memory.json` 跨会话召回。

@@ -110,6 +110,7 @@ class ConatusTuiRuntime {
         file: File(memoryFile ?? '$baseDir${sep}memory.json'),
       ),
     );
+    provideMemoryTools(app);
     provideCompaction(app);
     provideSkillLibrary(app);
 
