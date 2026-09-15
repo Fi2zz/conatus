@@ -178,6 +178,27 @@ void main() {
       expect(provider.calls.first.first.content, contains('你是助手。'));
     });
 
+    test('运行时调整 persona：闭包 text 在下一轮生效', () async {
+      String persona = '你是助手。';
+      final SystemPrompt prompt = SystemPrompt()
+        ..section(PromptSection(name: 'persona', text: () => persona));
+      final _ScriptedProvider provider = _ScriptedProvider(
+        <LlmResult>[_text('好的'), _text('好的')],
+      );
+      final AgentLoop loop = AgentLoop(
+        llm: provider,
+        tools: ToolRegistry(),
+        systemPrompt: prompt,
+      );
+
+      await loop.run('你好');
+      persona = '你是翻译。';
+      await loop.run('再见');
+
+      expect(provider.calls.first.first.content, contains('你是助手。'));
+      expect(provider.calls.last.first.content, contains('你是翻译。'));
+    });
+
     test('长期记忆召回进 system，回复记入记忆', () async {
       final MemoryStore memory = MemoryStore();
       await memory.remember('用户喜欢京剧', tags: <String>{'偏好'});

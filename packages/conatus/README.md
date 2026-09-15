@@ -537,6 +537,19 @@ ctx.effect(() => prompt.section(PromptSection(
 final text = prompt.render(prompt.assemble(variables: {'name': '助手'}));
 ```
 
+人设可在运行时动态调整：`PromptSection.text` 是每次装配都重新求值的闭包，把人设文本
+绑到可变状态即可；`AgentLoop` 每轮 `run()` 都会重新装配，改动在下一轮生效。
+
+```dart
+var persona = '你是助手。';
+prompt.section(PromptSection(name: 'persona', text: () => persona));
+
+persona = '你是简洁的中文翻译。'; // 下一轮 run() 生效
+```
+
+需注意：`AgentLoop` 持有的是同一个 `SystemPrompt` 实例引用，替换 `'systemPrompt'`
+服务不会影响已建好的 loop，必须改原实例；同名 `section` 重复注册会抛 `StateError`。
+
 ### `compaction` — 会话滚动摘要
 
 服务键 `'compaction'`。事件数超过 `keepRecent` 时，把较早的事件连同上一版摘要交给
