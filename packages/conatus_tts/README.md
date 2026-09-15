@@ -12,7 +12,7 @@ conatus 的 TTS（语音合成）能力缝。把「文本 → 音频字节」作
 | 词汇 | `TtsSession` / `TtsVoice` / `TtsAudioFormat` | 文本进、音频出的会话 |
 | 输出接口 | `TtsAudioSink` | **音频输出去向**（宿主实现） |
 | 内置实现 | `BytesAudioSink` / `StreamAudioSink` / `CallbackAudioSink` | 内存 / 流 / 回调 |
-| provider | `DoubaoHttpTtsProvider` | 豆包/火山 HTTP 语音合成 |
+| provider | `DoubaoStreamingTtsProvider` | 豆包/火山 v3 WebSocket 单向流式合成 |
 
 ## 接线
 
@@ -24,20 +24,24 @@ import 'package:conatus_tts/conatus_tts.dart';
 provideTts(app);
 ```
 
-环境变量：
+环境变量（二选一）：
 
 ```bash
-export VOLC_TTS_APP_ID="你的 App ID"
-export VOLC_TTS_ACCESS_TOKEN="你的 Access Token"
-# 可选
-export VOLC_TTS_CLUSTER="volcano_tts"
-export VOLC_TTS_VOICE="zh_female_cancan_mars_bigtts"
+export VOLC_TTS_API_KEY="新版控制台 API Key"
+
+# 或旧版控制台
+export VOLC_TTS_APP_KEY="App ID"
+export VOLC_TTS_ACCESS_TOKEN="Access Token"
+
+# 可选：资源 ID 与音色，需成对匹配
+export VOLC_TTS_RESOURCE_ID="seed-tts-2.0"          # 默认
+export VOLC_TTS_VOICE="zh_female_vv_uranus_bigtts"  # 默认
 ```
 
 也可显式注入：
 
 ```dart
-provideTts(app, appId: '...', accessToken: '...', voice: '...');
+provideTts(app, apiKey: '...', voice: '...');
 ```
 
 ## 用法

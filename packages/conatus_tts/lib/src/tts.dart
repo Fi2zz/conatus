@@ -137,18 +137,19 @@ extension TtsContext on Context {
 
 /// 将 [TtsService] 作为 `'tts'` 服务提供到上下文。
 ///
-/// [providers] 显式给出时按序注册；否则新建服务时默认注册豆包/火山语音合成
-/// provider（凭据缺省读环境变量，见 [DoubaoHttpTtsProvider]）。传入现成的 [tts]
-/// 且未给 [providers] 时不追加默认 provider。
+/// [providers] 显式给出时按序注册；否则新建服务时默认注册豆包/火山流式合成
+/// provider（凭据缺省读环境变量，见 [DoubaoStreamingTtsProvider]）。传入现成的
+/// [tts] 且未给 [providers] 时不追加默认 provider。
 TtsService provideTts(
   Context ctx, {
   TtsService? tts,
   List<TtsProvider>? providers,
-  String? appId,
+  String? apiKey,
+  String? appKey,
   String? accessToken,
-  String? cluster,
+  String? resourceId,
   String? voice,
-  String url = defaultDoubaoHttpTtsUrl,
+  String url = defaultDoubaoTtsStreamUrl,
 }) {
   final TtsService service = tts ?? TtsService();
   ctx.provide('tts', service);
@@ -156,10 +157,11 @@ TtsService provideTts(
       (tts != null
           ? const <TtsProvider>[]
           : <TtsProvider>[
-              DoubaoHttpTtsProvider(
-                appId: appId,
+              DoubaoStreamingTtsProvider(
+                apiKey: apiKey,
+                appKey: appKey,
                 accessToken: accessToken,
-                cluster: cluster,
+                resourceId: resourceId,
                 voice: voice,
                 url: url,
               ),

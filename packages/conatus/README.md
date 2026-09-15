@@ -330,10 +330,11 @@ final text = await ctx.asr.transcribeText(audioBytes, language: 'zh-CN');
 
 服务键 `'tts'`（`ctx.tts`）。把「文本 → 音频字节」作为可插拔能力，音频写到哪由
 `TtsAudioSink` 决定（扬声器 / 文件 / 网络）：CLI / 桌面写本地播放器，Flutter 写
-平台播放插件。默认 provider 是豆包/火山语音合成 `DoubaoHttpTtsProvider`。
+平台播放插件。默认 provider 是 `DoubaoStreamingTtsProvider`，走火山 v3
+`wss://openspeech.bytedance.com/api/v3/tts/unidirectional/stream`。
 
 ```dart
-provideTts(app); // 读 VOLC_TTS_APP_ID / VOLC_TTS_ACCESS_TOKEN
+provideTts(app); // 读 VOLC_TTS_API_KEY，或 VOLC_TTS_APP_KEY + VOLC_TTS_ACCESS_TOKEN
 
 final bytes = await ctx.tts.synthesize('你好，世界'); // 收进内存
 await ctx.tts.speak('你好', myAudioSink);            // 写入自定义输出
@@ -818,12 +819,12 @@ root.provide('x', 1);
 
 | 成员 | 说明 |
 |------|------|
-| `provideTts(ctx, {tts, providers, appId, accessToken, cluster, voice, url})` / `ctx.tts` | 提供 `'tts'` / 快捷访问 |
+| `provideTts(ctx, {tts, providers, apiKey, appKey, accessToken, resourceId, voice, url})` / `ctx.tts` | 提供 `'tts'` / 快捷访问 |
 | `register(TtsProvider) → Disposer` / `providers` / `get(name)` | provider 注册与查找 |
 | `start(sink, {provider, voice, format, speed, volume, pitch}) → Future<TtsSession>` | 顺序回退建连 |
 | `speak(text, sink, {...})` / `synthesize(text, {...}) → Future<List<int>>` | 合成到任意 sink / 收进内存 |
 | `TtsAudioSink` / `BytesAudioSink` / `StreamAudioSink` / `CallbackAudioSink` | 音频输出接口与内置实现 |
-| `DoubaoHttpTtsProvider({appId, accessToken, cluster, voice, url, ...})` | 豆包/火山 HTTP 语音合成 provider |
+| `DoubaoStreamingTtsProvider({apiKey, appKey, accessToken, resourceId, voice, url, ...})` | 豆包/火山 v3 WebSocket 单向流式合成 provider |
 | `TtsAudioFormat` / `TtsVoice` / `TtsSession` / `TtsException` | 格式 / 音色 / 会话 / 错误 |
 
 ### `ShellExecutor`（`shell`）

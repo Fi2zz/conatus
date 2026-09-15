@@ -1,10 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_tts/conatus_tts.dart';
-import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
 import 'package:test/test.dart';
 
 class _FakeSession implements TtsSession {
@@ -57,6 +55,28 @@ class _FakeProvider implements TtsProvider {
     if (fails) throw const TtsException('boom');
     lastVoice = voice;
     return last = _FakeSession(sink, name);
+  }
+}
+
+/// 捕获建连头与出站帧、可注入入站帧的假 socket。
+class _FakeTtsSocket implements TtsSocket {
+  final StreamController<Object?> _incoming = StreamController<Object?>();
+  final List<List<int>> sent = <List<int>>[];
+  Map<String, String>? headers;
+
+  void emit(List<int> frame) {
+    if (!_incoming.isClosed) _incoming.add(frame);
+  }
+
+  @override
+  Stream<Object?> get messages => _incoming.stream;
+
+  @override
+  void send(List<int> data) => sent.add(data);
+
+  @override
+  Future<void> close() async {
+    if (!_incoming.isClosed) await _incoming.close();
   }
 }
 
@@ -172,70 +192,107 @@ void main() {
     });
   });
 
-  group('DoubaoHttpTtsProvider', () {
-    test('解析 base64 音频并写入 sink', () async {
-      final Uint8List audio = Uint8List.fromList(<int>[1, 2, 3, 4, 5]);
-      String? seenText;
-      final http.Client client = MockClient((http.Request request) async {
-        final Map<String, dynamic> body =
-            jsonDecode(request.body) as Map<String, dynamic>;
-        seenText = (body['request'] as Map<String, dynamic>)['text'] as String;
-        final Map<String, dynamic> app = body['app'] as Map<String, dynamic>;
-        expect(app['appid'], 'aid');
-        return http.Response(
-          jsonEncode(<String, Object?>{
-            'code': 3000,
-            'message': 'Success',
-            'data': base64Encode(audio),
-          }),
-          200,
-          headers: <String, String>{
-            'content-type': 'application/json; charset=utf-8',
-          },
-        );
+  group('tts_protocol', () {
+    test('请求帧为 full client request + gzip JSON', () {
+      final List<int> bytes = buildTtsRequest(<String, Object?>{
+        'req_params': <String, Object?>{'text': 'hi'},
       });
-
-      final DoubaoHttpTtsProvider provider = DoubaoHttpTtsProvider(
-        appId: 'aid',
-        accessToken: 'tok',
-        client: client,
-      );
-      final TtsService service = TtsService()..register(provider);
-
-      final List<int> bytes = await service.synthesize('你好');
-      expect(bytes, audio);
-      expect(seenText, '你好');
+      final TtsFrame frame = decodeTtsFrame(bytes);
+      expect(frame.messageType, ttsMsgFullClientRequest);
+      expect(frame.compression, ttsCompressionGzip);
+      expect(frame.payload, isNotEmpty);
+      expect(utf8.decode(frame.payload), contains('"text":"hi"'));
     });
 
-    test('业务错误码抛 TtsException', () async {
-      final http.Client client = MockClient((http.Request request) async {
-        return http.Response(
-          jsonEncode(<String, Object?>{'code': 3001, 'message': 'bad'}),
-          200,
-          headers: <String, String>{
-            'content-type': 'application/json; charset=utf-8',
-          },
-        );
-      });
-      final TtsService service = TtsService()
-        ..register(DoubaoHttpTtsProvider(
-          appId: 'aid',
-          accessToken: 'tok',
-          client: client,
-        ));
-
-      await expectLater(
-        service.synthesize('你好'),
-        throwsA(isA<TtsException>()),
+    test('音频帧解析 event / session_id / 负载', () {
+      final List<int> bytes = buildTtsFrame(
+        messageType: ttsMsgAudioOnlyServer,
+        flag: ttsFlagWithEvent,
+        serialization: ttsSerializationRaw,
+        event: ttsEventResponse,
+        sessionId: 'sess-1',
+        payload: <int>[9, 8, 7],
       );
+      final TtsFrame frame = decodeTtsFrame(bytes);
+      expect(frame.isAudio, isTrue);
+      expect(frame.event, ttsEventResponse);
+      expect(frame.sessionId, 'sess-1');
+      expect(frame.payload, <int>[9, 8, 7]);
+    });
+  });
+
+  group('DoubaoStreamingTtsProvider', () {
+    test('建连头正确，合成音频写入 sink', () async {
+      final _FakeTtsSocket socket = _FakeTtsSocket();
+      final DoubaoStreamingTtsProvider provider = DoubaoStreamingTtsProvider(
+        apiKey: 'k',
+        connector: (Uri url, Map<String, String> headers) async {
+          socket.headers = headers;
+          return socket;
+        },
+      );
+      final BytesAudioSink sink = BytesAudioSink();
+      final TtsSession session = await provider.start(sink);
+      session.send('你好');
+
+      final Future<void> done = session.finish();
+      socket.emit(buildTtsFrame(
+        messageType: ttsMsgAudioOnlyServer,
+        flag: ttsFlagWithEvent,
+        serialization: ttsSerializationRaw,
+        event: ttsEventResponse,
+        sessionId: 'sess',
+        payload: <int>[1, 2, 3],
+      ));
+      socket.emit(buildTtsFrame(
+        messageType: ttsMsgFullServerResponse,
+        flag: ttsFlagWithEvent,
+        event: ttsEventSessionFinished,
+        sessionId: 'sess',
+        payload: utf8.encode('{"status_code":20000000,"message":"ok"}'),
+      ));
+      await done;
+
+      expect(socket.headers!['X-Api-Key'], 'k');
+      expect(socket.headers!['X-Api-Resource-Id'], defaultDoubaoTtsResourceId);
+      expect(sink.bytes, <int>[1, 2, 3]);
+
+      final TtsFrame request = decodeTtsFrame(socket.sent.single);
+      final Map<String, dynamic> body =
+          jsonDecode(utf8.decode(request.payload)) as Map<String, dynamic>;
+      final Map<String, dynamic> params =
+          body['req_params'] as Map<String, dynamic>;
+      expect(params['text'], '你好');
+      expect(params['speaker'], defaultDoubaoTtsVoice);
     });
 
-    test('缺少凭据时抛 TtsException', () async {
-      final DoubaoHttpTtsProvider provider = DoubaoHttpTtsProvider(
-        appId: '',
+    test('错误帧抛 TtsException', () async {
+      final _FakeTtsSocket socket = _FakeTtsSocket();
+      final DoubaoStreamingTtsProvider provider = DoubaoStreamingTtsProvider(
+        apiKey: 'k',
+        connector: (Uri url, Map<String, String> headers) async => socket,
+      );
+      final TtsSession session = await provider.start(BytesAudioSink());
+      session.send('你好');
+
+      final Future<void> done = session.finish();
+      socket.emit(buildTtsFrame(
+        messageType: ttsMsgError,
+        flag: ttsFlagNoSeq,
+        errorCode: 40000000,
+        payload: utf8.encode('bad'),
+      ));
+
+      await expectLater(done, throwsA(isA<TtsException>()));
+    });
+
+    test('缺少凭据时 start 抛 TtsException', () async {
+      final DoubaoStreamingTtsProvider provider = DoubaoStreamingTtsProvider(
+        apiKey: '',
+        appKey: '',
         accessToken: '',
-        client: MockClient(
-            (http.Request request) async => throw StateError('不应请求')),
+        connector: (Uri url, Map<String, String> headers) async =>
+            throw StateError('不应建连'),
       );
 
       await expectLater(
