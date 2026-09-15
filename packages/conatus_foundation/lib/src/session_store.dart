@@ -19,6 +19,10 @@ class SessionStore {
   final List<Future<void>> _writes = <Future<void>>[];
   int _seq = 0;
 
+  /// 落盘写入链：同一进程内的追加串行执行，避免同轮多次 append 并发写同一
+  /// 文件（新会话首写时并发建目录）导致丢失事件。失败不毒化后续写入。
+  Future<void> _chain = Future<void>.value();
+
   /// 活跃会话 id。
   List<String> get ids => _sessions.keys.toList(growable: false);
 
@@ -88,7 +92,12 @@ class SessionStore {
     final SessionPersistence? persistence = _persistence;
     if (persistence != null) {
       session.onEvent((SessionEvent event) {
-        _writes.add(persistence.append(session.id, event));
+        final Future<void> write =
+            _chain.then((_) => persistence.append(session.id, event));
+        _writes.add(write);
+        // 链上吞掉错误只用于不让后续写入被前一次失败卡住；原始 write 保留
+        // 错误供 flush 暴露。
+        _chain = write.catchError((Object _) {});
       });
     }
     session.onClose(() => _sessions.remove(session.id));

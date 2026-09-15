@@ -118,6 +118,23 @@ void main() {
       expect(await reopened.persistedIds(), <String>['s1']);
     });
 
+    test('同一轮连续 append 不丢事件（首写并发建目录）', () async {
+      final SessionStore store = SessionStore(persistence: persistence);
+      final Session session = store.create(id: 'burst');
+      session.append('user/message', data: <String, Object?>{'text': '说普通话'});
+      session
+          .append('assistant/message', data: <String, Object?>{'text': '好的'});
+      await store.flush();
+
+      final SessionStore reopened = SessionStore(persistence: persistence);
+      final Session loaded = await reopened.open('burst');
+
+      expect(
+        loaded.events.map((SessionEvent e) => e.type),
+        <String>['user/message', 'assistant/message'],
+      );
+    });
+
     test('open 未持久化的 id 得到空会话，随后追加会落盘', () async {
       final SessionStore store = SessionStore(persistence: persistence);
       final Session session = await store.open('fresh');
