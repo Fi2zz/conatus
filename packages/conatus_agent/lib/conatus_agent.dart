@@ -62,6 +62,15 @@ export 'src/reflection.dart'
         parseReflectionStrategy,
         provideReflection,
         reflectAndRetry;
+export 'src/router.dart'
+    show
+        RouteDecision,
+        RoutePass,
+        RouteReply,
+        RouteTools,
+        Router,
+        RouterContext,
+        provideRouter;
 export 'src/skill.dart'
     show
         SkillMeta,

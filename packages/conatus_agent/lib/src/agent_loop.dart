@@ -10,6 +10,7 @@ import 'agent_types.dart';
 import 'compaction.dart';
 import 'plan.dart';
 import 'reflection.dart';
+import 'router.dart';
 
 /// Agent Loop。
 class AgentLoop {
@@ -21,6 +22,7 @@ class AgentLoop {
     this.compactor,
     this.memory,
     this.reflector,
+    this.router,
     this.onEvent,
     this.maxSteps = 8,
     this.memoryLimit = 5,
@@ -48,6 +50,9 @@ class AgentLoop {
 
   /// 工具执行后的自省器；null 表示不反思。
   final Reflector? reflector;
+
+  /// 调模型前的确定性路由器；null 表示不路由（直接落模型）。
+  final Router? router;
 
   /// 每轮的观察口（Observability 埋点）：`agent.round` / `agent.finished`。
   final void Function(String type, Map<String, Object?> data)? onEvent;
@@ -102,6 +107,20 @@ class AgentLoop {
       );
     }
     final List<AgentStep> steps = <AgentStep>[];
+    // 确定性快路径：命中本地直答直接收口；命中预置工具先执行再交模型收口；
+    // 未命中（或未装配 router）行为与无路由完全一致。
+    final Router? router = this.router;
+    if (router != null) {
+      final RouteDecision routed = await router.route(userInput);
+      switch (routed) {
+        case RouteReply(:final String text):
+          return _finish(session, messages, steps, text, userInput);
+        case RouteTools(:final List<LlmToolCall> calls):
+          await _runPrepared(session, messages, steps, calls, invoke);
+        case RoutePass():
+          break;
+      }
+    }
     for (int step = 0; step < maxSteps; step++) {
       ensureSessionOpen(session);
       if (_needsReplan && planning && session != null) {
@@ -159,6 +178,33 @@ class AgentLoop {
     }
     return _finish(
         session, messages, steps, '（已达到最大步数 $maxSteps，未收口）', userInput);
+  }
+
+  /// 执行一组预置工具调用：作为一条 assistant 消息 + 若干 tool 结果写入历史，
+  /// 供后续模型调用据此收口（与模型自身下发工具调用的口径一致）。
+  Future<void> _runPrepared(
+    Session? session,
+    List<LlmMessage> messages,
+    List<AgentStep> steps,
+    List<LlmToolCall> calls,
+    Future<ToolResult> Function(LlmToolCall call) invoke,
+  ) async {
+    messages.add(LlmMessage('assistant', '', toolCalls: calls));
+    session?.append(kAssistantMessageEvent, data: <String, Object?>{
+      'text': '',
+      'toolCalls': toolCallsToJson(calls),
+    });
+    for (final LlmToolCall call in calls) {
+      final ToolResult outcome = await invoke(call);
+      messages.add(LlmMessage('tool', outcome.content, toolCallId: call.id));
+      session?.append(kToolResultEvent, data: <String, Object?>{
+        'callId': call.id,
+        'name': call.name,
+        'content': outcome.content,
+        'isError': outcome.isError,
+      });
+      steps.add(AgentStep(call: call, result: outcome));
+    }
   }
 
   Future<AgentTurn> _finish(

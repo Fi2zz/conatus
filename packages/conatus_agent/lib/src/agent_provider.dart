@@ -7,6 +7,7 @@ import 'package:conatus_llm/conatus_llm.dart';
 import 'agent_loop.dart';
 import 'compaction.dart';
 import 'reflection.dart';
+import 'router.dart';
 import 'telemetry.dart';
 
 /// `ctx.agentLoop`：当前上下文可见的 Agent Loop。
@@ -40,6 +41,7 @@ AgentLoop provideAgentLoop(
         compactor: ctx.get<Compactor>('compaction'),
         memory: ctx.get<MemoryStore>('memory'),
         reflector: ctx.get<Reflector>('reflection'),
+        router: ctx.get<Router>('router'),
         maxSteps: maxSteps,
         planning: planning,
         onEvent: telemetry == null
