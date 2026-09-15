@@ -56,10 +56,16 @@ export 'src/prompt_types.dart'
         PromptContext,
         PromptSection;
 export 'src/session.dart' show Session;
+export 'src/session_log.dart' show SessionLog, SessionLogException;
+export 'src/session_log_database.dart' show DatabaseSessionLog;
+export 'src/session_log_memory.dart' show InMemorySessionLog;
+export 'src/session_log_persistence.dart' show PersistenceSessionLog;
+export 'src/session_log_provider.dart'
+    show SessionLogContext, provideSessionLog;
 export 'src/session_persistence.dart'
     show JsonlSessionPersistence, SessionPersistence, provideSessionPersistence;
 export 'src/session_store.dart' show SessionStore, provideSessions;
-export 'src/session_types.dart' show SessionEvent;
+export 'src/session_types.dart' show SessionEvent, nextSessionEventId;
 export 'src/shell.dart'
     show
         CollectedOutput,
