@@ -6,9 +6,9 @@
 > （arXiv:2608.25512）的核心机制。
 
 本包是 monorepo 的**伞包（umbrella）**：自身不含实现，统一再导出
-`conatus_core` / `conatus_foundation` / `conatus_llm` / `conatus_search` /
-`conatus_asr` / `conatus_tts` / `conatus_agent`，因此
-`import 'package:conatus/conatus.dart';` 仍是完整公开 API。
+`conatus_core` / `conatus_credentials` / `conatus_foundation` / `conatus_llm` /
+`conatus_mcp` / `conatus_search` / `conatus_asr` / `conatus_tts` / `conatus_agent`，
+因此 `import 'package:conatus/conatus.dart';` 仍是完整公开 API。
 也可以按需只引入某个模块包，以获得更小的依赖面。
 
 用于构建**可动态加载、卸载、热替换**的插件化系统。核心解决两个正交维度的问题：
@@ -27,13 +27,16 @@
 - 🌳 **上下文树**：服务沿父链向下可见，天然支持作用域隔离
 - ⚡ **重入收敛**：服务变更引发的连锁反应在一次 `notify` 内稳定
 - 🛡️ **循环依赖检测**：无法收敛时快速失败，而非死循环
-- 📦 **零运行时依赖**：核心仅用 Dart 核心库（`llm` / `search` 插件依赖 `http`）
+- 📦 **零运行时依赖**：核心仅用 Dart 核心库（`llm` / `credentials` / `mcp` / `search` 插件依赖 `http`）
 - 🧰 **基础设施插件**：`timer`（定时器即效应）、`logger-console`（分级日志）、`loader`（注册表 + 配置树）、`tools`（`Tool` 基类 + `ParamSpec` + 注册表/执行管线/分组/分级）、`shell` / `fs`（能力缝 + 本地实现）、`search`（搜索能力缝 + web 工具）、`asr`（语音识别能力缝 + `transcribe_audio`）、`tts`（语音合成能力缝 + 音频输出接口）
-- 🗂️ **会话与上下文**：`session`（事件日志 + 仓库 + JSONL 持久化）、`system-prompt`（prompt 段装配）、`compaction`（滚动摘要）、`memory`（长记忆库 + 显式记住/遗忘能力与工具）
+- 🔐 **凭据管理**：`credentials`（统一凭据契约 + 五种来源：环境变量 / 内存 / 文件 / Vault KV v2 / AWS Secrets Manager）——`get` / `require` / `validate` 同步读内存快照，远端来源用 `refresh()` 拉取并可定时轮换，对外只出现 `masked`
+- 🗂️ **会话与上下文**：`session`（事件日志 + 仓库 + JSONL 持久化）、`session-log`（多会话只追加日志：fork / replay / 轨迹重建，附「模型可见即已记录」不变式）、`system-prompt`（prompt 段装配）、`compaction`（滚动摘要）、`memory`（长记忆库 + 显式记住/遗忘能力与工具）
 - 🗄️ **持久化**：`database`（KV 存储 hub + 可插拔后端 + JSON 本地实现）
 - 🤖 **Agent Loop**：`agent`（会话事件 + prompt 装配 + 压缩 + 记忆 + 工具闭环）、`tool-result-eviction`（大结果落盘）、`plan`（结构化计划）、`sub-agent`（`spawn_agent` 隔离委托）、`reflection`（工具后自省重试）
+- 🔌 **MCP 生态**：`mcp`（MCP 客户端：stdio / HTTP / SSE 传输 + 握手与工具发现），外部 server 的工具以 `server__tool` 接入同一张工具表，风险缺省 `medium` 走审批
+- 🗜️ **分层压缩与缓存度量**：`content-classifier`（内容分类器能力缝）、`layered-compaction`（按类别分层折叠：工具结果压成指针、用户偏好留原文）、`context-cache`（可缓存前缀指纹 + 命中遥测）
 - 🔭 **产品化**：`telemetry`（事件导出 + 埋点）、`evaluation`（用例评估 + 基线对比）、`approval`（高危工具审批）、`skill`（技能沉淀）、`recovery`（会话快照恢复）
-- ✅ **完整测试覆盖**：324 个单元测试
+- ✅ **完整测试覆盖**：593 个单元测试
 
 ---
 
@@ -58,10 +61,14 @@ dependency_overrides:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_asr}
   conatus_core:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_core}
+  conatus_credentials:
+    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_credentials}
   conatus_foundation:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_foundation}
   conatus_llm:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_llm}
+  conatus_mcp:
+    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_mcp}
   conatus_search:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_search}
   conatus_tts:
@@ -210,6 +217,40 @@ await for (final event in llm.chatStream(
 
 非流式与流式都支持自动回退：任一提供商失败即尝试下一个，全部失败时抛出汇总了各提供商错误的 `LlmException`。流式回退只在该提供商**尚未产出任何增量**时生效；已产出增量后中途失败会直接抛出。
 
+### `credentials` — 统一凭据管理（环境变量 / 文件 / Vault / AWS）
+
+服务键 `'credentials'`（`ctx.credentials`）。`Credentials` 把「值从哪来」与「值怎么
+被消费」解耦：**读取是同步的**（`get` / `require` / `validate` 读内存快照），远端
+来源用 `refresh()` 把值拉进快照，轮换经 `changes` 广播。这样需要在构造函数里同步
+解析 Key 的 `LlmProvider` 不必改成异步形状。
+
+| 来源 | 类型 | 用途 | 可写 |
+|------|------|------|:---:|
+| 环境变量 | `EnvCredentials()` | 进程环境，默认来源 | 否 |
+| 内存 | `InMemoryCredentials({initial})` | 进程内临时凭据 / 测试替身 | 是 |
+| 文件 | `FileCredentials({path, fallback, refreshInterval})` | 本地 JSON | 否 |
+| Vault | `VaultCredentials({config: VaultConfig(...)})` | HashiCorp Vault KV v2 | 否 |
+| AWS | `AwsSecretsCredentials({config: AwsSecretsConfig(...)})` | Secrets Manager `GetSecretValue`（`SigV4Signer` 手写签名） | 否 |
+
+```dart
+final credentials = provideCredentials(app);          // 缺省 EnvCredentials
+final llm = DoubaoProvider(credentials: credentials); // 取 'ARK_API_KEY'
+
+print(credentials.require('ARK_API_KEY').masked);     // sk-1...cdef
+credentials.validate(<String>['ARK_API_KEY']);        // 缺失抛 CredentialsException('missing')
+```
+
+- 只读来源（env / file / vault / aws）调 `update` 抛 `CredentialsException('read-only')`，
+  只有 `InMemoryCredentials` 可写；`Credential.expired` 为真时 `get` 返回 `null`；
+- 各来源共用 `parseCredentialMap` 解析 `"KEY": "值"` 与
+  `"KEY": {"value": ..., "expiresAt": ...}` 两种形态；
+- 对外只暴露 `Credential.masked`（前 4 + `...` + 后 4，长度 ≤ 8 时整串星号），
+  `toString()` 也只含脱敏值；结构化日志交给 `conatus_core` 的 `redactSecrets`；
+- `DoubaoProvider` / `DeepSeekProvider` 可传 `credentials` 与 `credentialKey`
+  （缺省 `ARK_API_KEY` / `DEEPSEEK_API_KEY`），解析顺序是「显式 `apiKey` → 凭据服务 →
+  环境变量」，并订阅 `changes` 做运行时轮换——Header 每次请求重算，不重建 HTTP client；
+- 不传 `credentials` 时行为与从前完全一致。
+
 ### `timer` — 定时器即可逆效应
 
 定时器登记在调用方上下文上，随上下文释放自动清理（`TimerContext` 扩展，导入即可用）：
@@ -304,6 +345,43 @@ final result = await ctx.tools.call(
 - 失败码：参数不合法 `INVALID_ARGS`、超时 `TOOL_TIMEOUT`、未知工具 `UNKNOWN_TOOL`、
   守卫拒绝 `TOOL_DENIED`、执行体异常 `TOOL_ERROR`，都收敛为失败结果而非外抛；
 - 所有登记返回 `Disposer`，交给 `ctx.effect(...)` 即可随上下文卸载自动撤销。
+
+### `mcp` — MCP 客户端与工具生态
+
+服务键 `'mcp'`（`ctx.mcp`）。把外部 [MCP](https://modelcontextprotocol.io) server
+的工具接进 `ctx.tools`，模型看到的仍是同一张工具表。装配是异步的（要握手与发现
+工具），因此 `provideMcp` 返回 `Future<McpRegistry>`。
+
+```dart
+provideTools(app);
+await provideMcp(app, <McpServerConfig>[
+  McpServerConfig(
+    name: 'fs',
+    type: McpTransportType.stdio,
+    command: 'npx',
+    args: <String>['-y', '@modelcontextprotocol/server-filesystem', '/tmp'],
+  ),
+  McpServerConfig(
+    name: 'remote',
+    type: McpTransportType.http,
+    url: 'https://mcp.example.com/mcp',
+    headers: <String, String>{'Authorization': 'Bearer ${REMOTE_TOKEN}'},
+  ),
+], credentials: credentials, aliases: <String, String>{'read_file': 'fs__read_file'});
+```
+
+- 三种传输 `McpTransportType.stdio` / `.http` / `.sse`，对应 `StdioTransport` /
+  `HttpTransport` / `SseTransport`；`McpClient` 负责握手、`tools/list` 分页、
+  `tools/call` 按 id 关联，超时（默认 30s）只失败本次调用；
+- 工具注册名是 `server__tool`，`group` 为 `mcp:<server>`；入参 schema 由服务端下发，
+  `McpToolAdapter.toSchema()` 直通 `inputSchema`；
+- 风险映射：非标准 `riskLevel`（`readonly` / `read` → `low`，`write` / `mutating` →
+  `medium`，`destructive` / `admin` → `high`）、`annotations.destructiveHint` → `high`、
+  `annotations.readOnlyHint` → `low`，**什么都没声明则缺省 `medium`**（默认需要审批）；
+- `env` / `headers` 的值支持 `${KEY}` 占位符，用 `Credentials` 解析；解析不了时
+  占位符原样保留，且**解析结果不得写进日志**（要排查就用键名）；
+- `McpToolAlias` 给已注册工具加短名；连接登记为可逆效应，`ctx.dispose()` 断开全部
+  连接并注销工具，某个 server 崩溃只注销它自己的工具，其余 server 不受影响。
 
 ### `search` — 搜索能力缝 + web 工具
 
@@ -526,6 +604,51 @@ print((await reopened.open('s1')).events.length);
 - `Session.onEvent` / `onClose` 返回 `Disposer`；关闭后拒绝追加；
 - `SessionPersistence` 是可插拔端口（`list` / `load` / `append` / `remove`），换成数据库后端无需改调用方。
 
+### `session-log` — 多会话只追加日志（fork / replay / 轨迹重建）
+
+服务键 `'sessionLog'`（`ctx.sessionLog`）。`session` 是**单会话**的内存事件日志，
+`SessionLog` 面向**多会话**：按 `sessionId` 归档事件、按时间窗读取、从任意事件点
+分叉历史、按序重放。只追加是硬不变式——日志永不改写，fork 只产生新会话，源会话
+不受影响。`seq` 由日志按会话分配（每会话从 0 起密集递增）。
+
+```dart
+provideSessionPersistence(app);       // 追加式 JSONL
+final log = provideSessionLog(app);   // 三个后端按优先级自动挑选
+provideSessionLogRecorder(app);       // 依赖 'sessionLog'，缺则自动补一个
+
+final agent = provideAgentLoop(app, session: session);
+// 日志 = 业务事件的超集镜像 + llm/request / llm/response / tool/call 派生事件
+print(await log.list());                            // 已有会话 id
+
+final forked = await log.fork(session.id, eventId); // 从任意事件点分叉
+await log.replay(forked, (e) => print(e.type));
+assertModelVisibleInvariant(await log.read(session.id).toList());
+```
+
+- 三个后端：`InMemorySessionLog()`（进程内）、`PersistenceSessionLog(persistence)`
+  （复用追加式 `SessionPersistence`，**长会话无写放大，推荐**）、
+  `DatabaseSessionLog(database, {unit})`（长度前缀键；`DatabaseUnit.put` 整表重写，
+  长会话下有 O(n²) 写放大）；
+- `provideSessionLog(ctx, {log, persistence, database})` 的后端优先级：显式 `log` →
+  `persistence`（或 `'sessionPersistence'` 服务）→ `database`（或 `'database'` 服务，
+  且至少注册了一个后端）→ 内存；上下文释放时关闭日志；错误经
+  `SessionLogException(code, message)` 抛出；
+- Agent 侧由 `SessionLogRecorder` 镜像全部业务事件，再追加 **`llm/request` /
+  `llm/response` / `tool/call` 三类非模型可见的派生事件**，`parentEventId` 串成因果链；
+  业务 `Session` 的事件序列分毫未动（日志只是超集）；
+- `SessionLogLlmProvider` 是不改请求的装饰器，`instrumentSessionLogTools` 挂
+  `tools.use` 中间件记录工具名 / 调用 id / `group` 归因与实参；`provideAgentLoop`
+  只在上下文提供了对应能力时才包装（`'sessionLogRecorder'` 决定是否记轨迹、
+  `'contextCache'` 决定是否度量），未提供则行为与从前完全一致，`composeLlm` 由外到内
+  的叠加顺序是 `SessionLog(Caching(Telemetry(inner)))`；
+- `checkModelVisibleInvariant(events)` / `assertModelVisibleInvariant(events)` 验证
+  「凡进入模型的内容都能在日志里找到出处」：对日志里每条 `llm/request`，从日志重建
+  该点的会话消息并逐条比对（system prompt 由运行时装配，不在比对范围）；
+  `sameJson` 是配套的递归 JSON 比较工具。
+
+`Session` 一侧的 `fork` / `replay` / `read` / `appendEvent` / `lastEventId` 与它配对，
+既有签名全部保持兼容。
+
 ### `system-prompt` — prompt 段装配
 
 服务键 `'systemPrompt'`。各插件注册 `PromptSection` / `PromptContext`（`order` 升序、
@@ -566,6 +689,51 @@ final result = await compaction.compact(session, (events, previous) async {
   return await summarizeWithLlm(events, previous);
 });
 ```
+
+### `layered-compaction` — 分层压缩与内容分类器
+
+服务键同为 `'compaction'`（与 `provideCompaction` **二选一**，重复提供会抛错）。
+`LayeredCompactor` 是 `Compactor` 的 drop-in 替身：接口与契约完全一致，区别在
+`compact` 按内容类别分别处理，而不是一律压成一段摘要。
+
+```dart
+provideContentClassifier(app);    // 服务键 'contentClassifier'
+provideLayeredCompaction(app);    // 注册 'compaction'
+```
+
+- 工具结果压成「工具名 + 结果首行 + 字符数」一行，并指向会话日志中的 `tool/result`
+  事件（**不**额外落盘）；用户偏好原文保留；早期对话交给注入的汇总器产出摘要；
+  近期窗口不处理，留给 Agent Loop 的滑动窗口；
+- `ContentClassifier` 是能力缝：`classify(message)` / `strategyFor(category)` /
+  `recentWindow`，默认实现 `RuleBasedContentClassifier({recentWindow})`（角色 +
+  关键词 + 位置窗口，全部可解释）；`provideContentClassifier(ctx, {classifier})`
+  注册 `'contentClassifier'`；
+- `MessageCategory`：systemPrompt / toolDefinition / skillList / toolResult /
+  userPreference / userTask / earlyConversation / recentConversation；
+  `CompressionStrategy`：none / keep / summarize / evict；
+- 产出 `context.compacted` 遥测：`tokensBefore` / `tokensAfter` / `compacted` /
+  `kept` / `toolResults` / `preferences`；`estimateTokens` / `estimateMessagesTokens`
+  是 chars/4 的粗估，`tokensBefore` / `tokensAfter` 由它们给出。
+
+### `context-cache` — 可缓存前缀与缓存度量
+
+服务键 `'contextCache'`（`ctx.contextCache`）。豆包 / DeepSeek 由**服务端**按请求
+前缀自动缓存，本插件因此只做度量：算前缀指纹、从回包 `usage` 派生命中，**不往请求体
+塞任何非标字段**。
+
+```dart
+provideContextCache(app);            // telemetry 缺省取 'telemetry'
+final agent = provideAgentLoop(app); // 提供 'contextCache' 时自动包一层度量
+```
+
+- `LlmMessage.cacheable` 是**本地标记**，不写入请求体，只用来标记稳定前缀
+  （system prompt + 工具定义）；
+- `CachePlan.of(messages)` 求从头的**连续**可缓存前缀，给出稳定 `cacheKey` 与
+  `cacheableMessages` / `cacheableChars`（尾部增删消息不改变指纹，前缀内任何一条
+  变化都会改变指纹）；
+- `CachingLlmProvider` 原样透传请求，非流式 `chat` 返回后经 `ContextCache.recordHit`
+  记命中并产出 `context.cache` 遥测（`cacheKey` / `cacheableMessages` /
+  `cacheableChars` / `hit`，`hit` 从 provider 回包 `usage` 派生）；`hits` / `misses` 可读。
 
 ### `memory` — 长记忆库 + 显式记住 / 遗忘
 
@@ -637,7 +805,7 @@ print(turn.reply);                 // 已收口的文本
 for (final step in turn.steps) print('${step.call.name}: ${step.result.content}');
 ```
 
-- 依赖 `llm` + `tools`；`systemPrompt` / `compaction` / `memory` / `sessions` 存在时自动接入；
+- 依赖 `llm` + `tools`；`systemPrompt` / `compaction` / `memory` / `sessions` 存在时自动接入；提供了 `sessionLogRecorder` / `contextCache` 时另外叠加轨迹记录与缓存度量（见 `session-log` / `context-cache`）；
 - 工具失败（`ToolResult.isError`）作为失败结果回填，不中断循环；会话在循环中被关闭会中止（`StateError`）；
 - 循环有界（`maxSteps`，默认 8）；所有依赖可注入以便测试；
 - 会话事件（`user/message` / `assistant/message` / `tool/result`）可用 `deriveAgentMessages` 还原为模型消息序列。
@@ -761,6 +929,22 @@ root.provide('x', 1);
 | `FallbackLlm(providers)` / `FallbackLlm.withDefaults()` | 顺序回退链（豆包 → DeepSeek） |
 | `LlmTextDelta` / `LlmReasoningDelta` / `LlmStreamDone` | 流式事件：正文增量 / 思考增量 / 终态（用量、结束原因、累积的工具调用） |
 
+### `Credentials`（`credentials`）
+
+| 成员 | 说明 |
+|------|------|
+| `provideCredentials(ctx, {credentials})` / `ctx.credentials` | 提供 `'credentials'`（缺省 `EnvCredentials`，随上下文释放关闭） |
+| `get(key) → Credential?` / `require(key) → Credential` | **同步**读内存快照；缺失或已过期返回 `null` / 抛 `CredentialsException('missing')` |
+| `validate(keys)` | 批量校验必填键 |
+| `update(key, value) → Future<void>` | 写入；只读来源抛 `CredentialsException('read-only')` |
+| `refresh()` / `changes` / `keys` / `close()` | 拉取远端 / 变更流 / 键列表 / 释放 |
+| `Credential({key, value, expiresAt})` | `masked`（前 4 + `...` + 后 4，≤ 8 全星号）/ `expired`；`toString()` 只含脱敏值 |
+| `EnvCredentials({environment})` / `InMemoryCredentials({initial})` | 环境变量（默认）/ 内存（唯一可写来源） |
+| `FileCredentials({path, fallback, refreshInterval})` | 本地 JSON，支持定时刷新 |
+| `VaultCredentials({config})` / `VaultConfig({address, token, path, mount, refreshInterval})` | HashiCorp Vault KV v2 |
+| `AwsSecretsCredentials({config})` / `AwsSecretsConfig({accessKey, secretKey, region, secretId, sessionToken, endpoint, refreshInterval})` / `SigV4Signer` | AWS Secrets Manager（SigV4 手写签名） |
+| `CredentialsSource` / `CredentialsException(code, message)` / `parseCredentialMap(raw)` | 来源枚举 / 稳定错误码 / 共用的 JSON 解析 |
+
 ### `TimerContext`（`timer`）
 
 | 成员 | 说明 |
@@ -809,6 +993,19 @@ root.provide('x', 1);
 | `group(name, [tools]) → Disposer`（`ctx.tools.group`） | 按领域分组；`groups` / `groupOf` / `namesIn` / `describeGroup` |
 | `guardRisk(ToolRisk) → Disposer` / `describeWithin(ToolRisk)` | 能力分级：拒绝/投影越级工具 |
 | `guard(ToolGuard)` / `use(ToolMiddleware)` / `onChange(fn)` / `onResult(fn)` | 守卫 / 中间件 / 变更 / 结局监听 |
+
+### `McpRegistry` / `McpClient` / `McpToolAdapter`（`mcp`）
+
+| 成员 | 说明 |
+|------|------|
+| `provideMcp(ctx, servers, {aliases, credentials, transportFactory})` / `ctx.mcp` | 提供 `'mcp'`；异步装配，返回 `Future<McpRegistry>` |
+| `McpRegistry`：`servers` / `clientOf(name)` / `toolsOf(name)` / `attach(ctx, client)` / `addAlias(ctx, alias, fullName)` / `close()` | 多 server 连接、别名与生命周期 |
+| `McpClient({transport, serverName, timeout})` | 握手、`tools/list` 分页、`tools/call` 按 id 关联（超时默认 30s） |
+| `McpTransport` / `StdioTransport` / `HttpTransport` / `SseTransport` | 传输缝与三种实现（`connect` / `disconnect` / `send` / `messages` / `diagnostics`） |
+| `McpServerConfig({name, type, command, args, env, url, headers})` / `McpTransportType` / `McpException` | server 配置 / 传输类型 / 错误 |
+| `McpToolAdapter({client, tool})` / `mcpToolName(server, tool)` / `mcpToolRisk(tool)` | 服务端工具 → `Tool`（`server__tool`、`group` 为 `mcp:<server>`、`toSchema()` 直通 `inputSchema`） |
+| `McpToolAlias({inner, alias})` / `toolResultFromMcp(result)` / `describeMcpContent(content)` | 短别名 / 结果转换 / 内容摘要 |
+| `resolveCredentialPlaceholders(raw, credentials)` | 解析 `env` / `headers` 里的 `${KEY}`（未命中原样保留） |
 
 ### `SearchService`（`search`）
 
@@ -881,6 +1078,23 @@ root.provide('x', 1);
 | `create({id})` / `open(id)` / `get(id)` / `close(id)` / `remove(id)` | 会话生命周期 |
 | `persistedIds()` / `flush()` | 已持久化 id / 等待在途写入 |
 | `provideSessionPersistence(ctx, {persistence})` / `JsonlSessionPersistence({dir})` | 提供 `'sessionPersistence'` / 本地 JSONL |
+| `SessionEvent.create({sessionId, type, seq, data, parentEventId, time, id})` / `nextSessionEventId()` | 构造带唯一 id 的事件（`sessionId` / `parentEventId` 表达归属与因果） |
+| `appendEvent(event) → SessionEvent` / `lastEventId` | 回填已构造的事件（按本会话重盖章 id 与 seq）/ 最后一条事件 id |
+| `read({from, to})` / `fork({fromEventId, id})` / `replay(handler)` | 按时间（闭区间）读取 / 从事件点分叉出新会话 / 按序重放 |
+| `SessionEvent.copyWith(...)` / `toJson()` | 复制事件 / 序列化（`data` 中的敏感字段自动脱敏） |
+
+### `SessionLog` / `SessionLogRecorder`（`session-log`）
+
+| 成员 | 说明 |
+|------|------|
+| `provideSessionLog(ctx, {log, persistence, database})` / `ctx.sessionLog` | 提供 `'sessionLog'`；后端优先级：显式 → `sessionPersistence` → `database` → 内存 |
+| `SessionLog`：`append(event)` / `read(sessionId, {from, to})` / `fork(sessionId, fromEventId, {newId})` / `replay(sessionId, handler)` / `list()` / `close()` | 多会话只追加日志抽象（`seq` 按会话分配） |
+| `InMemorySessionLog()` / `PersistenceSessionLog(persistence)` / `DatabaseSessionLog(database, {unit})` | 三个后端；`PersistenceSessionLog` 追加写，长会话推荐 |
+| `SessionLogException(code, message)` | 日志操作失败（稳定错误码） |
+| `provideSessionLogRecorder(ctx, {recorder})` / `ctx.sessionLogRecorder` | 提供 `'sessionLogRecorder'`（缺 `'sessionLog'` 时自动补） |
+| `SessionLogRecorder`：`attach(session)` / `detach()` / `record(type, {data})` / `sessionId` / `lastEventId` | 镜像业务事件 + 追加派生事件，串成因果链 |
+| `SessionLogLlmProvider(inner, {recorder})` / `instrumentSessionLogTools(tools, recorder)` | 记录 `llm/request` / `llm/response` / `tool/call`（不改请求） |
+| `checkModelVisibleInvariant(events)` / `assertModelVisibleInvariant(events)` / `sameJson(left, right)` | 「模型可见即已记录」不变式的检查 / 断言 / 递归 JSON 比较 |
 
 ### `SystemPrompt`（`system-prompt`）
 
@@ -899,6 +1113,29 @@ root.provide('x', 1);
 | `Compactor({keepRecent})` | 保留最近事件数 |
 | `compact(session, summarize, {keepRecent}) → Future<CompactionResult?>` | 折叠较早事件，不足预算返回 `null` |
 | `summaryOf(id)` / `forget(id)` | 查询 / 丢弃滚动摘要 |
+
+### `LayeredCompactor` / `ContentClassifier`（`layered-compaction` / `content-classifier`）
+
+| 成员 | 说明 |
+|------|------|
+| `provideLayeredCompaction(ctx, {compaction, classifier, telemetry, keepRecent})` | 提供 `'compaction'`（与 `provideCompaction` 二选一） |
+| `LayeredCompactor({keepRecent, classifier, telemetry})` | `Compactor` 的 drop-in 替身，按类别分别处理较早事件 |
+| `provideContentClassifier(ctx, {classifier})` / `ctx.contentClassifier` | 提供 `'contentClassifier'`（缺省 `RuleBasedContentClassifier`） |
+| `ContentClassifier`：`classify(message)` / `strategyFor(category)` / `recentWindow` | 内容分类能力缝 |
+| `MessageCategory`（systemPrompt / toolDefinition / skillList / toolResult / userPreference / userTask / earlyConversation / recentConversation） | 内容类别 |
+| `CompressionStrategy`（none / keep / summarize / evict） | 类别对应的压缩策略 |
+| `RuleBasedContentClassifier({recentWindow})` | 角色 + 关键词 + 位置窗口的默认分类器 |
+| `context.compacted` 遥测 | `tokensBefore` / `tokensAfter` / `compacted` / `kept` / `toolResults` / `preferences` |
+
+### `CachePlan` / `ContextCache`（`context-cache`）
+
+| 成员 | 说明 |
+|------|------|
+| `provideContextCache(ctx, {cache, telemetry})` / `ctx.contextCache` | 提供 `'contextCache'` |
+| `CachePlan.of(messages)` | 连续可缓存前缀：`cacheKey` / `cacheableMessages` / `cacheableChars` / `empty` |
+| `CachingLlmProvider(inner, {cache})` | 透传请求，按回包 `usage` 记命中（不加任何请求字段） |
+| `ContextCache`：`planFor(messages)` / `recordHit({plan, usage})` / `hits` / `misses` | 前缀计划 / 命中记账 / `context.cache` 遥测 |
+| `LlmMessage.cacheable` | 本地前缀标记，不写入请求体 |
 
 ### `MemoryStore`（`memory`）
 

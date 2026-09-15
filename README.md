@@ -12,11 +12,13 @@
 | 包 | 说明 | 依赖 |
 |----|------|------|
 | [`conatus_core`](packages/conatus_core) | 核心范式：`Context` / `EffectScope` / `Reactor`（零运行时依赖） | — |
-| [`conatus_foundation`](packages/conatus_foundation) | 基础设施插件：timer / logger / loader / tools / shell / fs / session / system-prompt / memory / database / ask-user | `conatus_core` |
-| [`conatus_llm`](packages/conatus_llm) | 大模型接入（豆包 / DeepSeek，chat 与 responses 两种形态） | `conatus_core`、`http` |
+| [`conatus_foundation`](packages/conatus_foundation) | 基础设施插件：timer / logger / loader / tools / shell / fs / session / session-log / system-prompt / memory / database / ask-user | `conatus_core` |
+| [`conatus_credentials`](packages/conatus_credentials) | 凭据能力缝：环境变量 / 文件 / 内存 / Vault KV v2 / AWS Secrets Manager | `conatus_core`、`http` |
+| [`conatus_llm`](packages/conatus_llm) | 大模型接入（豆包 / DeepSeek，chat 与 responses 两种形态） | `conatus_core`、`conatus_credentials`、`http` |
 | [`conatus_search`](packages/conatus_search) | 搜索能力缝 + `web_search` / `fetch_url` | `conatus_core`、`conatus_foundation`、`http` |
 | [`conatus_asr`](packages/conatus_asr) | ASR 能力缝（豆包/火山流式识别）+ `transcribe_audio` + 可替换音频源 | `conatus_core`、`conatus_foundation` |
 | [`conatus_tts`](packages/conatus_tts) | TTS 能力缝（豆包/火山语音合成）+ 可替换音频输出接口 | `conatus_core`、`http` |
+| [`conatus_mcp`](packages/conatus_mcp) | MCP（Model Context Protocol）客户端：stdio / HTTP / SSE 传输 + 工具接入 | `conatus_core`、`conatus_credentials`、`conatus_foundation`、`http` |
 | [`conatus_agent`](packages/conatus_agent) | Agent Loop 与产品化：plan / sub-agent / reflection / telemetry / eval / approval / skill / recovery | `conatus_core`、`conatus_foundation`、`conatus_llm` |
 | [`conatus_tui`](packages/conatus_tui) | 基于 [nocterm](https://pub.dev/packages/nocterm) 的文本 TUI：对话 + 工具闭环、斜杠命令、会话选择面板 | `conatus_agent`、`conatus_llm`、`conatus_search`、`nocterm` |
 | [`conatus`](packages/conatus) | 伞包（umbrella）：再导出以上全部，保持 `package:conatus/conatus.dart` 兼容 | 全部 |
@@ -25,8 +27,9 @@
 
 ```
 conatus ─▶ conatus_agent ─▶ conatus_llm ─▶ conatus_core
-                │                              ▲
-                └▶ conatus_foundation ─────────┘
+                │           └▶ conatus_credentials ─▶ conatus_core
+                └▶ conatus_foundation ─▶ conatus_core
+conatus_mcp ────▶ conatus_foundation、conatus_credentials
 conatus_search ─▶ conatus_foundation
 conatus_asr ────▶ conatus_foundation
 conatus_tts ────▶ conatus_core
@@ -74,10 +77,14 @@ dependency_overrides:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_asr}
   conatus_core:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_core}
+  conatus_credentials:
+    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_credentials}
   conatus_foundation:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_foundation}
   conatus_llm:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_llm}
+  conatus_mcp:
+    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_mcp}
   conatus_search:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_search}
   conatus_tts:
@@ -106,7 +113,8 @@ dependencies:
 ### 方案 C：发布后用版本号（推荐的长期方案）
 
 将各包按依赖顺序发布到 pub.dev（`conatus_core` → `conatus_foundation` →
-`conatus_llm` → `conatus_search` → `conatus_agent` → `conatus`），之后消费方只需：
+`conatus_credentials` → `conatus_llm` → `conatus_mcp` → `conatus_search` →
+`conatus_agent` → `conatus`），之后消费方只需：
 
 ```yaml
 dependencies:

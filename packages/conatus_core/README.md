@@ -5,6 +5,7 @@ conatus 的核心范式（零运行时依赖）：
 - `EffectScope` — 可逆效应的 LIFO 撤销（时间可组合性）
 - `Reactor` — 服务变更的同步广播与重入收敛（空间可组合性调度）
 - `Context` — 统一上下文，同时承载效应与共效应
+- `isSensitiveKey` / `maskSecret` / `redactSecrets` — 密钥脱敏：判定敏感键名、遮蔽单个值（前 4 + `...` + 后 4，长度 ≤ 8 时整串星号）、递归清洗 Map / List（不改入参）
 
 ```dart
 import 'package:conatus_core/conatus_core.dart';
