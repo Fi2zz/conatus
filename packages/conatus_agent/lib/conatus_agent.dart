@@ -11,12 +11,16 @@ export 'src/agent_events.dart'
         toolCallsFromJson,
         toolCallsToJson;
 export 'src/agent_loop.dart' show AgentLoop;
-export 'src/agent_provider.dart' show AgentContext, provideAgentLoop;
+export 'src/agent_provider.dart'
+    show AgentContext, composeLlm, provideAgentLoop;
 export 'src/agent_types.dart'
     show
         AgentStep,
         AgentTurn,
         kAssistantMessageEvent,
+        kLlmRequestEvent,
+        kLlmResponseEvent,
+        kToolCallEvent,
         kToolResultEvent,
         kUserMessageEvent;
 export 'src/approval.dart'
@@ -40,6 +44,11 @@ export 'src/eval.dart'
         EvalRunner,
         Evaluator,
         defaultEvalJudge;
+export 'src/model_visible_invariant.dart'
+    show
+        assertModelVisibleInvariant,
+        checkModelVisibleInvariant,
+        sameJson;
 export 'src/plan.dart'
     show
         Plan,
@@ -72,6 +81,13 @@ export 'src/router.dart'
         Router,
         RouterContext,
         provideRouter;
+export 'src/session_log_integration.dart'
+    show
+        SessionLogRecorder,
+        SessionLogRecorderContext,
+        instrumentSessionLogTools,
+        provideSessionLogRecorder;
+export 'src/session_log_llm.dart' show SessionLogLlmProvider;
 export 'src/skill.dart'
     show
         SkillMeta,

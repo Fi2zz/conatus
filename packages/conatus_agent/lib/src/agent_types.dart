@@ -16,6 +16,19 @@ const String kAssistantMessageEvent = 'assistant/message';
 /// 工具结果事件类型。
 const String kToolResultEvent = 'tool/result';
 
+/// 模型请求事件类型。
+///
+/// Session Log 的**派生事件**（非模型可见）：记录真正发给模型的消息与工具表，
+/// 用于「模型可见即可从日志重建」的不变式校验。`deriveAgentMessages` 只识别
+/// 三类消息事件，因此它们不会污染请求派生。
+const String kLlmRequestEvent = 'llm/request';
+
+/// 模型响应事件类型（Session Log 的派生事件）。
+const String kLlmResponseEvent = 'llm/response';
+
+/// 工具调用事件类型（Session Log 的派生事件，早于工具执行）。
+const String kToolCallEvent = 'tool/call';
+
 /// 一次工具调用在循环中的步骤记录。
 class AgentStep {
   const AgentStep({required this.call, required this.result});

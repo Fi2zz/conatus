@@ -8,6 +8,8 @@ import 'agent_loop.dart';
 import 'compaction.dart';
 import 'reflection.dart';
 import 'router.dart';
+import 'session_log_integration.dart';
+import 'session_log_llm.dart';
 import 'telemetry.dart';
 
 /// `ctx.agentLoop`：当前上下文可见的 Agent Loop。
@@ -30,13 +32,14 @@ AgentLoop provideAgentLoop(
   final LlmProvider llm = ctx.require<LlmProvider>('llm');
   final ToolRegistry tools = ctx.require<ToolRegistry>('tools');
   final Telemetry? telemetry = ctx.get<Telemetry>('telemetry');
+  final SessionLogRecorder? recorder =
+      ctx.get<SessionLogRecorder>('sessionLogRecorder');
+  final Session? target = session ?? _soleOpenSession(ctx);
   final AgentLoop resolved = agent ??
       AgentLoop(
-        llm: telemetry == null
-            ? llm
-            : TelemetryLlmProvider(llm, telemetry: telemetry),
+        llm: composeLlm(llm, telemetry: telemetry, recorder: recorder),
         tools: tools,
-        session: session ?? _soleOpenSession(ctx),
+        session: target,
         systemPrompt: ctx.get<SystemPrompt>('systemPrompt'),
         compactor: ctx.get<Compactor>('compaction'),
         memory: ctx.get<MemoryStore>('memory'),
@@ -49,8 +52,31 @@ AgentLoop provideAgentLoop(
             : (String type, Map<String, Object?> data) =>
                 telemetry.emit(TelemetryEvent(type, data: data)),
       );
+  if (recorder != null && target != null) {
+    ctx.effect(() => recorder.attach(target));
+    ctx.effect(() => instrumentSessionLogTools(tools, recorder));
+  }
   ctx.provide('agentLoop', resolved);
   return resolved;
+}
+
+/// 按当前上下文已提供的能力叠加 [LlmProvider] 装饰器。
+///
+/// 由外到内：Session Log（记录真正发出的请求与收到的响应）→ 遥测（记录提供方
+/// 行为）→ 原始提供方。未提供对应能力时不包装，行为与从前一致。
+LlmProvider composeLlm(
+  LlmProvider base, {
+  Telemetry? telemetry,
+  SessionLogRecorder? recorder,
+}) {
+  LlmProvider composed = base;
+  if (telemetry != null) {
+    composed = TelemetryLlmProvider(composed, telemetry: telemetry);
+  }
+  if (recorder != null) {
+    composed = SessionLogLlmProvider(composed, recorder: recorder);
+  }
+  return composed;
 }
 
 Session? _soleOpenSession(Context ctx) {

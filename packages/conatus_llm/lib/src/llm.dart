@@ -55,6 +55,7 @@ class LlmMessage {
     this.content, {
     this.toolCalls = const <LlmToolCall>[],
     this.toolCallId,
+    this.cacheable = false,
   });
 
   final String role; // system / user / assistant / tool
@@ -65,6 +66,13 @@ class LlmMessage {
 
   /// 工具结果消息对应的调用 id（role 为 `tool` 时必填）。
   final String? toolCallId;
+
+  /// 是否属于可缓存的稳定前缀（如 system prompt + 工具定义）。
+  ///
+  /// 纯本地标记，**不会**写入请求体：豆包 / DeepSeek 的前缀缓存由服务端自动
+  /// 生效，塞入非标字段可能被拒。它只用于 `CachingLlmProvider` 计算连续可缓存
+  /// 前缀与缓存度量。
+  final bool cacheable;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'role': role,
