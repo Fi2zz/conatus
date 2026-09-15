@@ -22,6 +22,22 @@ dart run conatus_tui --session tui --first "现在几点？"
 `--session <id>` 指定启动会话（对应 `.conatus/sessions/<id>.jsonl`）；
 `--first <文本>` 挂载后自动发一轮，便于冒烟验证。
 
+## DeepSeek Demo
+
+`example/deepseek_demo.dart` 用 conatus 的 `DeepSeekProvider` 驱动 TUI；
+未设置 `DEEPSEEK_API_KEY` 时退回离线脚本模型（时间类问题仍会走 `get_time` 工具），
+无 Key 也能预览界面：
+
+```bash
+# 真实调用 DeepSeek
+export DEEPSEEK_API_KEY="sk-..."
+dart run packages/conatus_tui/example/deepseek_demo.dart
+
+# 指定模型 / 会话 / 首轮
+dart run packages/conatus_tui/example/deepseek_demo.dart \
+  --model deepseek-chat --session demo --first "现在几点？"
+```
+
 ## 功能
 
 - **对话 + 工具闭环**：`AgentLoop` 自动接入 llm / tools / system-prompt /

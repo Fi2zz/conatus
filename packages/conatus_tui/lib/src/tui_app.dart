@@ -38,11 +38,15 @@ class ConatusTuiRuntime {
   ///
   /// [sessionDir] / [memoryFile] 缺省落在 `<cwd>/.conatus` 下；
   /// [webTools] 为 true 时注册 DuckDuckGo（有 [exaApiKey] 则 Exa 优先）。
+  /// [llm] 缺省用 `FallbackLlm.withDefaults()`（豆包 → DeepSeek）；传入后按注入的
+  /// 提供商为准（如 DeepSeek-only 的 Demo）。[modelLabel] 覆盖顶栏模型标签。
   static Future<ConatusTuiRuntime> create({
     String? sessionDir,
     String? memoryFile,
     String? exaApiKey,
     bool webTools = true,
+    FallbackLlm? llm,
+    String? modelLabel,
   }) async {
     final Context app = Context.root(name: 'conatus');
     final String baseDir =
@@ -78,7 +82,7 @@ class ConatusTuiRuntime {
     }
 
     // ── 模型 / 自省 / 子 Agent ──────────────────────────────────
-    provideLlm(app);
+    provideLlm(app, llm: llm);
     provideReflection(app);
     provideSpawnAgent(
       app,
@@ -118,7 +122,7 @@ class ConatusTuiRuntime {
       app: app,
       sessions: sessions,
       tools: app.tools,
-      modelLabel: _modelLabel(),
+      modelLabel: modelLabel ?? _modelLabel(),
     );
   }
 
