@@ -1,11 +1,44 @@
 /// 控制器：把 Agent Loop 的事件投射到屏上记录，并处理斜杠命令。
 library;
 
+import 'dart:async';
+
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 import 'package:conatus_tui/conatus_tui.dart';
 import 'package:test/test.dart';
+
+/// 模型调用挂起不返回，直到被放行（模拟对端不响应）。
+class _HangingProvider implements LlmProvider {
+  final Completer<void> started = Completer<void>();
+  final Completer<void> release = Completer<void>();
+
+  @override
+  String get name => 'hanging';
+
+  @override
+  Future<LlmResult> chat(
+    List<LlmMessage> messages, {
+    Map<String, dynamic>? options,
+    List<Map<String, dynamic>>? tools,
+  }) async {
+    if (!started.isCompleted) started.complete();
+    await release.future;
+    return const LlmResult(content: '迟到', provider: 'hanging', model: 'm');
+  }
+
+  @override
+  Stream<LlmStreamEvent> chatStream(
+    List<LlmMessage> messages, {
+    Map<String, dynamic>? options,
+    List<Map<String, dynamic>>? tools,
+  }) =>
+      const Stream<LlmStreamEvent>.empty();
+
+  @override
+  void close() {}
+}
 
 /// 按脚本返回结果的假 provider。
 class _ScriptedProvider implements LlmProvider {
@@ -29,6 +62,7 @@ class _ScriptedProvider implements LlmProvider {
   Stream<LlmStreamEvent> chatStream(
     List<LlmMessage> messages, {
     Map<String, dynamic>? options,
+    List<Map<String, dynamic>>? tools,
   }) =>
       const Stream<LlmStreamEvent>.empty();
 
@@ -186,6 +220,41 @@ void main() {
 
     expect(controller.transcript.messages.single.text, contains('已遗忘'));
     expect(memory.length, 0);
+    app.dispose();
+  });
+
+  test('interrupt 打断在飞轮次：busy 复位且不产回复', () async {
+    final _HangingProvider provider = _HangingProvider();
+    final Context app = Context.root();
+    provideTools(app);
+    provideLlm(app, llm: FallbackLlm(<LlmProvider>[provider]));
+    final SessionStore sessions = provideSessions(app);
+    final ConatusTuiController controller = ConatusTuiController(
+      app: app,
+      sessions: sessions,
+      name: 'test',
+      initialSession: 's1',
+      modelLabel: 'hanging',
+      onExit: () {},
+    );
+    await controller.start();
+
+    final Future<void> running = controller.handleLine('你好');
+    await provider.started.future;
+    expect(controller.busy, isTrue);
+
+    controller.interrupt();
+    await running;
+
+    expect(controller.busy, isFalse);
+    expect(
+      controller.transcript.messages.any(
+        (TuiMessage m) => m.role == TuiRole.assistant,
+      ),
+      isFalse,
+    );
+    expect(controller.transcript.messages.last.text, contains('已打断'));
+    provider.release.complete();
     app.dispose();
   });
 }

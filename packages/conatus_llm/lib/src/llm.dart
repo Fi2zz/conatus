@@ -124,20 +124,27 @@ final class LlmReasoningDelta extends LlmStreamEvent {
   String toString() => 'LlmReasoningDelta($text)';
 }
 
-/// 流结束：携带累计用量与结束原因。
+/// 流结束：携带累计用量、结束原因与工具调用。
 ///
 /// 由 `chatStream` 在流末尾产出一次；若流中途失败则不产出。
 final class LlmStreamDone extends LlmStreamEvent {
   const LlmStreamDone({
     this.usage = const <String, dynamic>{},
     this.finishReason,
+    this.toolCalls = const <LlmToolCall>[],
   });
 
   final Map<String, dynamic> usage;
   final String? finishReason;
 
+  /// 流式累积完成的工具调用；无工具调用时为空。
+  ///
+  /// 工具参数以 JSON 分片到达，须攒到流结束才能得到完整调用，故在终态一次性给出。
+  final List<LlmToolCall> toolCalls;
+
   @override
-  String toString() => 'LlmStreamDone($finishReason, $usage)';
+  String toString() =>
+      'LlmStreamDone($finishReason, ${toolCalls.length} toolCalls, $usage)';
 }
 
 /// 大模型提供商抽象。
@@ -155,9 +162,13 @@ abstract class LlmProvider {
   });
 
   /// 发送流式聊天补全请求。
+  ///
+  /// [tools] 语义与 [chat] 一致；工具调用以 JSON 分片到达，攒到流结束后
+  /// 由终态 [LlmStreamDone.toolCalls] 一次性给出。
   Stream<LlmStreamEvent> chatStream(
     List<LlmMessage> messages, {
     Map<String, dynamic>? options,
+    List<Map<String, dynamic>>? tools,
   });
 
   /// 释放底层资源（如 HTTP 客户端）。默认无操作。
@@ -228,13 +239,17 @@ class FallbackLlm implements LlmProvider {
   Stream<LlmStreamEvent> chatStream(
     List<LlmMessage> messages, {
     Map<String, dynamic>? options,
+    List<Map<String, dynamic>>? tools,
   }) async* {
     final List<String> errors = <String>[];
     for (final LlmProvider provider in providers) {
       bool emitted = false;
       try {
-        await for (final LlmStreamEvent event
-            in provider.chatStream(messages, options: options)) {
+        await for (final LlmStreamEvent event in provider.chatStream(
+          messages,
+          options: options,
+          tools: tools,
+        )) {
           emitted = true;
           yield event;
         }

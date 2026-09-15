@@ -25,6 +25,7 @@ class _NoopProvider implements LlmProvider {
   Stream<LlmStreamEvent> chatStream(
     List<LlmMessage> messages, {
     Map<String, dynamic>? options,
+    List<Map<String, dynamic>>? tools,
   }) =>
       const Stream<LlmStreamEvent>.empty();
 

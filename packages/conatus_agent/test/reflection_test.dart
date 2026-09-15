@@ -27,6 +27,7 @@ class _ReplyProvider implements LlmProvider {
   Stream<LlmStreamEvent> chatStream(
     List<LlmMessage> messages, {
     Map<String, dynamic>? options,
+    List<Map<String, dynamic>>? tools,
   }) =>
       const Stream<LlmStreamEvent>.empty();
 
@@ -58,6 +59,7 @@ class _ScriptedMain implements LlmProvider {
   Stream<LlmStreamEvent> chatStream(
     List<LlmMessage> messages, {
     Map<String, dynamic>? options,
+    List<Map<String, dynamic>>? tools,
   }) =>
       const Stream<LlmStreamEvent>.empty();
 

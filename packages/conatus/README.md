@@ -190,18 +190,23 @@ final llm = DoubaoProvider(apiStyle: LlmApiStyle.responses);
 final result = await llm.chat([const LlmMessage('user', '你好')]);
 print(result.content);
 
-// 流式：正文 / 思考增量 + 终态用量
-await for (final event in llm.chatStream([const LlmMessage('user', '你好')])) {
+// 流式：正文 / 思考增量 + 终态用量与工具调用
+await for (final event in llm.chatStream(
+  [const LlmMessage('user', '现在几点？')],
+  tools: app.tools.describe(), // 与非流式一致，可下发工具 schema
+)) {
   switch (event) {
     case LlmTextDelta(:final text):
       stdout.write(text);
     case LlmReasoningDelta(:final text):
       break; // 思考增量
-    case LlmStreamDone(:final finishReason, :final usage):
-      print('\n[$finishReason] $usage');
+    case LlmStreamDone(:final finishReason, :final usage, :final toolCalls):
+      print('\n[$finishReason] $usage ${toolCalls.length} 次工具调用');
   }
 }
 ```
+
+`chat` / `chatStream` 的 `tools` 参数语义一致：非空时以原生 function calling 下发，`chat` 的结果与 `chatStream` 的终态都在 `toolCalls` 里给出。流式下工具参数是 JSON 分片，攒到流结束才完整，故由 `LlmStreamDone.toolCalls` 一次性给出。
 
 非流式与流式都支持自动回退：任一提供商失败即尝试下一个，全部失败时抛出汇总了各提供商错误的 `LlmException`。流式回退只在该提供商**尚未产出任何增量**时生效；已产出增量后中途失败会直接抛出。
 
@@ -749,12 +754,12 @@ root.provide('x', 1);
 
 | 成员 | 说明 |
 |------|------|
-| `chat(messages, {options}) → Future<LlmResult>` | 非流式补全 |
-| `chatStream(messages, {options}) → Stream<LlmStreamEvent>` | 流式补全 |
+| `chat(messages, {options, tools}) → Future<LlmResult>` | 非流式补全（`tools` 触发原生 function calling） |
+| `chatStream(messages, {options, tools}) → Stream<LlmStreamEvent>` | 流式补全 |
 | `close()` | 释放底层 HTTP 客户端 |
 | `DoubaoProvider({apiStyle, ...})` / `DeepSeekProvider({apiStyle, ...})` | 内置 provider，`apiStyle` 默认 `chat` |
 | `FallbackLlm(providers)` / `FallbackLlm.withDefaults()` | 顺序回退链（豆包 → DeepSeek） |
-| `LlmTextDelta` / `LlmReasoningDelta` / `LlmStreamDone` | 流式事件：正文增量 / 思考增量 / 终态（用量、结束原因） |
+| `LlmTextDelta` / `LlmReasoningDelta` / `LlmStreamDone` | 流式事件：正文增量 / 思考增量 / 终态（用量、结束原因、累积的工具调用） |
 
 ### `TimerContext`（`timer`）
 

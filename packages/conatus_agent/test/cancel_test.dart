@@ -28,7 +28,9 @@ class _HangingProvider implements LlmProvider {
   Stream<LlmStreamEvent> chatStream(
     List<LlmMessage> messages, {
     Map<String, dynamic>? options,
-  }) => const Stream<LlmStreamEvent>.empty();
+    List<Map<String, dynamic>>? tools,
+  }) =>
+      const Stream<LlmStreamEvent>.empty();
 
   @override
   void close() {}

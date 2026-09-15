@@ -4,6 +4,14 @@
 
 ## [未发布]
 
+`llm` 流式补全补齐 function calling：
+
+- `LlmProvider.chatStream` / `FallbackLlm.chatStream` 新增 `tools` 参数，与非流式
+  `chat` 语义一致，透传工具 schema
+- 流式解析累积工具调用分片（Chat Completions 按 `tool_calls[].index`、
+  Responses 按 `output_item` / `function_call_arguments`），在终态
+  `LlmStreamDone.toolCalls` 一次性给出完整调用
+
 仓库重组为 pub workspace monorepo，按依赖层次拆包：
 
 - `conatus_core` — `Context` / `EffectScope` / `Reactor`（零运行时依赖）

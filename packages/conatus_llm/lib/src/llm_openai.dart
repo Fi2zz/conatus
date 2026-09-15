@@ -268,11 +268,14 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
   Stream<LlmStreamEvent> chatStream(
     List<LlmMessage> messages, {
     Map<String, dynamic>? options,
+    List<Map<String, dynamic>>? tools,
   }) async* {
     _requireKey();
     final http.Request request = http.Request('POST', _endpoint)
       ..headers.addAll(_headers)
-      ..body = jsonEncode(_body(messages, stream: true, options: options));
+      ..body = jsonEncode(
+        _body(messages, stream: true, options: options, tools: tools),
+      );
 
     final http.StreamedResponse response;
     try {
@@ -296,7 +299,11 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
         yield event;
       }
     }
-    yield LlmStreamDone(usage: state.usage, finishReason: state.finishReason);
+    yield LlmStreamDone(
+      usage: state.usage,
+      finishReason: state.finishReason,
+      toolCalls: state.buildToolCalls(),
+    );
   }
 
   List<LlmStreamEvent> _frameEvents(
@@ -331,7 +338,27 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
     if (content != null && content.isNotEmpty) {
       events.add(LlmTextDelta(content));
     }
+    _accumulateChatToolCalls(delta['tool_calls'], state);
     return events;
+  }
+
+  /// Chat Completions 的 `delta.tool_calls`：按 `index` 键累积 id / name /
+  /// arguments 分片。首个分片通常带 `id` 与 `function.name`，后续只补 arguments。
+  void _accumulateChatToolCalls(Object? rawCalls, _StreamState state) {
+    if (rawCalls is! List) return;
+    for (final Object? rawCall in rawCalls) {
+      if (rawCall is! Map) continue;
+      final int index =
+          (rawCall['index'] as int?) ?? state.chatToolCalls.length;
+      final _ToolCallBuilder builder = state.chatBuilder(index);
+      final Object? id = rawCall['id'];
+      if (id is String && id.isNotEmpty) builder.id = id;
+      final Object? function = rawCall['function'];
+      if (function is! Map) continue;
+      final Object? name = function['name'];
+      if (name is String && name.isNotEmpty) builder.name = name;
+      builder.addArguments(function['arguments']);
+    }
   }
 
   List<LlmStreamEvent> _responsesFrame(
@@ -350,6 +377,18 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
         return delta.isEmpty
             ? const <LlmStreamEvent>[]
             : <LlmStreamEvent>[LlmReasoningDelta(delta)];
+      case 'response.output_item.added':
+        _accumulateResponsesItem(json['item'], state);
+        return const <LlmStreamEvent>[];
+      case 'response.function_call_arguments.delta':
+        _appendResponsesArguments(json, state);
+        return const <LlmStreamEvent>[];
+      case 'response.function_call_arguments.done':
+        _setResponsesArguments(json, state);
+        return const <LlmStreamEvent>[];
+      case 'response.output_item.done':
+        _accumulateResponsesItem(json['item'], state);
+        return const <LlmStreamEvent>[];
       case 'response.completed':
       case 'response.incomplete':
         final Map<String, dynamic> data =
@@ -372,6 +411,41 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
     }
   }
 
+  /// Responses 输出项：`function_call` 项携带 call_id / name / arguments。
+  /// 首帧（`output_item.added`）与终帧（`output_item.done`）各调一次，
+  /// 终帧的 arguments 为权威完整值。
+  void _accumulateResponsesItem(Object? rawItem, _StreamState state) {
+    if (rawItem is! Map<String, dynamic> ||
+        rawItem['type'] != 'function_call') {
+      return;
+    }
+    final _ToolCallBuilder builder =
+        state.responsesBuilder('${rawItem['id'] ?? ''}');
+    final Object? callId = rawItem['call_id'];
+    if (callId is String && callId.isNotEmpty) builder.id = callId;
+    final Object? name = rawItem['name'];
+    if (name is String && name.isNotEmpty) builder.name = name;
+    builder.setArguments(rawItem['arguments']);
+  }
+
+  /// `response.function_call_arguments.delta`：追加 arguments 分片。
+  void _appendResponsesArguments(
+    Map<String, dynamic> json,
+    _StreamState state,
+  ) =>
+      state.responsesBuilder('${json['item_id'] ?? ''}').addArguments(
+            json['delta'],
+          );
+
+  /// `response.function_call_arguments.done`：以完整 arguments 覆盖。
+  void _setResponsesArguments(
+    Map<String, dynamic> json,
+    _StreamState state,
+  ) =>
+      state
+          .responsesBuilder('${json['item_id'] ?? ''}')
+          .setArguments(json['arguments']);
+
   void _requireKey() {
     if (apiKey.isEmpty) {
       throw LlmException(name, '缺少 API Key');
@@ -382,10 +456,64 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
   void close() => _client.close();
 }
 
-/// 流式累积状态：用量与结束原因可能晚于增量到达，收尾时统一产出。
+/// 流式累积状态：用量、结束原因与工具调用分片可能晚于增量到达，收尾时统一产出。
 class _StreamState {
   Map<String, dynamic> usage = const <String, dynamic>{};
   String? finishReason;
+
+  /// Chat Completions：按 `tool_calls[].index` 累积。
+  final List<_ToolCallBuilder> chatToolCalls = <_ToolCallBuilder>[];
+
+  /// Responses：按输出项 `id` 累积。
+  final Map<String, _ToolCallBuilder> responsesToolCalls =
+      <String, _ToolCallBuilder>{};
+
+  _ToolCallBuilder chatBuilder(int index) {
+    while (chatToolCalls.length <= index) {
+      chatToolCalls.add(_ToolCallBuilder());
+    }
+    return chatToolCalls[index];
+  }
+
+  _ToolCallBuilder responsesBuilder(String itemId) =>
+      responsesToolCalls.putIfAbsent(itemId, _ToolCallBuilder.new);
+
+  /// 汇总已完成的工具调用；丢弃只收到分片、始终无名的占位项。
+  List<LlmToolCall> buildToolCalls() => <LlmToolCall>[
+        for (final _ToolCallBuilder builder in chatToolCalls) builder.build(),
+        for (final _ToolCallBuilder builder in responsesToolCalls.values)
+          builder.build(),
+      ].where((LlmToolCall call) => call.name.isNotEmpty).toList();
+}
+
+/// 流式工具调用分片累积器：id / name 一次性到达，arguments 为 JSON 分片。
+class _ToolCallBuilder {
+  String id = '';
+  String name = '';
+  final StringBuffer _arguments = StringBuffer();
+
+  /// 追加 arguments 分片；非字符串（如已解析的 Map）按 JSON 编码。
+  void addArguments(Object? chunk) {
+    if (chunk is String) {
+      if (chunk.isNotEmpty) _arguments.write(chunk);
+    } else if (chunk != null) {
+      _arguments.write(jsonEncode(chunk));
+    }
+  }
+
+  /// 以完整 arguments 覆盖；空串忽略（终帧缺省时不抹掉已累积分片）。
+  void setArguments(Object? complete) {
+    if (complete is! String || complete.isEmpty) return;
+    _arguments
+      ..clear()
+      ..write(complete);
+  }
+
+  LlmToolCall build() => LlmToolCall(
+        id: id,
+        name: name,
+        arguments: _arguments.isEmpty ? '{}' : _arguments.toString(),
+      );
 }
 
 Map<String, dynamic>? _tryDecode(String data) {

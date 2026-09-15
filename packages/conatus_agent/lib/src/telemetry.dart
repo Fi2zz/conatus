@@ -192,8 +192,9 @@ class TelemetryLlmProvider implements LlmProvider {
   Stream<LlmStreamEvent> chatStream(
     List<LlmMessage> messages, {
     Map<String, dynamic>? options,
+    List<Map<String, dynamic>>? tools,
   }) =>
-      inner.chatStream(messages, options: options);
+      inner.chatStream(messages, options: options, tools: tools);
 
   @override
   void close() => inner.close();

@@ -32,6 +32,7 @@ class _ScriptedProvider implements LlmProvider {
   Stream<LlmStreamEvent> chatStream(
     List<LlmMessage> messages, {
     Map<String, dynamic>? options,
+    List<Map<String, dynamic>>? tools,
   }) =>
       const Stream<LlmStreamEvent>.empty();
 
@@ -55,6 +56,7 @@ class _ThrowingProvider implements LlmProvider {
   Stream<LlmStreamEvent> chatStream(
     List<LlmMessage> messages, {
     Map<String, dynamic>? options,
+    List<Map<String, dynamic>>? tools,
   }) =>
       const Stream<LlmStreamEvent>.empty();
 
@@ -86,6 +88,7 @@ class _BlockingProvider implements LlmProvider {
   Stream<LlmStreamEvent> chatStream(
     List<LlmMessage> messages, {
     Map<String, dynamic>? options,
+    List<Map<String, dynamic>>? tools,
   }) =>
       const Stream<LlmStreamEvent>.empty();
 
