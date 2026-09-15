@@ -1,0 +1,5 @@
+# 测试标签：integration 标记需要真实子进程的端到端用例。
+#
+# 只跑单元测试：dart test -x integration
+tags:
+  integration:

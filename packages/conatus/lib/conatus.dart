@@ -4,9 +4,12 @@
 /// 使 `import 'package:conatus/conatus.dart';` 保持向后兼容。
 ///
 /// * [conatus_core]       — 核心范式：Context / EffectScope / Reactor
+/// * [conatus_credentials] — 凭据管理：env / 文件 / Vault / AWS Secrets Manager
 /// * [conatus_foundation] — 基础设施插件：timer / logger / loader / tools /
-///                          shell / fs / session / system-prompt / memory / database
+///                          shell / fs / session / session-log / system-prompt /
+///                          memory / database
 /// * [conatus_llm]        — 大模型接入（豆包 / DeepSeek）
+/// * [conatus_mcp]        — MCP 客户端（stdio / HTTP / SSE 传输 + 工具接入）
 /// * [conatus_search]     — 搜索能力缝 + web 工具
 /// * [conatus_asr]        — ASR 能力缝（豆包/火山流式识别）+ transcribe_audio
 /// * [conatus_tts]        — TTS 能力缝（豆包/火山语音合成）+ 音频输出接口
@@ -17,7 +20,9 @@ library;
 export 'package:conatus_agent/conatus_agent.dart';
 export 'package:conatus_asr/conatus_asr.dart';
 export 'package:conatus_core/conatus_core.dart';
+export 'package:conatus_credentials/conatus_credentials.dart';
 export 'package:conatus_foundation/conatus_foundation.dart';
 export 'package:conatus_llm/conatus_llm.dart';
+export 'package:conatus_mcp/conatus_mcp.dart';
 export 'package:conatus_search/conatus_search.dart';
 export 'package:conatus_tts/conatus_tts.dart';
