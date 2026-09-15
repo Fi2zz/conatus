@@ -7,8 +7,8 @@
 
 本包是 monorepo 的**伞包（umbrella）**：自身不含实现，统一再导出
 `conatus_core` / `conatus_foundation` / `conatus_llm` / `conatus_search` /
-`conatus_asr` / `conatus_agent`，因此 `import 'package:conatus/conatus.dart';`
-仍是完整公开 API。
+`conatus_asr` / `conatus_tts` / `conatus_agent`，因此
+`import 'package:conatus/conatus.dart';` 仍是完整公开 API。
 也可以按需只引入某个模块包，以获得更小的依赖面。
 
 用于构建**可动态加载、卸载、热替换**的插件化系统。核心解决两个正交维度的问题：
@@ -28,7 +28,7 @@
 - ⚡ **重入收敛**：服务变更引发的连锁反应在一次 `notify` 内稳定
 - 🛡️ **循环依赖检测**：无法收敛时快速失败，而非死循环
 - 📦 **零运行时依赖**：核心仅用 Dart 核心库（`llm` / `search` 插件依赖 `http`）
-- 🧰 **基础设施插件**：`timer`（定时器即效应）、`logger-console`（分级日志）、`loader`（注册表 + 配置树）、`tools`（`Tool` 基类 + `ParamSpec` + 注册表/执行管线/分组/分级）、`shell` / `fs`（能力缝 + 本地实现）、`search`（搜索能力缝 + web 工具）、`asr`（语音识别能力缝 + `transcribe_audio`）
+- 🧰 **基础设施插件**：`timer`（定时器即效应）、`logger-console`（分级日志）、`loader`（注册表 + 配置树）、`tools`（`Tool` 基类 + `ParamSpec` + 注册表/执行管线/分组/分级）、`shell` / `fs`（能力缝 + 本地实现）、`search`（搜索能力缝 + web 工具）、`asr`（语音识别能力缝 + `transcribe_audio`）、`tts`（语音合成能力缝 + 音频输出接口）
 - 🗂️ **会话与上下文**：`session`（事件日志 + 仓库 + JSONL 持久化）、`system-prompt`（prompt 段装配）、`compaction`（滚动摘要）、`memory`（长记忆库）
 - 🗄️ **持久化**：`database`（KV 存储 hub + 可插拔后端 + JSON 本地实现）
 - 🤖 **Agent Loop**：`agent`（会话事件 + prompt 装配 + 压缩 + 记忆 + 工具闭环）、`tool-result-eviction`（大结果落盘）、`plan`（结构化计划）、`sub-agent`（`spawn_agent` 隔离委托）、`reflection`（工具后自省重试）
@@ -64,6 +64,8 @@ dependency_overrides:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_llm}
   conatus_search:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_search}
+  conatus_tts:
+    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_tts}
 ```
 
 各包发布到 pub.dev 后即可简化为 `conatus: ^0.15.0`。
@@ -322,6 +324,19 @@ provideAsrTools(app); // 注册 transcribe_audio
 
 // 任何 Stream<List<int>> 都能识别（文件 / 麦克风 / 网络）
 final text = await ctx.asr.transcribeText(audioBytes, language: 'zh-CN');
+```
+
+### `tts` — 语音合成能力缝 + 音频输出接口
+
+服务键 `'tts'`（`ctx.tts`）。把「文本 → 音频字节」作为可插拔能力，音频写到哪由
+`TtsAudioSink` 决定（扬声器 / 文件 / 网络）：CLI / 桌面写本地播放器，Flutter 写
+平台播放插件。默认 provider 是豆包/火山语音合成 `DoubaoHttpTtsProvider`。
+
+```dart
+provideTts(app); // 读 VOLC_TTS_APP_ID / VOLC_TTS_ACCESS_TOKEN
+
+final bytes = await ctx.tts.synthesize('你好，世界'); // 收进内存
+await ctx.tts.speak('你好', myAudioSink);            // 写入自定义输出
 ```
 
 ### `shell` — 命令执行能力缝
@@ -785,6 +800,18 @@ root.provide('x', 1);
 | `AsrAudioSource` / `FfmpegMicSource({executable, input, device, format})` / `transcribeSource(asr, source, {...})` | 音频来源缝 + ffmpeg 麦克风 |
 | `TranscribeAudioTool({asr, provider, chunkBytes})` / `provideAsrTools(ctx, {...})` | `transcribe_audio` 工具 |
 | `AsrResult` / `AsrUtterance` / `AsrPartial` / `AsrFinal` / `AsrException` | 结果 / 分句 / 事件 / 错误 |
+
+### `TtsService`（`tts`）
+
+| 成员 | 说明 |
+|------|------|
+| `provideTts(ctx, {tts, providers, appId, accessToken, cluster, voice, url})` / `ctx.tts` | 提供 `'tts'` / 快捷访问 |
+| `register(TtsProvider) → Disposer` / `providers` / `get(name)` | provider 注册与查找 |
+| `start(sink, {provider, voice, format, speed, volume, pitch}) → Future<TtsSession>` | 顺序回退建连 |
+| `speak(text, sink, {...})` / `synthesize(text, {...}) → Future<List<int>>` | 合成到任意 sink / 收进内存 |
+| `TtsAudioSink` / `BytesAudioSink` / `StreamAudioSink` / `CallbackAudioSink` | 音频输出接口与内置实现 |
+| `DoubaoHttpTtsProvider({appId, accessToken, cluster, voice, url, ...})` | 豆包/火山 HTTP 语音合成 provider |
+| `TtsAudioFormat` / `TtsVoice` / `TtsSession` / `TtsException` | 格式 / 音色 / 会话 / 错误 |
 
 ### `ShellExecutor`（`shell`）
 

@@ -16,6 +16,7 @@
 | [`conatus_llm`](packages/conatus_llm) | 大模型接入（豆包 / DeepSeek，chat 与 responses 两种形态） | `conatus_core`、`http` |
 | [`conatus_search`](packages/conatus_search) | 搜索能力缝 + `web_search` / `fetch_url` | `conatus_core`、`conatus_foundation`、`http` |
 | [`conatus_asr`](packages/conatus_asr) | ASR 能力缝（豆包/火山流式识别）+ `transcribe_audio` + 可替换音频源 | `conatus_core`、`conatus_foundation` |
+| [`conatus_tts`](packages/conatus_tts) | TTS 能力缝（豆包/火山语音合成）+ 可替换音频输出接口 | `conatus_core`、`http` |
 | [`conatus_agent`](packages/conatus_agent) | Agent Loop 与产品化：plan / sub-agent / reflection / telemetry / eval / approval / skill / recovery | `conatus_core`、`conatus_foundation`、`conatus_llm` |
 | [`conatus_tui`](packages/conatus_tui) | 基于 [nocterm](https://pub.dev/packages/nocterm) 的文本 TUI：对话 + 工具闭环、斜杠命令、会话选择面板 | `conatus_agent`、`conatus_llm`、`conatus_search`、`nocterm` |
 | [`conatus`](packages/conatus) | 伞包（umbrella）：再导出以上全部，保持 `package:conatus/conatus.dart` 兼容 | 全部 |
@@ -28,6 +29,7 @@ conatus ─▶ conatus_agent ─▶ conatus_llm ─▶ conatus_core
                 └▶ conatus_foundation ─────────┘
 conatus_search ─▶ conatus_foundation
 conatus_asr ────▶ conatus_foundation
+conatus_tts ────▶ conatus_core
 ```
 
 ## 快速开始
@@ -78,6 +80,8 @@ dependency_overrides:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_llm}
   conatus_search:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_search}
+  conatus_tts:
+    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_tts}
 ```
 
 ```bash

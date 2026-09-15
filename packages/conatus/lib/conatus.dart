@@ -9,6 +9,7 @@
 /// * [conatus_llm]        — 大模型接入（豆包 / DeepSeek）
 /// * [conatus_search]     — 搜索能力缝 + web 工具
 /// * [conatus_asr]        — ASR 能力缝（豆包/火山流式识别）+ transcribe_audio
+/// * [conatus_tts]        — TTS 能力缝（豆包/火山语音合成）+ 音频输出接口
 /// * [conatus_agent]      — Agent Loop 与产品化：plan / sub-agent / reflection /
 ///                          telemetry / evaluation / approval / skill / recovery
 library;
@@ -19,3 +20,4 @@ export 'package:conatus_core/conatus_core.dart';
 export 'package:conatus_foundation/conatus_foundation.dart';
 export 'package:conatus_llm/conatus_llm.dart';
 export 'package:conatus_search/conatus_search.dart';
+export 'package:conatus_tts/conatus_tts.dart';
