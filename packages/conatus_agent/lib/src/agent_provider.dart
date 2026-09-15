@@ -5,6 +5,7 @@ import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 import 'agent_loop.dart';
+import 'caching.dart';
 import 'compaction.dart';
 import 'reflection.dart';
 import 'router.dart';
@@ -32,12 +33,14 @@ AgentLoop provideAgentLoop(
   final LlmProvider llm = ctx.require<LlmProvider>('llm');
   final ToolRegistry tools = ctx.require<ToolRegistry>('tools');
   final Telemetry? telemetry = ctx.get<Telemetry>('telemetry');
+  final ContextCache? cache = ctx.get<ContextCache>('contextCache');
   final SessionLogRecorder? recorder =
       ctx.get<SessionLogRecorder>('sessionLogRecorder');
   final Session? target = session ?? _soleOpenSession(ctx);
   final AgentLoop resolved = agent ??
       AgentLoop(
-        llm: composeLlm(llm, telemetry: telemetry, recorder: recorder),
+        llm: composeLlm(llm,
+            telemetry: telemetry, cache: cache, recorder: recorder),
         tools: tools,
         session: target,
         systemPrompt: ctx.get<SystemPrompt>('systemPrompt'),
@@ -62,16 +65,21 @@ AgentLoop provideAgentLoop(
 
 /// 按当前上下文已提供的能力叠加 [LlmProvider] 装饰器。
 ///
-/// 由外到内：Session Log（记录真正发出的请求与收到的响应）→ 遥测（记录提供方
-/// 行为）→ 原始提供方。未提供对应能力时不包装，行为与从前一致。
+/// 由外到内：Session Log（记录真正发出的请求与收到的响应）→ 缓存度量（从响应
+/// 派生命中，不改请求体）→ 遥测（记录提供方行为）→ 原始提供方。未提供对应
+/// 能力时不包装，行为与从前一致。
 LlmProvider composeLlm(
   LlmProvider base, {
   Telemetry? telemetry,
+  ContextCache? cache,
   SessionLogRecorder? recorder,
 }) {
   LlmProvider composed = base;
   if (telemetry != null) {
     composed = TelemetryLlmProvider(composed, telemetry: telemetry);
+  }
+  if (cache != null) {
+    composed = CachingLlmProvider(composed, cache: cache);
   }
   if (recorder != null) {
     composed = SessionLogLlmProvider(composed, recorder: recorder);

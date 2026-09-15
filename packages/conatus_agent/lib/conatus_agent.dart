@@ -32,8 +32,24 @@ export 'src/approval.dart'
         AutoApproval,
         RuleBasedApproval;
 export 'src/approval_gate.dart' show instrumentApproval, provideApproval;
+export 'src/caching.dart'
+    show
+        CachePlan,
+        CachingLlmProvider,
+        ContextCache,
+        ContextCacheContext,
+        provideContextCache;
 export 'src/compaction.dart'
     show CompactionResult, Compactor, Summarizer, provideCompaction;
+export 'src/content_classifier.dart'
+    show
+        CompressionStrategy,
+        ContentClassifier,
+        ContentClassifierContext,
+        MessageCategory,
+        RuleBasedContentClassifier,
+        provideContentClassifier;
+export 'src/context_metrics.dart' show estimateMessagesTokens, estimateTokens;
 export 'src/eval.dart'
     show
         EvalCase,
@@ -44,6 +60,8 @@ export 'src/eval.dart'
         EvalRunner,
         Evaluator,
         defaultEvalJudge;
+export 'src/layered_compaction.dart'
+    show LayeredCompactor, provideLayeredCompaction;
 export 'src/model_visible_invariant.dart'
     show
         assertModelVisibleInvariant,

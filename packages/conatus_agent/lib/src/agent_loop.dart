@@ -103,7 +103,7 @@ class AgentLoop {
         );
 
     final List<LlmMessage> messages = <LlmMessage>[
-      LlmMessage('system', _systemText(userInput)),
+      LlmMessage('system', _systemText(userInput), cacheable: true),
       ...deriveAgentMessages(recentAgentEvents(session, _historyStart)),
     ];
     if (planning && session != null && readPlan(session) == null) {
