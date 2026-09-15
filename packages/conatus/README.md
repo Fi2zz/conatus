@@ -7,7 +7,8 @@
 
 本包是 monorepo 的**伞包（umbrella）**：自身不含实现，统一再导出
 `conatus_core` / `conatus_foundation` / `conatus_llm` / `conatus_search` /
-`conatus_agent`，因此 `import 'package:conatus/conatus.dart';` 仍是完整公开 API。
+`conatus_asr` / `conatus_agent`，因此 `import 'package:conatus/conatus.dart';`
+仍是完整公开 API。
 也可以按需只引入某个模块包，以获得更小的依赖面。
 
 用于构建**可动态加载、卸载、热替换**的插件化系统。核心解决两个正交维度的问题：
@@ -27,7 +28,7 @@
 - ⚡ **重入收敛**：服务变更引发的连锁反应在一次 `notify` 内稳定
 - 🛡️ **循环依赖检测**：无法收敛时快速失败，而非死循环
 - 📦 **零运行时依赖**：核心仅用 Dart 核心库（`llm` / `search` 插件依赖 `http`）
-- 🧰 **基础设施插件**：`timer`（定时器即效应）、`logger-console`（分级日志）、`loader`（注册表 + 配置树）、`tools`（`Tool` 基类 + `ParamSpec` + 注册表/执行管线/分组/分级）、`shell` / `fs`（能力缝 + 本地实现）、`search`（搜索能力缝 + web 工具）
+- 🧰 **基础设施插件**：`timer`（定时器即效应）、`logger-console`（分级日志）、`loader`（注册表 + 配置树）、`tools`（`Tool` 基类 + `ParamSpec` + 注册表/执行管线/分组/分级）、`shell` / `fs`（能力缝 + 本地实现）、`search`（搜索能力缝 + web 工具）、`asr`（语音识别能力缝 + `transcribe_audio`）
 - 🗂️ **会话与上下文**：`session`（事件日志 + 仓库 + JSONL 持久化）、`system-prompt`（prompt 段装配）、`compaction`（滚动摘要）、`memory`（长记忆库）
 - 🗄️ **持久化**：`database`（KV 存储 hub + 可插拔后端 + JSON 本地实现）
 - 🤖 **Agent Loop**：`agent`（会话事件 + prompt 装配 + 压缩 + 记忆 + 工具闭环）、`tool-result-eviction`（大结果落盘）、`plan`（结构化计划）、`sub-agent`（`spawn_agent` 隔离委托）、`reflection`（工具后自省重试）
@@ -53,6 +54,8 @@ dependencies:
 dependency_overrides:
   conatus_agent:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_agent}
+  conatus_asr:
+    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_asr}
   conatus_core:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_core}
   conatus_foundation:
@@ -304,6 +307,21 @@ DuckDuckGo（无需 Key），传 `exaApiKey` 时 Exa 优先。`provideWebTools` 
 ```dart
 provideSearch(app, exaApiKey: Platform.environment['EXA_API_KEY']);
 provideWebTools(app); // 注册 web_search / fetch_url
+```
+
+### `asr` — 语音识别能力缝 + `transcribe_audio`
+
+服务键 `'asr'`（`ctx.asr`）。把「音频字节 → 文本」作为可插拔能力，与音频来源
+解耦：`AsrProvider` 抽象识别服务（默认豆包/火山 SAUC 双向流式 WebSocket），
+`AsrAudioSource` 抽象音频来源（桌面用 `FfmpegMicSource`，Flutter 用录音插件）。
+`provideAsrTools` 把 `transcribe_audio` 注册进 `ctx.tools`。
+
+```dart
+provideAsr(app);      // 读 VOLC_ASR_API_KEY 或 VOLC_ASR_APP_KEY + ACCESS_KEY
+provideAsrTools(app); // 注册 transcribe_audio
+
+// 任何 Stream<List<int>> 都能识别（文件 / 麦克风 / 网络）
+final text = await ctx.asr.transcribeText(audioBytes, language: 'zh-CN');
 ```
 
 ### `shell` — 命令执行能力缝
@@ -754,6 +772,19 @@ root.provide('x', 1);
 | `search(query, {limit, provider}) → Future<List<SearchResult>>` | 顺序回退查询 |
 | `DuckDuckGoSearchProvider({client, endpoint})` / `ExaSearchProvider({apiKey, client, endpoint})` | 内置 provider |
 | `WebSearchTool({search, defaultLimit})` / `FetchUrlTool({client, maxChars})` / `provideWebTools(ctx, {...})` | web_search / fetch_url 工具 |
+
+### `AsrService`（`asr`）
+
+| 成员 | 说明 |
+|------|------|
+| `provideAsr(ctx, {asr, providers, apiKey, appKey, accessKey, resourceId, url, auth})` / `ctx.asr` | 提供 `'asr'` / 快捷访问（凭据优先级：`auth` > 参数 > 环境变量） |
+| `register(AsrProvider) → Disposer` / `providers` / `get(name)` | provider 注册与查找 |
+| `start({provider, audio, language, hotwords}) → Future<AsrSession>` | 顺序回退建连 |
+| `transcribe(audio, {...}) → Stream<AsrEvent>` / `transcribeText(audio, {...}) → Future<String>` | 输入源无关的识别 |
+| `DoubaoStreamingAsrProvider({apiKey, appKey, accessKey, resourceId, url, auth, ...})` | 豆包/火山 SAUC 流式 provider（`auth` 为动态签名/短时令牌回调） |
+| `AsrAudioSource` / `FfmpegMicSource({executable, input, device, format})` / `transcribeSource(asr, source, {...})` | 音频来源缝 + ffmpeg 麦克风 |
+| `TranscribeAudioTool({asr, provider, chunkBytes})` / `provideAsrTools(ctx, {...})` | `transcribe_audio` 工具 |
+| `AsrResult` / `AsrUtterance` / `AsrPartial` / `AsrFinal` / `AsrException` | 结果 / 分句 / 事件 / 错误 |
 
 ### `ShellExecutor`（`shell`）
 

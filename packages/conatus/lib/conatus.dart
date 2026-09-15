@@ -8,11 +8,13 @@
 ///                          shell / fs / session / system-prompt / memory / database
 /// * [conatus_llm]        — 大模型接入（豆包 / DeepSeek）
 /// * [conatus_search]     — 搜索能力缝 + web 工具
+/// * [conatus_asr]        — ASR 能力缝（豆包/火山流式识别）+ transcribe_audio
 /// * [conatus_agent]      — Agent Loop 与产品化：plan / sub-agent / reflection /
 ///                          telemetry / evaluation / approval / skill / recovery
 library;
 
 export 'package:conatus_agent/conatus_agent.dart';
+export 'package:conatus_asr/conatus_asr.dart';
 export 'package:conatus_core/conatus_core.dart';
 export 'package:conatus_foundation/conatus_foundation.dart';
 export 'package:conatus_llm/conatus_llm.dart';

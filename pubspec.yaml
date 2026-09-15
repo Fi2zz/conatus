@@ -7,6 +7,7 @@ environment:
 workspace:
   - packages/conatus
   - packages/conatus_agent
+  - packages/conatus_asr
   - packages/conatus_core
   - packages/conatus_foundation
   - packages/conatus_llm
