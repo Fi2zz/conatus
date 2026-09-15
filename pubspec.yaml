@@ -11,3 +11,4 @@ workspace:
   - packages/conatus_foundation
   - packages/conatus_llm
   - packages/conatus_search
+  - packages/conatus_tui

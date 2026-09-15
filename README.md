@@ -16,6 +16,7 @@
 | [`conatus_llm`](packages/conatus_llm) | 大模型接入（豆包 / DeepSeek，chat 与 responses 两种形态） | `conatus_core`、`http` |
 | [`conatus_search`](packages/conatus_search) | 搜索能力缝 + `web_search` / `fetch_url` | `conatus_core`、`conatus_foundation`、`http` |
 | [`conatus_agent`](packages/conatus_agent) | Agent Loop 与产品化：plan / sub-agent / reflection / telemetry / eval / approval / skill / recovery | `conatus_core`、`conatus_foundation`、`conatus_llm` |
+| [`conatus_tui`](packages/conatus_tui) | 基于 [nocterm](https://pub.dev/packages/nocterm) 的文本 TUI：对话 + 工具闭环、斜杠命令、会话选择面板 | `conatus_agent`、`conatus_llm`、`conatus_search`、`nocterm` |
 | [`conatus`](packages/conatus) | 伞包（umbrella）：再导出以上全部，保持 `package:conatus/conatus.dart` 兼容 | 全部 |
 
 依赖方向自上而下，无环：

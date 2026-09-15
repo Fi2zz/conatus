@@ -17,3 +17,6 @@ Thumbs.db
 
 # Coverage
 coverage/
+
+# conatus TUI runtime data
+.conatus/

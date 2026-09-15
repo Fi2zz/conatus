@@ -1,0 +1,30 @@
+name: conatus_tui
+description: >-
+  conatus 的 nocterm 文本 TUI：会话控制器、斜杠命令、会话选择面板与渲染组件，
+  用 Agent Loop 驱动多轮对话与工具调用。
+version: 0.15.0
+repository: https://github.com/Fi2zz/conatus
+issue_tracker: https://github.com/Fi2zz/conatus/issues
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+dependencies:
+  conatus_agent: ^0.15.0
+  conatus_core: ^0.15.0
+  conatus_foundation: ^0.15.0
+  conatus_llm: ^0.15.0
+  conatus_search: ^0.15.0
+  nocterm: ^0.9.0
+
+dev_dependencies:
+  lints: ^4.0.0
+  test: ^1.25.0
+
+topics:
+  - tui
+  - agent
+  - llm
+  - plugin
