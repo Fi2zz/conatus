@@ -38,15 +38,32 @@
 
 ## 安装
 
-在 `pubspec.yaml` 中加入：
+本包是 monorepo 的伞包，依赖同一仓库内的 `conatus_*` 兄弟包（目前尚未发布到
+pub.dev）。因此从 git 引入时，需要把兄弟包一并指向该仓库，详见仓库根目录
+[「作为依赖使用」](../../README.md#作为依赖使用)：
 
 ```yaml
 dependencies:
   conatus:
     git:
       url: https://github.com/Fi2zz/conatus.git
-      ref: v0.15.0
+      ref: master
+      path: packages/conatus
+
+dependency_overrides:
+  conatus_agent:
+    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_agent}
+  conatus_core:
+    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_core}
+  conatus_foundation:
+    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_foundation}
+  conatus_llm:
+    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_llm}
+  conatus_search:
+    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_search}
 ```
+
+各包发布到 pub.dev 后即可简化为 `conatus: ^0.15.0`。
 
 或从源码使用：
 
