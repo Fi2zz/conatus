@@ -785,31 +785,72 @@ prompt.section(PromptSection(name: 'persona', text: () => persona));
 persona = '你是简洁的中文翻译。'; // 下一轮 run() 生效
 ```
 
+需注意：`AgentLoop` 持有的是同一个 `SystemPrompt` 实例引用，替换 `'systemPrompt'`
+服务不会影响已建好的 loop，必须改原实例；同名 `section` 重复注册会抛 `StateError`。
+
 ### `time-context` — 日期锚点
 
 模型没有时钟：相对日期（"明天""下周三"）与带本地语义的时刻（"明早九点"）都需要一个
 外部锚点才能换算成绝对时间。`provideTimePrompt` 注册一份日粒度的 `PromptContext`
-（`prompt` 缺省取上下文里的 `'systemPrompt'` 服务），每轮装配重新求值，因此跨天自动
-更新。
+（名字 `time`），每轮装配重新求值，因此跨天自动更新。
 
 ```dart
-provideSystemPrompt(app);
-provideTimePrompt(app);                            // 本地时区名
+final prompt = provideSystemPrompt(app);  // 必须先有
+provideTimePrompt(app);                   // 本地时区名
+provideAgentLoop(app, session: session);  // 自动取上面这个 prompt
+
+// 变体
 provideTimePrompt(app, zoneName: 'Asia/Shanghai'); // 指定时区名
+provideTimePrompt(app, prompt: prompt);            // 显式指定注册表
+provideTimePrompt(app, clock: () => fixedNow);     // 固定时钟（测试 / 回放）
+ctx.effect(() => provideTimePrompt(app));          // 随上下文卸载撤销
 ```
 
-渲染为：
+顺序有约束：`provideAgentLoop` 通过 `ctx.get<SystemPrompt>('systemPrompt')` 接入，
+`provideTimePrompt` 又通过 `ctx.require<SystemPrompt>('systemPrompt')` 取目标注册表，
+因此它要排在 `provideSystemPrompt` 之后、`provideAgentLoop` 之前；上下文里没有
+`SystemPrompt` 时 `require` 直接抛 `StateError`。
+
+装配出的 system 形如：
 
 ```text
+你是"助手"，一位耐心、务实的助手。需要实时信息或操作时调用工具；否则直接简洁回答。
+
 [当前时间]
 2026-09-16 周三 · Asia/Shanghai (UTC+08:00)
 ```
 
-锚点只精确到日：system 是可缓存前缀，秒级变化会让前缀缓存每轮失效；要精确到秒的场景
-交给时间工具（如 `get_time`）。
+| 参数 | 缺省 | 说明 |
+|------|------|------|
+| `prompt` | `ctx.require('systemPrompt')` | 目标注册表 |
+| `clock` | `DateTime.now` | 注入固定时钟，便于测试与回放 |
+| `zoneName` | `clock().timeZoneName` | 本机时区名常是缩写（macOS 上会给出 `CST` 这类有歧义的值），跨时区部署请显式给 IANA 名 |
 
-需注意：`AgentLoop` 持有的是同一个 `SystemPrompt` 实例引用，替换 `'systemPrompt'`
-服务不会影响已建好的 loop，必须改原实例；同名 `section` 重复注册会抛 `StateError`。
+三点注意：
+
+- 锚点只精确到日：system 是可缓存前缀，秒级变化会让前缀缓存每轮失效；"现在几点"
+  这类问题交给时间工具；
+- 没走 `SystemPrompt` 的装配（例如直接 `AgentLoop(defaultSystemPrompt: ...)`）不会
+  有锚点，那是一条独立分支；
+- 与段一样可撤销：`ctx.effect(() => provideTimePrompt(app))`。
+
+精确到秒的时间工具由装配方提供（`conatus_tui` 已内置，见其 `tui_app.dart`）：
+
+```dart
+app.effect(() => app.tools.fn(
+      'get_time',
+      description: '返回当前本地时间（RFC 3339，带时区偏移）',
+      handler: (ToolContext ctx) async {
+        final DateTime now = DateTime.now();
+        return ToolResult.success(
+            '${now.toIso8601String()}${formatClockOffset(now.timeZoneOffset)}');
+      },
+    ));
+```
+
+锚点行为由 `packages/conatus_foundation/test/time_context_test.dart` 与装配级端到端
+`packages/conatus_tui/test/tui_runtime_assembly_test.dart`（断言模型实际收到的 system
+含 `[当前时间]`）守住。
 
 ### `compaction` — 会话滚动摘要
 
@@ -928,12 +969,18 @@ print(unit.get('name'));
 ```dart
 provideTools(app);
 app.effect(() => app.tools.fn('get_time',
-    description: '返回当前时间',
-    handler: (ctx) async => ToolResult.success(DateTime.now().toIso8601String())));
+    description: '返回当前本地时间（RFC 3339，带时区偏移）',
+    handler: (ctx) async {
+      final now = DateTime.now();
+      return ToolResult.success(
+          '${now.toIso8601String()}${formatClockOffset(now.timeZoneOffset)}');
+    }));
 provideLlm(app);
 final session = provideSessions(app).create(id: 'cli');
-provideSystemPrompt(app).section(
+final prompt = provideSystemPrompt(app);
+prompt.section(
     PromptSection(name: 'persona', text: () => '你是助手，需要实时信息时调用工具。'));
+provideTimePrompt(app);            // 日期锚点：模型不必调工具就知道今天
 provideMemory(app);
 provideCompaction(app);            // keepRecent 默认 20
 final agent = provideAgentLoop(app, session: session);
