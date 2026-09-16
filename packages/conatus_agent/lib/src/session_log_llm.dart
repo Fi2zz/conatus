@@ -3,9 +3,11 @@
 /// 装饰器不改动请求本身，只在两侧记录，因此对既有 Provider 与测试完全透明。
 library;
 
+import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 import 'agent_events.dart';
 import 'agent_types.dart';
+import 'model_visible_invariant.dart';
 import 'session_log_integration.dart';
 
 /// 记录 `llm/request` / `llm/response` 派生事件的 [LlmProvider] 装饰器。
@@ -29,6 +31,7 @@ class SessionLogLlmProvider implements LlmProvider {
     List<Map<String, dynamic>>? tools,
   }) async {
     await _recordRequest(messages, tools);
+    await _assertModelVisible();
     final LlmResult result =
         await inner.chat(messages, options: options, tools: tools);
     await recorder.record(
@@ -51,6 +54,7 @@ class SessionLogLlmProvider implements LlmProvider {
     List<Map<String, dynamic>>? tools,
   }) async* {
     await _recordRequest(messages, tools);
+    await _assertModelVisible();
     final StringBuffer text = StringBuffer();
     Map<String, dynamic> usage = const <String, dynamic>{};
     String? finishReason;
@@ -94,6 +98,18 @@ class SessionLogLlmProvider implements LlmProvider {
         ],
         if (tools != null && tools.isNotEmpty) 'tools': tools,
       });
+
+  /// 开发模式断言：发送前确认这条请求能从日志重建（生产默认关闭）。
+  ///
+  /// 只校验**当前这条请求**对日志的一致性：压缩摘要请求会被识别并跳过，
+  /// system prompt 由运行时装配、不在比对范围。
+  Future<void> _assertModelVisible() async {
+    final String? sessionId = recorder.sessionId;
+    if (!recorder.strictModelVisible || sessionId == null) return;
+    final List<SessionEvent> events =
+        await recorder.log.read(sessionId).toList();
+    assertModelVisibleInvariant(events);
+  }
 
   Map<String, Object?> _responseData({
     required String content,

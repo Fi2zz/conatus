@@ -18,10 +18,16 @@ import 'agent_types.dart';
 /// 在多路调用下依然稳定。
 class SessionLogRecorder {
   /// 用给定的只追加日志构造。
-  SessionLogRecorder({required this.log});
+  SessionLogRecorder({required this.log, this.strictModelVisible = false});
 
   /// 目标日志。
   final SessionLog log;
+
+  /// 是否在每次 `llm/request` 落盘后、**发送前**校验「模型可见即已记录」。
+  ///
+  /// 开发模式建议开启（违反不变式会抛 [StateError]）；生产保持关闭——每次校验都要
+  /// 回读一遍会话日志，O(n) 一次请求。校验逻辑见 `model_visible_invariant.dart`。
+  final bool strictModelVisible;
 
   String? _sessionId;
   String? _lastEventId;
@@ -121,10 +127,12 @@ extension SessionLogRecorderContext on Context {
 SessionLogRecorder provideSessionLogRecorder(
   Context ctx, {
   SessionLogRecorder? recorder,
+  bool strictModelVisible = false,
 }) {
   final SessionLogRecorder resolved = recorder ??
       SessionLogRecorder(
         log: ctx.get<SessionLog>('sessionLog') ?? provideSessionLog(ctx),
+        strictModelVisible: strictModelVisible,
       );
   ctx.provide('sessionLogRecorder', resolved);
   return resolved;
