@@ -7,7 +7,8 @@
 
 本包是 monorepo 的**伞包（umbrella）**：自身不含实现，统一再导出
 `conatus_core` / `conatus_credentials` / `conatus_foundation` / `conatus_llm` /
-`conatus_mcp` / `conatus_search` / `conatus_asr` / `conatus_tts` / `conatus_agent`，
+`conatus_mcp` / `conatus_schedule` / `conatus_search` / `conatus_asr` /
+`conatus_tts` / `conatus_agent`，
 因此 `import 'package:conatus/conatus.dart';` 仍是完整公开 API。
 也可以按需只引入某个模块包，以获得更小的依赖面。
 
@@ -69,6 +70,8 @@ dependency_overrides:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_llm}
   conatus_mcp:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_mcp}
+  conatus_schedule:
+    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_schedule}
   conatus_search:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_search}
   conatus_tts:

@@ -2,13 +2,13 @@
 library;
 
 import 'package:conatus_core/conatus_core.dart';
+import 'package:conatus_foundation/conatus_foundation.dart';
 
 import 'schedule.dart';
 import 'schedule_create_tool.dart';
 import 'schedule_errors.dart';
 import 'schedule_tool_results.dart';
 import 'schedule_types.dart';
-import 'tools.dart';
 
 /// 按创建顺序列出当前会话的活动提醒。
 class ScheduleListTool extends Tool {

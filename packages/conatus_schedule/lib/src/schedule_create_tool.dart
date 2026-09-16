@@ -3,14 +3,13 @@
 /// 选择器三选一，形状类错误在读取或决策之前返回，通过后才进入持久化检查点。
 library;
 
-import 'param_spec.dart';
+import 'package:conatus_foundation/conatus_foundation.dart';
+
 import 'schedule.dart';
 import 'schedule_errors.dart';
 import 'schedule_time.dart';
 import 'schedule_tool_results.dart';
 import 'schedule_types.dart';
-import 'tool.dart';
-import 'tool_types.dart';
 
 /// 创建参数里允许出现的键。
 const Set<String> kScheduleCreateKeys = <String>{

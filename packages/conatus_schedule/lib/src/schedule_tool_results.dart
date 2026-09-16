@@ -6,8 +6,9 @@ library;
 
 import 'dart:convert';
 
+import 'package:conatus_foundation/conatus_foundation.dart';
+
 import 'schedule_errors.dart';
-import 'tool_types.dart';
 
 /// 成功结果：规范值同时作为文本与结构化值返回。
 ToolResult scheduleSuccessResult(Object? value) =>

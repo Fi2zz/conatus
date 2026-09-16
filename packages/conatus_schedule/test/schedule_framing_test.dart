@@ -1,4 +1,4 @@
-import 'package:conatus_foundation/conatus_foundation.dart';
+import 'package:conatus_schedule/conatus_schedule.dart';
 import 'package:test/test.dart';
 
 ScheduleRecord atRecord({

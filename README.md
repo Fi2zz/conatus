@@ -19,8 +19,9 @@
 | [`conatus_asr`](packages/conatus_asr) | ASR 能力缝（豆包/火山流式识别）+ `transcribe_audio` + 可替换音频源 | `conatus_core`、`conatus_foundation` |
 | [`conatus_tts`](packages/conatus_tts) | TTS 能力缝（豆包/火山语音合成）+ 可替换音频输出接口 | `conatus_core`、`http` |
 | [`conatus_mcp`](packages/conatus_mcp) | MCP（Model Context Protocol）客户端：stdio / HTTP / SSE 传输 + 工具接入 | `conatus_core`、`conatus_credentials`、`conatus_foundation`、`http` |
+| [`conatus_schedule`](packages/conatus_schedule) | 会话本地持久提醒：`schedule_create` / `schedule_list` / `schedule_delete` + 到期交付 | `conatus_core`、`conatus_foundation`、`timezone` |
 | [`conatus_agent`](packages/conatus_agent) | Agent Loop 与产品化：plan / sub-agent / reflection / telemetry / eval / approval / skill / recovery | `conatus_core`、`conatus_foundation`、`conatus_llm` |
-| [`conatus_tui`](packages/conatus_tui) | 基于 [nocterm](https://pub.dev/packages/nocterm) 的文本 TUI：对话 + 工具闭环、斜杠命令、会话选择面板 | `conatus_agent`、`conatus_llm`、`conatus_search`、`nocterm` |
+| [`conatus_tui`](packages/conatus_tui) | 基于 [nocterm](https://pub.dev/packages/nocterm) 的文本 TUI：对话 + 工具闭环、斜杠命令、会话选择面板 | `conatus_agent`、`conatus_llm`、`conatus_schedule`、`conatus_search`、`nocterm` |
 | [`conatus`](packages/conatus) | 伞包（umbrella）：再导出以上全部，保持 `package:conatus/conatus.dart` 兼容 | 全部 |
 
 依赖方向自上而下，无环：
@@ -30,9 +31,11 @@ conatus ─▶ conatus_agent ─▶ conatus_llm ─▶ conatus_core
                 │           └▶ conatus_credentials ─▶ conatus_core
                 └▶ conatus_foundation ─▶ conatus_core
 conatus_mcp ────▶ conatus_foundation、conatus_credentials
+conatus_schedule ▶ conatus_foundation、timezone
 conatus_search ─▶ conatus_foundation
 conatus_asr ────▶ conatus_foundation
 conatus_tts ────▶ conatus_core
+conatus_tui ────▶ conatus_agent、conatus_schedule、conatus_search
 ```
 
 ## 快速开始
@@ -85,6 +88,8 @@ dependency_overrides:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_llm}
   conatus_mcp:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_mcp}
+  conatus_schedule:
+    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_schedule}
   conatus_search:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_search}
   conatus_tts:
@@ -113,7 +118,8 @@ dependencies:
 ### 方案 C：发布后用版本号（推荐的长期方案）
 
 将各包按依赖顺序发布到 pub.dev（`conatus_core` → `conatus_foundation` →
-`conatus_credentials` → `conatus_llm` → `conatus_mcp` → `conatus_search` →
+`conatus_credentials` → `conatus_llm` → `conatus_mcp` → `conatus_schedule` →
+`conatus_search` →
 `conatus_agent` → `conatus`），之后消费方只需：
 
 ```yaml

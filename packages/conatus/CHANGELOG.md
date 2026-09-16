@@ -4,7 +4,8 @@
 
 ## [未发布]
 
-`foundation` 新增会话本地持久提醒（schedule）：
+新增 `conatus_schedule` 包 —— 会话本地持久提醒（依赖 `conatus_core`、
+`conatus_foundation` 与 `timezone`）：
 
 - `SessionSchedule` / `provideSessionSchedule`（服务键 `'schedule'`，`ctx.schedule`）——
   提醒写在会话事件流的 `schedule/change` 事件里（严格版本 1 解码：拒绝未知版本、
@@ -15,9 +16,9 @@
   到期后折叠、采样墙钟并调用注入的交付端口；交付失败不写派发记录、记录保持活动，
   追加失败则停止派发（消息可能已经入队）；重试由活动驱动，不额外起私有定时器
 - `at` 支持显式偏移的 RFC 3339 串与 `{date, time, time_zone}` 对象（IANA 时区，
-  夏令时缺口拒绝、重叠取较早）；新增依赖 `timezone`
-- `Session` 新增 `inheritedEventCount` / `ownEvents`：fork 出的会话不继承父会话的
-  活动状态，而 `SessionStore.open` 载入的历史仍算自身事件
+  夏令时缺口拒绝、重叠取较早）
+- `foundation` 的 `Session` 新增 `inheritedEventCount` / `ownEvents`：fork 出的会话
+  不继承父会话的活动状态，而 `SessionStore.open` 载入的历史仍算自身事件
 - TUI 的会话子上下文装配提醒服务、工具与运行时；轮次结束即触发一次到期推导
 
 `llm` 流式补全补齐 function calling：

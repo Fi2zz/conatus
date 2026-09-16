@@ -1,5 +1,6 @@
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
+import 'package:conatus_schedule/conatus_schedule.dart';
 import 'package:test/test.dart';
 
 final DateTime base = DateTime.utc(2026, 8, 6, 12);

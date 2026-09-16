@@ -12,6 +12,7 @@ import 'package:conatus_agent/conatus_agent.dart';
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
+import 'package:conatus_schedule/conatus_schedule.dart';
 
 import 'transcript.dart';
 import 'tui_help.dart';

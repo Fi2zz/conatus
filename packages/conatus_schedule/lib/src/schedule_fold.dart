@@ -5,11 +5,12 @@
 /// 用过的标识，因此标识永不复用。
 library;
 
+import 'package:conatus_foundation/conatus_foundation.dart';
+
 import 'schedule_changes.dart';
 import 'schedule_errors.dart';
 import 'schedule_recurrence.dart';
 import 'schedule_types.dart';
-import 'session_types.dart';
 
 /// 折叠一段按序事件流，得到活动记录与用过的标识。
 ///

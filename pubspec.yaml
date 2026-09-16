@@ -13,6 +13,7 @@ workspace:
   - packages/conatus_foundation
   - packages/conatus_llm
   - packages/conatus_mcp
+  - packages/conatus_schedule
   - packages/conatus_search
   - packages/conatus_tts
   - packages/conatus_tui
