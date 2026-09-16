@@ -1,11 +1,16 @@
-name: conatus_workspace
-publish_to: none
+name: conatus
+description: >-
+  时空可组合性（Spatiotemporal Composability）编程范式的 Dart 实现。
+  伞包 conatus 再导出 core / foundation / llm / mcp / agent / tui 等 13 个模块包，
+  `package:conatus/conatus.dart` 即完整公开 API。
+version: 0.15.0
+repository: https://github.com/Fi2zz/conatus
+issue_tracker: https://github.com/Fi2zz/conatus/issues
 
 environment:
   sdk: ^3.6.0
 
 workspace:
-  - packages/conatus
   - packages/conatus_agent
   - packages/conatus_asr
   - packages/conatus_compaction
@@ -19,3 +24,28 @@ workspace:
   - packages/conatus_skill
   - packages/conatus_tts
   - packages/conatus_tui
+
+dependencies:
+  conatus_agent: ^0.15.0
+  conatus_asr: ^0.15.0
+  conatus_compaction: ^0.15.0
+  conatus_core: ^0.15.0
+  conatus_credentials: ^0.15.0
+  conatus_foundation: ^0.15.0
+  conatus_llm: ^0.15.0
+  conatus_mcp: ^0.15.0
+  conatus_schedule: ^0.15.0
+  conatus_search: ^0.15.0
+  conatus_skill: ^0.15.0
+  conatus_tts: ^0.15.0
+
+dev_dependencies:
+  lints: ^4.0.0
+  test: ^1.25.0
+
+topics:
+  - plugin
+  - architecture
+  - composability
+  - di
+  - llm
