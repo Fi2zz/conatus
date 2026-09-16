@@ -5,6 +5,8 @@
 ///
 /// * [conatus_core]       — 核心范式：Context / EffectScope / Reactor
 /// * [conatus_credentials] — 凭据管理：env / 文件 / Vault / AWS Secrets Manager
+/// * [conatus_cron]       — 定时任务：at / every / daily / cron 规则调度 +
+///                          运行记录持久化 + cron_* 管理工具
 /// * [conatus_foundation] — 基础设施插件：timer / logger / loader / tools /
 ///                          shell / fs / session / session-log / system-prompt /
 ///                          memory / database
@@ -25,6 +27,7 @@ export 'package:conatus_asr/conatus_asr.dart';
 export 'package:conatus_compaction/conatus_compaction.dart';
 export 'package:conatus_core/conatus_core.dart';
 export 'package:conatus_credentials/conatus_credentials.dart';
+export 'package:conatus_cron/conatus_cron.dart';
 export 'package:conatus_foundation/conatus_foundation.dart';
 export 'package:conatus_llm/conatus_llm.dart';
 export 'package:conatus_mcp/conatus_mcp.dart';

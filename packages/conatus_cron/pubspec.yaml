@@ -1,0 +1,27 @@
+name: conatus_cron
+description: >-
+  conatus 的定时任务插件：按 at / every / daily / cron 规则调度任务，到点把任务
+  提示交付给宿主注入的端口执行，运行记录持久化（重启不重发），模型可用
+  cron_list / cron_add / cron_update / cron_remove / cron_history 管理任务。
+version: 0.15.0
+repository: https://github.com/Fi2zz/conatus
+issue_tracker: https://github.com/Fi2zz/conatus/issues
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+dependencies:
+  conatus_core: ^0.15.0
+  conatus_foundation: ^0.15.0
+
+dev_dependencies:
+  lints: ^4.0.0
+  test: ^1.25.0
+
+topics:
+  - plugin
+  - cron
+  - schedule
+  - automation

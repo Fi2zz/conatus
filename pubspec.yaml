@@ -16,6 +16,7 @@ workspace:
   - packages/conatus_compaction
   - packages/conatus_core
   - packages/conatus_credentials
+  - packages/conatus_cron
   - packages/conatus_foundation
   - packages/conatus_llm
   - packages/conatus_mcp
@@ -31,6 +32,7 @@ dependencies:
   conatus_compaction: ^0.15.0
   conatus_core: ^0.15.0
   conatus_credentials: ^0.15.0
+  conatus_cron: ^0.15.0
   conatus_foundation: ^0.15.0
   conatus_llm: ^0.15.0
   conatus_mcp: ^0.15.0
