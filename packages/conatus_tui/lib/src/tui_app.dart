@@ -11,6 +11,7 @@ import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 import 'package:conatus_search/conatus_search.dart';
+import 'package:conatus_skill/conatus_skill.dart';
 
 import 'tui_controller.dart';
 
@@ -38,7 +39,9 @@ class ConatusTuiRuntime {
   /// 装配一个默认运行时。
   ///
   /// [sessionDir] / [memoryFile] 缺省落在 `<cwd>/.conatus` 下；
-  /// [webTools] 为 true 时注册 DuckDuckGo（有 [exaApiKey] 则 Exa 优先）。
+  /// [webTools] 为 true 时注册 DuckDuckGo（有 [exaApiKey] 则 Exa 优先）；
+  /// [skills] 为 true 时从 `.conatus/skills` 等目录发现技能，注入目录段并注册
+  /// `skill` 工具。
   /// [llm] 缺省用 `FallbackLlm.withDefaults()`（豆包 → DeepSeek）；传入后按注入的
   /// 提供商为准（如 DeepSeek-only 的 Demo）。[modelLabel] 覆盖顶栏模型标签。
   static Future<ConatusTuiRuntime> create({
@@ -46,6 +49,7 @@ class ConatusTuiRuntime {
     String? memoryFile,
     String? exaApiKey,
     bool webTools = true,
+    bool skills = true,
     FallbackLlm? llm,
     String? modelLabel,
   }) async {
@@ -114,6 +118,12 @@ class ConatusTuiRuntime {
     provideMemoryTools(app);
     provideCompaction(app);
     provideSkillLibrary(app);
+    if (skills) {
+      await provideSkillRegistry(app);
+      provideSkillCatalog(app);
+      provideSkillTool(app);
+      await provideSkillFilesystem(app);
+    }
 
     // ── 恢复：数据库（JSON 后端）+ 快照服务 ────────────────────
     provideDatabase(app, defaultBackend: 'json');

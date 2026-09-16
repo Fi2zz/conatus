@@ -13,6 +13,7 @@
 /// * [conatus_schedule]   — 会话本地持久提醒（schedule_create / list / delete）
 /// * [conatus_compaction] — 压缩能力缝（滚动摘要 + compaction/* 日志事件）
 /// * [conatus_search]     — 搜索能力缝 + web 工具
+/// * [conatus_skill]      — 技能加载：发现 SKILL.md 指令集 + 目录注入 + skill 工具
 /// * [conatus_asr]        — ASR 能力缝（豆包/火山流式识别）+ transcribe_audio
 /// * [conatus_tts]        — TTS 能力缝（豆包/火山语音合成）+ 音频输出接口
 /// * [conatus_agent]      — Agent Loop 与产品化：plan / sub-agent / reflection /
@@ -29,4 +30,5 @@ export 'package:conatus_llm/conatus_llm.dart';
 export 'package:conatus_mcp/conatus_mcp.dart';
 export 'package:conatus_schedule/conatus_schedule.dart';
 export 'package:conatus_search/conatus_search.dart';
+export 'package:conatus_skill/conatus_skill.dart';
 export 'package:conatus_tts/conatus_tts.dart';

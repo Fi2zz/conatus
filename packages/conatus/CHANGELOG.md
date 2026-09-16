@@ -4,6 +4,24 @@
 
 ## [未发布]
 
+新增 `conatus_skill` 包 —— 技能加载（依赖 `conatus_core`、`conatus_foundation` 与
+`yaml`；从 `deepseek-harness` 的 `packages/skill` 包族移植）：
+
+- `SkillRegistry` / `provideSkillRegistry`（服务键 `'skillRegistry'`）：provider 与
+  运行时技能的注册表，`available` 是同步快照，收集串行化并带合并窗口，
+  单个 provider 失败只降级它自己（经 `onWarning` 上报）
+- `SkillFilesystemProvider` / `provideSkillFilesystem` / `SkillRootWatcher`：按
+  rank 100/200/300/400/500 从 `<项目根>/.conatus/skills`、`.agents/skills` 与用户
+  技能目录发现 `SKILL.md` / `<name>.md`，目录变更合并成一次失效
+- `SkillCatalogSection` / `provideSkillCatalog`：把可用技能目录挂成 system prompt
+  的 `skills` 段——没有技能时该段不存在，prompt 与本插件不存在时逐字相同
+- `SkillLoadTool` / `provideSkillTool`：`skill` 工具按名字返回 `<skill_content>`
+  正文块，结果由 Agent Loop 正常写进 `tool/result` 事件
+- `parseSkillDocument`：真 YAML frontmatter，`name` / `description` 必需，
+  旧 camelCase 键与非法条目一律丢弃并告警
+- 命名与 `conatus_agent` 的 `SkillLibrary`（服务键 `'skill'`，技能沉淀）刻意区分；
+  `conatus_tui` 缺省接上（`ConatusTuiRuntime.create(skills: false)` 可关）
+
 新增 `conatus_compaction` 包 —— 压缩能力缝（依赖 `conatus_core`、
 `conatus_foundation`；压缩实现从 `conatus_agent` 迁入，对应 dsh
 `packages/compaction/compaction`）：

@@ -1,0 +1,27 @@
+name: conatus_skill
+description: >-
+  conatus 的技能加载：从 .conatus/skills 与 .agents/skills 发现 SKILL.md
+  形式的指令集，把可调用技能目录注入 system prompt，并由 skill 工具按需
+  把正文加载进对话。
+version: 0.15.0
+repository: https://github.com/Fi2zz/conatus
+issue_tracker: https://github.com/Fi2zz/conatus/issues
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+dependencies:
+  conatus_core: ^0.15.0
+  conatus_foundation: ^0.15.0
+  yaml: ^3.1.2
+
+dev_dependencies:
+  lints: ^4.0.0
+  test: ^1.25.0
+
+topics:
+  - plugin
+  - skill
+  - prompt

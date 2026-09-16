@@ -47,6 +47,10 @@ dart run packages/conatus_tui/example/deepseek_demo.dart \
 - **会话选择面板**：`/sessions` 打开，`↑↓` 选择、`Enter` 切换、`Esc` 关闭；
   会话事件以 JSONL 持久化到 `.conatus/sessions`，重启后 `open` 即恢复历史。
 - **长记忆**：`.conatus/memory.json` 跨会话召回。
+- **技能加载**：从 `.conatus/skills`、`.agents/skills` 与用户技能目录发现
+  `SKILL.md` 指令集，目录注入 system prompt，模型按需用 `skill` 工具取回正文；
+  `ConatusTuiRuntime.create(skills: false)` 可关闭。注意它与 `provideSkillLibrary`
+  （把重复工具序列沉淀成新工具）不是同一件事。
 - **状态栏**：思考动画、按键提示与 Ctrl+C 连按两次退出。
 
 ## 作为库使用

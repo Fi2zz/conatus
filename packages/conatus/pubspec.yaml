@@ -4,7 +4,7 @@ description: >-
   本包为伞包（umbrella），统一再导出 conatus_core / conatus_credentials /
   conatus_foundation / conatus_llm / conatus_mcp / conatus_schedule /
   conatus_search / conatus_asr / conatus_tts / conatus_compaction /
-  conatus_agent，
+  conatus_skill / conatus_agent，
   保持 `package:conatus/conatus.dart` 的完整公开 API。
 version: 0.15.0
 repository: https://github.com/Fi2zz/conatus
@@ -26,6 +26,7 @@ dependencies:
   conatus_mcp: ^0.15.0
   conatus_schedule: ^0.15.0
   conatus_search: ^0.15.0
+  conatus_skill: ^0.15.0
   conatus_tts: ^0.15.0
 
 dev_dependencies:

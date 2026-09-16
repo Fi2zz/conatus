@@ -16,13 +16,14 @@
 | [`conatus_credentials`](packages/conatus_credentials) | 凭据能力缝：环境变量 / 文件 / 内存 / Vault KV v2 / AWS Secrets Manager | `conatus_core`、`http` |
 | [`conatus_llm`](packages/conatus_llm) | 大模型接入（豆包 / DeepSeek，chat 与 responses 两种形态） | `conatus_core`、`conatus_credentials`、`http` |
 | [`conatus_search`](packages/conatus_search) | 搜索能力缝 + `web_search` / `fetch_url` | `conatus_core`、`conatus_foundation`、`http` |
+| [`conatus_skill`](packages/conatus_skill) | 技能加载：发现 `SKILL.md` 指令集、目录注入 system prompt、`skill` 工具按需取正文 | `conatus_core`、`conatus_foundation`、`yaml` |
 | [`conatus_asr`](packages/conatus_asr) | ASR 能力缝（豆包/火山流式识别）+ `transcribe_audio` + 可替换音频源 | `conatus_core`、`conatus_foundation` |
 | [`conatus_tts`](packages/conatus_tts) | TTS 能力缝（豆包/火山语音合成）+ 可替换音频输出接口 | `conatus_core`、`http` |
 | [`conatus_mcp`](packages/conatus_mcp) | MCP（Model Context Protocol）客户端：stdio / HTTP / SSE 传输 + 工具接入 | `conatus_core`、`conatus_credentials`、`conatus_foundation`、`http` |
 | [`conatus_schedule`](packages/conatus_schedule) | 会话本地持久提醒：`schedule_create` / `schedule_list` / `schedule_delete` + 到期交付 | `conatus_core`、`conatus_foundation`、`timezone` |
 | [`conatus_compaction`](packages/conatus_compaction) | 压缩能力缝：滚动摘要契约 + `compaction/*` 日志事件 + 工具配对平衡切点 | `conatus_core`、`conatus_foundation` |
 | [`conatus_agent`](packages/conatus_agent) | Agent Loop 与产品化：plan / sub-agent / reflection / telemetry / eval / approval / skill / recovery | `conatus_compaction`、`conatus_core`、`conatus_foundation`、`conatus_llm` |
-| [`conatus_tui`](packages/conatus_tui) | 基于 [nocterm](https://pub.dev/packages/nocterm) 的文本 TUI：对话 + 工具闭环、斜杠命令、会话选择面板 | `conatus_agent`、`conatus_compaction`、`conatus_llm`、`conatus_schedule`、`conatus_search`、`nocterm` |
+| [`conatus_tui`](packages/conatus_tui) | 基于 [nocterm](https://pub.dev/packages/nocterm) 的文本 TUI：对话 + 工具闭环、斜杠命令、会话选择面板 | `conatus_agent`、`conatus_compaction`、`conatus_llm`、`conatus_schedule`、`conatus_search`、`conatus_skill`、`nocterm` |
 | [`conatus`](packages/conatus) | 伞包（umbrella）：再导出以上全部，保持 `package:conatus/conatus.dart` 兼容 | 全部 |
 
 依赖方向自上而下，无环：
@@ -35,9 +36,10 @@ conatus ─▶ conatus_agent ─▶ conatus_llm ─▶ conatus_core
 conatus_mcp ────▶ conatus_foundation、conatus_credentials
 conatus_schedule ▶ conatus_foundation、timezone
 conatus_search ─▶ conatus_foundation
+conatus_skill ──▶ conatus_foundation
 conatus_asr ────▶ conatus_foundation
 conatus_tts ────▶ conatus_core
-conatus_tui ────▶ conatus_agent、conatus_compaction、conatus_schedule、conatus_search
+conatus_tui ────▶ conatus_agent、conatus_compaction、conatus_schedule、conatus_search、conatus_skill
 ```
 
 ## 快速开始
@@ -96,6 +98,8 @@ dependency_overrides:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_schedule}
   conatus_search:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_search}
+  conatus_skill:
+    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_skill}
   conatus_tts:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_tts}
 ```
@@ -123,7 +127,7 @@ dependencies:
 
 将各包按依赖顺序发布到 pub.dev（`conatus_core` → `conatus_foundation` →
 `conatus_compaction` → `conatus_credentials` → `conatus_llm` → `conatus_mcp` →
-`conatus_schedule` → `conatus_search` →
+`conatus_schedule` → `conatus_search` → `conatus_skill` →
 `conatus_agent` → `conatus`），之后消费方只需：
 
 ```yaml

@@ -7,8 +7,8 @@
 
 本包是 monorepo 的**伞包（umbrella）**：自身不含实现，统一再导出
 `conatus_core` / `conatus_credentials` / `conatus_foundation` / `conatus_llm` /
-`conatus_mcp` / `conatus_schedule` / `conatus_search` / `conatus_asr` /
-`conatus_tts` / `conatus_compaction` / `conatus_agent`，
+`conatus_mcp` / `conatus_schedule` / `conatus_search` / `conatus_skill` /
+`conatus_asr` / `conatus_tts` / `conatus_compaction` / `conatus_agent`，
 因此 `import 'package:conatus/conatus.dart';` 仍是完整公开 API。
 也可以按需只引入某个模块包，以获得更小的依赖面。
 
@@ -36,8 +36,8 @@
 - 🤖 **Agent Loop**：`agent`（会话事件 + prompt 装配 + 压缩 + 记忆 + 工具闭环）、`tool-result-eviction`（大结果落盘）、`plan`（结构化计划）、`sub-agent`（`spawn_agent` 隔离委托）、`reflection`（工具后自省重试）
 - 🔌 **MCP 生态**：`mcp`（MCP 客户端：stdio / HTTP / SSE 传输 + 握手与工具发现），外部 server 的工具以 `server__tool` 接入同一张工具表，风险缺省 `medium` 走审批
 - 🗜️ **分层压缩与缓存度量**：`content-classifier`（内容分类器能力缝）、`layered-compaction`（按类别分层折叠：工具结果压成指针、用户偏好留原文）、`context-cache`（可缓存前缀指纹 + 命中遥测）
-- 🔭 **产品化**：`telemetry`（事件导出 + 埋点）、`evaluation`（用例评估 + 基线对比）、`approval`（高危工具审批）、`skill`（技能沉淀）、`recovery`（会话快照恢复）
-- ✅ **完整测试覆盖**：714 个单元测试
+- 🔭 **产品化**：`telemetry`（事件导出 + 埋点）、`evaluation`（用例评估 + 基线对比）、`approval`（高危工具审批）、`skill`（技能沉淀）、`skill-catalog`（技能加载：发现 `SKILL.md` 指令集 + 目录注入 + `skill` 工具）、`recovery`（会话快照恢复）
+- ✅ **完整测试覆盖**：796 个单元测试
 
 ---
 
@@ -76,6 +76,8 @@ dependency_overrides:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_schedule}
   conatus_search:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_search}
+  conatus_skill:
+    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_skill}
   conatus_tts:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_tts}
 ```
@@ -574,6 +576,29 @@ skills.record('查环境', <SkillStep>[SkillStep(toolName: 'get_weather', argume
 final skill = await skills.maybeExtract(tools: app.tools);     // 达阈值时产出并注册
 await skills.restore(tools: app.tools);                        // 跨会话恢复
 ```
+
+### `skill-catalog` — 技能加载（可加载指令集）
+
+服务键 `'skillRegistry'`（`ctx.skillRegistry`）。与上面的 `skill`（技能沉淀）不是
+同一件事：这里加载的是磁盘上的 Markdown 指令集，那边沉淀出的是可执行的新工具。
+
+技能放在 `<项目根>/.conatus/skills/<name>/SKILL.md`（或 `<name>.md`），
+`<项目根>/.agents/skills`、`~/.conatus/skills`（`$CONATUS_HOME`）、
+`~/.agents/skills`（`$CONATUS_AGENTS_HOME`）按同一优先级规则依次生效。
+frontmatter 需要 `name`（kebab-case）与 `description`，可选 `whenToUse` /
+`metadata` / `disable-model-invocation`；`name` 与描述会被拼成一段 system prompt
+（`skills` 段——没有技能时该段不存在），模型据此调用 `skill` 工具取回正文。
+
+```dart
+final registry = await provideSkillRegistry(app);
+provideSkillCatalog(app);            // 目录段：有技能才挂
+provideSkillTool(app);               // 注册 skill 工具
+await provideSkillFilesystem(app);   // 发现 .conatus/skills 等目录并监听变更
+```
+
+限制：只有一层全局注册表（无 per-scope 分层）；只扫发现根一层，不递归
+`**/SKILL.md`；发现根在装配时确定，之后不会跟随工作目录变化；只做模型侧调用
+（不做斜杠 `/name` 直接调用）；改正文不会改变目录，模型不会被通知。
 
 ### `recovery` — 持久化与恢复
 
@@ -1135,6 +1160,21 @@ root.provide('x', 1);
 | `SessionLogRecorder`：`attach(session)` / `detach()` / `record(type, {data})` / `sessionId` / `lastEventId` | 镜像业务事件 + 追加派生事件，串成因果链 |
 | `SessionLogLlmProvider(inner, {recorder})` / `instrumentSessionLogTools(tools, recorder)` | 记录 `llm/request` / `llm/response` / `tool/call`（不改请求） |
 | `checkModelVisibleInvariant(events)` / `assertModelVisibleInvariant(events)` / `sameJson(left, right)` | 「模型可见即已记录」不变式的检查 / 断言 / 递归 JSON 比较 |
+
+### `SkillRegistry`（`skill-catalog`，`conatus_skill` 包）
+
+| 成员 | 说明 |
+|------|------|
+| `provideSkillRegistry(ctx, {providers, refreshDebounce, onWarning})` | 提供 `'skillRegistry'` 并完成首次收集 |
+| `provideSkillFilesystem(ctx, {roots, watch, debounce})` | 注册目录发现 provider（缺省 `defaultSkillRoots()`）并为已存在的根起监听 |
+| `provideSkillCatalog(ctx, {order, descriptionMaxLength})` | 把目录挂成 `skills` 段（空目录不注册） |
+| `provideSkillTool(ctx)` | 注册 `skill` 工具（参数 `name`，结果是一段 `<skill_content>`） |
+| `SkillRegistry`：`available` / `modelInvocable` / `load(name)` / `register(SkillRegistration)` / `registerProvider(SkillProvider)` / `refresh()` / `invalidate()` / `onChange(fn)` | 同步快照 / 可调用技能 / 加载正文 / 运行时技能 / 来源注册 / 立即收集 / 标脏 / 变更监听 |
+| `SkillProvider`：`name` / `list()` / `load(summary)` | 来源契约（单 provider 失败只降级它自己） |
+| `SkillRoot(path, source, rank)` / `defaultSkillRoots({projectRoot, includeUserRoots})` / `findProjectRoot()` | 发现根与项目根定位（最近含 `.git` 的祖先） |
+| `SkillCatalogSection` / `renderSkillCatalog(...)` / `renderSkillContent(...)` | 目录段控制器与目录 / `<skill_content>` 渲染 |
+| `parseSkillDocument(text) → SkillDocument` / `SkillFrontmatter` | frontmatter 解析（`error` 非空即丢弃该条目） |
+| `SkillRootWatcher({roots, onInvalidate, debounce})` | 目录监听：变更合并成一次失效 |
 
 ### `SystemPrompt`（`system-prompt`）
 

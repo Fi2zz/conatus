@@ -16,5 +16,6 @@ workspace:
   - packages/conatus_mcp
   - packages/conatus_schedule
   - packages/conatus_search
+  - packages/conatus_skill
   - packages/conatus_tts
   - packages/conatus_tui
