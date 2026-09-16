@@ -7,7 +7,8 @@
 初始实现——技能加载，从 `deepseek-harness` 的 skill 包族移植为独立包：
 
 - `SkillRegistry` / `provideSkillRegistry`（服务键 `'skillRegistry'`）：provider
-  与运行时技能的注册表，`available` 是同步快照，收集串行化且带合并窗口
+  与运行时技能的注册表，`available` 是同步快照，收集串行化且带合并窗口；
+  `inlineSkills` 允许把一段提示词直接当技能注册，不落盘也不解析 frontmatter
 - `SkillProvider` 契约与 `SkillFilesystemProvider` / `provideSkillFilesystem`：
   从 `<项目根>/.conatus/skills`、`.agents/skills` 与用户目录发现
   `SKILL.md` / `<name>.md`，rank 100/200/300/400/500 决定同名遮蔽

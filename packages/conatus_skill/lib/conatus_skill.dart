@@ -9,11 +9,20 @@
 /// 目录本身是运行时现场装配的 system prompt 段，没有技能时该段不存在。
 ///
 /// ```dart
+/// // 从磁盘发现
 /// final SkillRegistry registry = await provideSkillRegistry(ctx);
 /// provideSkillCatalog(ctx);
 /// provideSkillTool(ctx);
 /// await provideSkillFilesystem(ctx);
+///
+/// // 或者直接把一段提示词当技能（不落盘）
+/// await provideSkillRegistry(ctx, inlineSkills: <SkillRegistration>[
+///   SkillRegistration(name: 'release-notes', description: '…', content: '…'),
+/// ]);
 /// ```
+///
+/// 技能来自磁盘时是「Markdown + frontmatter」，来自 [SkillRegistration] 时是
+/// 「名字 + 描述 + 正文」；两条来源进同一份目录、同一个 `skill` 工具。
 ///
 /// 服务键 `'skillRegistry'`（`ctx.skillRegistry`）。名称与 `conatus_agent` 的
 /// `SkillLibrary`（`'skill'`，把重复工具序列沉淀成新工具）刻意区分。

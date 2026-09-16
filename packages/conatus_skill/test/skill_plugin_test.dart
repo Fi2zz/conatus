@@ -132,5 +132,59 @@ void main() {
       expect(prompt.sections, isEmpty);
       expect(prompt.render(prompt.assemble()), isEmpty);
     });
+
+    test('inlineSkills：不落盘的一段提示词也能进目录与工具', () async {
+      final Context ctx = Context.root();
+      addTearDown(ctx.dispose);
+      provideTools(ctx);
+      final SystemPrompt prompt = provideSystemPrompt(ctx);
+      final SkillRegistry registry = await provideSkillRegistry(
+        ctx,
+        inlineSkills: const <SkillRegistration>[
+          SkillRegistration(
+            name: 'release-notes',
+            description: '把合并记录改写成发布说明',
+            content: '先读 git log。',
+          ),
+        ],
+      );
+      provideSkillCatalog(ctx);
+      provideSkillTool(ctx);
+
+      expect(
+        registry.available.map((SkillSummary s) => s.name),
+        <String>['release-notes'],
+      );
+      expect(registry.available.single.source, kSkillSourceRuntime);
+      expect(
+        prompt.render(prompt.assemble()),
+        contains('- `release-notes`: 把合并记录改写成发布说明'),
+      );
+
+      final ToolResult result = await ctx.tools.call(const ToolCall(
+        name: 'skill',
+        arguments: <String, Object?>{'name': 'release-notes'},
+      ));
+
+      expect(result.isError, isFalse);
+      expect(result.content, contains('<skill_instructions>\n先读 git log。'));
+    });
+
+    test('inlineSkills 的名字非法时在装配处就失败', () async {
+      final Context ctx = Context.root();
+      addTearDown(ctx.dispose);
+      provideTools(ctx);
+      provideSystemPrompt(ctx);
+
+      await expectLater(
+        provideSkillRegistry(
+          ctx,
+          inlineSkills: const <SkillRegistration>[
+            SkillRegistration(name: 'Bad Name', description: '名字不合法'),
+          ],
+        ),
+        throwsArgumentError,
+      );
+    });
   });
 }

@@ -37,7 +37,7 @@
 - 🔌 **MCP 生态**：`mcp`（MCP 客户端：stdio / HTTP / SSE 传输 + 握手与工具发现），外部 server 的工具以 `server__tool` 接入同一张工具表，风险缺省 `medium` 走审批
 - 🗜️ **分层压缩与缓存度量**：`content-classifier`（内容分类器能力缝）、`layered-compaction`（按类别分层折叠：工具结果压成指针、用户偏好留原文）、`context-cache`（可缓存前缀指纹 + 命中遥测）
 - 🔭 **产品化**：`telemetry`（事件导出 + 埋点）、`evaluation`（用例评估 + 基线对比）、`approval`（高危工具审批）、`skill`（技能沉淀）、`skill-catalog`（技能加载：发现 `SKILL.md` 指令集 + 目录注入 + `skill` 工具）、`recovery`（会话快照恢复）
-- ✅ **完整测试覆盖**：796 个单元测试
+- ✅ **完整测试覆盖**：798 个单元测试
 
 ---
 
@@ -595,6 +595,10 @@ provideSkillCatalog(app);            // 目录段：有技能才挂
 provideSkillTool(app);               // 注册 skill 工具
 await provideSkillFilesystem(app);   // 发现 .conatus/skills 等目录并监听变更
 ```
+
+不想落盘时也可以直接传提示词：`provideSkillRegistry(app, inlineSkills: [...])`
+把内联技能（[`SkillRegistration`]，不解析 frontmatter）注册进同一份目录与同一个
+`skill` 工具。
 
 限制：只有一层全局注册表（无 per-scope 分层）；只扫发现根一层，不递归
 `**/SKILL.md`；发现根在装配时确定，之后不会跟随工作目录变化；只做模型侧调用
@@ -1165,7 +1169,7 @@ root.provide('x', 1);
 
 | 成员 | 说明 |
 |------|------|
-| `provideSkillRegistry(ctx, {providers, refreshDebounce, onWarning})` | 提供 `'skillRegistry'` 并完成首次收集 |
+| `provideSkillRegistry(ctx, {providers, inlineSkills, registry})` | 提供 `'skillRegistry'` 并完成首次收集；`inlineSkills` 直接把提示词当技能（不落盘） |
 | `provideSkillFilesystem(ctx, {roots, watch, debounce})` | 注册目录发现 provider（缺省 `defaultSkillRoots()`）并为已存在的根起监听 |
 | `provideSkillCatalog(ctx, {order, descriptionMaxLength})` | 把目录挂成 `skills` 段（空目录不注册） |
 | `provideSkillTool(ctx)` | 注册 `skill` 工具（参数 `name`，结果是一段 `<skill_content>`） |

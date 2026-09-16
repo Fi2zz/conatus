@@ -9,7 +9,8 @@
 
 - `SkillRegistry` / `provideSkillRegistry`（服务键 `'skillRegistry'`）：provider 与
   运行时技能的注册表，`available` 是同步快照，收集串行化并带合并窗口，
-  单个 provider 失败只降级它自己（经 `onWarning` 上报）
+  单个 provider 失败只降级它自己（经 `onWarning` 上报）；`inlineSkills` 允许把
+  一段提示词直接当技能注册（不落盘、不解析 frontmatter）
 - `SkillFilesystemProvider` / `provideSkillFilesystem` / `SkillRootWatcher`：按
   rank 100/200/300/400/500 从 `<项目根>/.conatus/skills`、`.agents/skills` 与用户
   技能目录发现 `SKILL.md` / `<name>.md`，目录变更合并成一次失效

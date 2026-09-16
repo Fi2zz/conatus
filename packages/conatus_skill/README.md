@@ -65,10 +65,31 @@ provideSkillTool(ctx);               // 注册 skill 工具
 await provideSkillFilesystem(ctx);   // 发现 .conatus/skills 等目录并监听变更
 ```
 
+也可以完全不走磁盘，直接传一段提示词当技能：
+
+```dart
+await provideSkillRegistry(ctx, inlineSkills: <SkillRegistration>[
+  const SkillRegistration(
+    name: 'release-notes',                       // 必须 kebab-case
+    description: '把一组合并记录改写成发布说明',   // 目录里显示的一行
+    content: '先读 git log，再按 Keep a Changelog 组织。',
+  ),
+]);
+provideSkillCatalog(ctx);
+provideSkillTool(ctx);
+```
+
+`inlineSkills` 与文件系统技能进同一份目录、同一个 `skill` 工具，区别只在来源：
+内联技能 `source` / `provider` 都是 `runtime`、rank 250（项目声明可以覆盖它，
+它又压过自定义与用户目录），且恒为模型可见——`SkillRegistration` 没有
+`disable-model-invocation` 对应字段。名字非法或描述为空时**在装配处**抛
+`ArgumentError`，不会静默跳过。
+
 - `SkillRegistry`（服务键 `'skillRegistry'`，`ctx.skillRegistry`）：provider 与
   运行时技能的集散地。`available` 是目录与工具读取的**同步快照**；
   `registerProvider` / `register` / `invalidate` 只标脏并调度一次收集（默认 50ms
-  合并窗口），收集串行化，快照确有变化时经 `onChange` 通知。
+  合并窗口），收集串行化，快照确有变化时经 `onChange` 通知。装配后再注册同样
+  有效，只是要 `await registry.refresh()` 让快照立刻更新。
 - `SkillProvider`（`list()` / `load(summary)`）：一类技能来源。单个 provider 抛错
   只降级它自己——其余 provider 的产出照常生效，错误经 `onWarning` 上报。
 - `SkillRootWatcher`：为已存在的发现根起目录监听，变更在 250ms 窗口合并成一次

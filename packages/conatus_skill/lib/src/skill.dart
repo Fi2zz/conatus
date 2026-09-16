@@ -18,6 +18,7 @@ import 'skill_filesystem_watch.dart';
 import 'skill_provider.dart';
 import 'skill_registry.dart';
 import 'skill_tool.dart';
+import 'skill_types.dart';
 
 /// `ctx.skillRegistry`：当前上下文可见的技能注册表。
 ///
@@ -28,26 +29,30 @@ extension SkillRegistryContext on Context {
   SkillRegistry get skillRegistry => require<SkillRegistry>('skillRegistry');
 }
 
-/// 提供服务键 `'skillRegistry'`，注册 [providers] 并完成首次收集。
+/// 提供服务键 `'skillRegistry'`，注册 [providers] 与 [inlineSkills] 并完成首次收集。
+///
+/// [inlineSkills] 是「直接把一段提示词当技能用」的入口：不落盘、不解析
+/// frontmatter，只要求 kebab-case 名字与非空描述。需要自定义合并窗口或告警出口
+/// 时，传一个自己构造的 [registry]。
 ///
 /// 注册表的生命周期随 [ctx]：上下文释放时取消待执行的收集并清空监听。
 Future<SkillRegistry> provideSkillRegistry(
   Context ctx, {
   Iterable<SkillProvider> providers = const <SkillProvider>[],
-  Duration refreshDebounce = const Duration(milliseconds: 50),
-  void Function(String message)? onWarning,
+  Iterable<SkillRegistration> inlineSkills = const <SkillRegistration>[],
+  SkillRegistry? registry,
 }) async {
-  final SkillRegistry registry = SkillRegistry(
-    refreshDebounce: refreshDebounce,
-    onWarning: onWarning,
-  );
-  ctx.provide('skillRegistry', registry);
-  ctx.onDispose(registry.dispose);
+  final SkillRegistry resolved = registry ?? SkillRegistry();
+  ctx.provide('skillRegistry', resolved);
+  ctx.onDispose(resolved.dispose);
   for (final SkillProvider provider in providers) {
-    ctx.effect(() => registry.registerProvider(provider));
+    ctx.effect(() => resolved.registerProvider(provider));
   }
-  await registry.refresh();
-  return registry;
+  for (final SkillRegistration registration in inlineSkills) {
+    ctx.effect(() => resolved.register(registration));
+  }
+  await resolved.refresh();
+  return resolved;
 }
 
 /// 注册目录发现型 provider，并（默认）为已存在的发现根起目录监听。
