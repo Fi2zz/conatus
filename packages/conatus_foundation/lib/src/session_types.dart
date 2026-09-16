@@ -3,6 +3,15 @@ library;
 
 import 'package:conatus_core/conatus_core.dart';
 
+/// 用户消息事件类型。
+const String kUserMessageEvent = 'user/message';
+
+/// 助手消息事件类型（可携带工具调用）。
+const String kAssistantMessageEvent = 'assistant/message';
+
+/// 工具结果事件类型。
+const String kToolResultEvent = 'tool/result';
+
 /// 生成事件唯一 id（进程内单调，跨会话唯一）。
 String nextSessionEventId() =>
     'evt-${DateTime.now().microsecondsSinceEpoch}-${_eventSeq++}';

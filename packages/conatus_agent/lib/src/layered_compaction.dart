@@ -1,8 +1,8 @@
 /// layered-compaction 插件：按内容类别分层折叠会话，而不是一律压成一段摘要。
 ///
 /// 服务键 `'compaction'`，与 [provideCompaction] 二选一（同名服务重复提供会抛错）。
-/// 与 [Compactor] 的接口与契约完全一致（`compact` / `summaryOf` / `forget` /
-/// `keepRecent`），可直接替换进 Agent Loop。区别在 `compact` 的处理方式：
+/// 压缩的交易边界、切点安全与摘要记忆都由 [Compactor] 承担，本插件只覆盖
+/// [summarizeFolded]：分层结果替换掉那一次汇总的产出，其余契约完全一致：
 ///
 /// * 工具结果压成「工具名 + 结果首行 + 字符数」的一行说明，正文丢弃，并指向
 ///   会话日志里的 `tool/result` 事件（**不**额外落盘）；
@@ -14,12 +14,11 @@
 /// `[保留原文]`），`buildSystemText` 会把它整段塞进 system 的 `[历史摘要]` 块。
 library;
 
+import 'package:conatus_compaction/conatus_compaction.dart';
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 import 'agent_events.dart';
-import 'agent_types.dart';
-import 'compaction.dart';
 import 'content_classifier.dart';
 import 'context_metrics.dart';
 import 'telemetry.dart';
@@ -38,44 +37,36 @@ class LayeredCompactor extends Compactor {
   final ContentClassifier classifier;
 
   final Telemetry? _telemetry;
-  final Map<String, String> _summaries = <String, String>{};
 
   @override
-  String? summaryOf(String sessionId) => _summaries[sessionId];
+  Future<CompactionSummary> summarizeFolded(
+    CompactionFold fold,
+    Summarizer summarize,
+  ) async {
+    final _Layers layers = _collect(fold.events);
+    final CompactionSummary inner =
+        await summarize(layers.conversation, fold.previous);
+    final String text = _render(inner.text.trim(), layers);
+    _emit(fold, layers, text);
+    return CompactionSummary(text,
+        provider: inner.provider, model: inner.model);
+  }
 
-  @override
-  void forget(String sessionId) => _summaries.remove(sessionId);
-
-  @override
-  Future<CompactionResult?> compact(
-    Session session,
-    Summarizer summarize, {
-    int? keepRecent,
-  }) async {
-    final int keep = keepRecent ?? this.keepRecent;
-    final List<SessionEvent> events = session.events;
-    if (events.length <= keep) return null;
-    final int olderEnd = events.length - keep;
-    final _Layers layers = _collect(events, olderEnd);
-    final String summary =
-        await summarize(layers.conversation, _summaries[session.id] ?? '');
-    final String text = _render(summary.trim(), layers);
-    _summaries[session.id] = text;
+  void _emit(CompactionFold fold, _Layers layers, String text) {
     _telemetry
         ?.emit(TelemetryEvent('context.compacted', data: <String, Object?>{
       'tokensBefore': estimateMessagesTokens(
-          deriveAgentMessages(_messageEvents(events, olderEnd))),
+          deriveAgentMessages(_messageEvents(fold.events))),
       'tokensAfter': estimateTokens(text),
-      'compacted': olderEnd,
-      'kept': keep,
+      'compacted': fold.events.length,
+      'kept': fold.kept,
       'toolResults': layers.toolNotes.length,
       'preferences': layers.preferences.length,
     }));
-    return CompactionResult(summary: text, compacted: olderEnd, kept: keep);
   }
 
-  _Layers _collect(List<SessionEvent> events, int olderEnd) {
-    final List<SessionEvent> older = _messageEvents(events, olderEnd);
+  _Layers _collect(List<SessionEvent> folded) {
+    final List<SessionEvent> older = _messageEvents(folded);
     final List<LlmMessage> messages = deriveAgentMessages(older);
     final _Layers layers = _Layers();
     for (int index = 0; index < older.length; index++) {
@@ -90,10 +81,10 @@ class LayeredCompactor extends Compactor {
 
   /// 只保留「会被 `deriveAgentMessages` 还原成一条消息」的事件，保证事件与
   /// 消息按下标一一对应。
-  List<SessionEvent> _messageEvents(List<SessionEvent> events, int olderEnd) =>
+  List<SessionEvent> _messageEvents(List<SessionEvent> events) =>
       <SessionEvent>[
-        for (int index = 0; index < olderEnd; index++)
-          if (_carriesMessage(events[index])) events[index],
+        for (final SessionEvent event in events)
+          if (_carriesMessage(event)) event,
       ];
 
   bool _carriesMessage(SessionEvent event) {
@@ -176,7 +167,7 @@ class _Layers {
 /// 已提供的 `'contentClassifier'` / `'telemetry'`。
 LayeredCompactor provideLayeredCompaction(
   Context ctx, {
-  Compactor? compaction,
+  CompactionEngine? compaction,
   ContentClassifier? classifier,
   Telemetry? telemetry,
   int? keepRecent,

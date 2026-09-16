@@ -1,4 +1,5 @@
 import 'package:conatus_agent/conatus_agent.dart';
+import 'package:conatus_compaction/conatus_compaction.dart';
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
@@ -76,8 +77,8 @@ void main() {
     test('事件数不超过保留数时不压缩', () async {
       final LayeredCompactor compactor = LayeredCompactor(keepRecent: 8);
 
-      final CompactionResult? result =
-          await compactor.compact(_dialog(rounds: 2), (_, __) async => 'x');
+      final CompactionResult? result = await compactor.compactIfNeeded(
+          _dialog(rounds: 2), (_, __) async => const CompactionSummary('x'));
 
       expect(result, isNull);
       expect(compactor.summaryOf('s1'), isNull);
@@ -88,15 +89,15 @@ void main() {
       final LayeredCompactor compactor = LayeredCompactor(keepRecent: 8);
       final List<SessionEvent> summarized = <SessionEvent>[];
 
-      final CompactionResult result = (await compactor.compact(
+      final CompactionResult result = (await compactor.compactIfNeeded(
         session,
         (List<SessionEvent> events, String previous) async {
           summarized.addAll(events);
-          return '用户逐一读取了 24 个文件';
+          return const CompactionSummary('用户逐一读取了 24 个文件');
         },
       ))!;
 
-      expect(result.compacted, session.length - 8);
+      expect(result.compacted, 88);
       expect(result.kept, 8);
       expect(compactor.summaryOf('s1'), result.summary);
       // ① 分层结构：三段小节
@@ -135,8 +136,8 @@ void main() {
         classifier: RuleBasedContentClassifier(recentWindow: 5),
       );
 
-      final CompactionResult result =
-          (await compactor.compact(session, (_, __) async => '摘要'))!;
+      final CompactionResult result = (await compactor.compactIfNeeded(
+          session, (_, __) async => const CompactionSummary('摘要')))!;
 
       expect(result.summary, contains('[保留原文]'));
       expect(result.summary, contains('第3条'));
@@ -149,15 +150,15 @@ void main() {
       final LayeredCompactor compactor = LayeredCompactor(keepRecent: 8);
       final List<String> previous = <String>[];
 
-      await compactor.compact(session,
+      await compactor.compactIfNeeded(session,
           (List<SessionEvent> events, String prev) async {
         previous.add(prev);
-        return 'v1';
+        return const CompactionSummary('v1');
       });
-      await compactor.compact(session,
+      await compactor.compactIfNeeded(session,
           (List<SessionEvent> events, String prev) async {
         previous.add(prev);
-        return 'v2';
+        return const CompactionSummary('v2');
       });
 
       expect(previous.first, '');
@@ -168,11 +169,14 @@ void main() {
     test('汇总器抛错时摘要记忆不更新', () async {
       final Session session = _dialog();
       final LayeredCompactor compactor = LayeredCompactor(keepRecent: 8);
-      await compactor.compact(session, (_, __) async => '旧摘要');
+      await compactor.compactIfNeeded(
+          session, (_, __) async => const CompactionSummary('旧摘要'));
       final String? before = compactor.summaryOf('s1');
 
       await expectLater(
-        compactor.compact(session, (_, __) async => throw StateError('boom')),
+        compactor.compactIfNeeded(session, (_, __) async {
+          throw StateError('boom');
+        }),
         throwsStateError,
       );
 
@@ -185,7 +189,8 @@ void main() {
       final Session session = Session(id: 's1')
         ..append(kUserMessageEvent, data: <String, Object?>{'text': 'a'})
         ..append(kAssistantMessageEvent, data: <String, Object?>{'text': 'b'});
-      await compactor.compact(session, (_, __) async => '摘要');
+      await compactor.compactIfNeeded(
+          session, (_, __) async => const CompactionSummary('摘要'));
 
       compactor.forget('s1');
 
@@ -200,7 +205,8 @@ void main() {
       final CompactionResult result = (await LayeredCompactor(
         keepRecent: 8,
         telemetry: telemetry,
-      ).compact(_dialog(), (_, __) async => '摘要'))!;
+      ).compactIfNeeded(
+          _dialog(), (_, __) async => const CompactionSummary('摘要')))!;
 
       final TelemetryEvent event = telemetry.recent.single;
       expect(event.name, 'context.compacted');
@@ -215,7 +221,8 @@ void main() {
 
     test('没有 telemetry 时不发事件也不报错', () async {
       final CompactionResult? result = await LayeredCompactor(keepRecent: 8)
-          .compact(_dialog(), (_, __) async => '摘要');
+          .compactIfNeeded(
+              _dialog(), (_, __) async => const CompactionSummary('摘要'));
 
       expect(result, isNotNull);
     });
@@ -241,7 +248,8 @@ void main() {
       final LayeredCompactor compactor = provideLayeredCompaction(ctx);
 
       expect(identical(compactor.classifier, classifier), isTrue);
-      await compactor.compact(_dialog(), (_, __) async => '摘要');
+      await compactor.compactIfNeeded(
+          _dialog(), (_, __) async => const CompactionSummary('摘要'));
       expect(telemetry.recent.single.name, 'context.compacted');
       ctx.dispose();
     });
@@ -265,14 +273,19 @@ void main() {
 
       final AgentTurn turn = await loop.run('新问题');
 
+      // 压缩在日志末尾留下 start / summary / end 三个记录事件。
       expect(session.events.map((SessionEvent e) => e.type), <String>[
         kUserMessageEvent,
         kUserMessageEvent,
         kUserMessageEvent,
         kUserMessageEvent,
         kUserMessageEvent,
+        kCompactionStartEvent,
+        kCompactionSummaryEvent,
+        kCompactionEndEvent,
         kAssistantMessageEvent,
       ]);
+      expect(checkCompactionInvariant(session.events), isEmpty);
       expect(provider.calls, hasLength(2));
       expect(provider.calls.last.first.content, contains('[历史摘要]'));
       expect(provider.calls.last.first.content, contains('这是摘要'));

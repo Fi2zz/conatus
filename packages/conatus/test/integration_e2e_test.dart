@@ -208,12 +208,23 @@ void main() {
     );
     expect(turn.reply, '完成');
 
-    // 2) 业务会话事件序列不受四个方向影响：尾部恰是本轮的 6 条，且只有三类业务事件
+    // 2) 业务会话事件序列不受四个方向影响：本轮的业务事件仍是 6 条，压缩只在
+    //    本轮用户消息之后追加 3 条记录事件
     final List<String> allTypes =
         session.events.map((SessionEvent e) => e.type).toList();
-    expect(allTypes.length, 18); // 12 条预置历史 + 6 条本轮
+    expect(allTypes.length, 21); // 12 条预置历史 + 6 条本轮 + 3 条压缩记录
+    expect(allTypes.sublist(12, 16), <String>[
+      kUserMessageEvent,
+      kCompactionStartEvent,
+      kCompactionSummaryEvent,
+      kCompactionEndEvent,
+    ]);
+    final List<String> business = <String>[
+      for (final String type in allTypes)
+        if (!type.startsWith('compaction/')) type,
+    ];
     expect(
-      allTypes.sublist(allTypes.length - 6),
+      business.sublist(business.length - 6),
       <String>[
         kUserMessageEvent,
         kAssistantMessageEvent,
@@ -224,9 +235,10 @@ void main() {
       ],
     );
     expect(
-      allTypes.toSet(),
+      business.toSet(),
       <String>{kUserMessageEvent, kAssistantMessageEvent, kToolResultEvent},
     );
+    expect(checkCompactionInvariant(session.events), isEmpty);
 
     // 3) Session Log 是超集（含派生事件）
     final List<SessionEvent> log = await app.sessionLog.read('e2e').toList();

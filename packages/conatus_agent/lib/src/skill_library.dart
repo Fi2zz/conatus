@@ -8,7 +8,6 @@ import 'dart:convert';
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
-import 'agent_types.dart';
 import 'approval.dart';
 import 'skill.dart';
 import 'skill_namer.dart';

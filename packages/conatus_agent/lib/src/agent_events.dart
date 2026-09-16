@@ -3,10 +3,9 @@
 library;
 
 import 'dart:convert';
+import 'package:conatus_compaction/conatus_compaction.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
-import 'agent_types.dart';
-import 'compaction.dart';
 import 'plan.dart';
 
 /// 把会话事件日志还原为模型消息序列。
@@ -84,7 +83,7 @@ Map<String, Object?> parseToolArguments(String raw) {
 const String kCompactionSummaryPrompt = '请把下面这段对话压缩成简洁的中文要点（保留事实、结论与未完成事项）：';
 
 /// 用模型把一组会话事件压缩为要点摘要；[previous] 是上一版摘要。
-Future<String> summarizeEvents(
+Future<CompactionSummary> summarizeEvents(
   LlmProvider llm,
   List<SessionEvent> events,
   String previous,
@@ -97,7 +96,8 @@ Future<String> summarizeEvents(
   }
   final LlmResult result =
       await llm.chat(<LlmMessage>[LlmMessage('user', buffer.toString())]);
-  return result.content.trim();
+  return CompactionSummary(result.content.trim(),
+      provider: result.provider, model: result.model);
 }
 
 /// 会话关闭时抛错以中止循环。
@@ -117,19 +117,19 @@ Iterable<SessionEvent> recentAgentEvents(Session? session, int historyStart) {
 /// 按预算压缩会话；返回历史窗口的起点（事件下标）。
 Future<int> compactSession({
   required Session? session,
-  required Compactor? compactor,
+  required CompactionEngine? compactor,
   required LlmProvider llm,
   required int historyStart,
 }) async {
   if (compactor == null || session == null) return historyStart;
-  await compactor.compact(
+  final CompactionResult? result = await compactor.compactIfNeeded(
     session,
     (List<SessionEvent> events, String previous) =>
         summarizeEvents(llm, events, previous),
   );
-  if (compactor.summaryOf(session.id) == null) return historyStart;
-  final int keep = compactor.keepRecent;
-  return session.length > keep ? session.length - keep : 0;
+  // 折叠掉的是日志开头的一段，因此窗口起点就是折叠条数（安全切点可能比预算
+  // 切点更靠前，不能再用 keepRecent 反推）。
+  return result?.compacted ?? historyStart;
 }
 
 /// 组装 system 文本：systemPrompt 装配 + 历史摘要 + 当前计划 + 相关记忆。
@@ -137,7 +137,7 @@ String buildSystemText({
   required String userInput,
   String? defaultSystemPrompt,
   SystemPrompt? systemPrompt,
-  Compactor? compactor,
+  CompactionEngine? compactor,
   MemoryStore? memory,
   Session? session,
   int memoryLimit = 5,

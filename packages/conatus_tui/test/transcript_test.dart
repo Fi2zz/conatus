@@ -1,7 +1,6 @@
 /// 会话事件 → 屏上消息的投射。
 library;
 
-import 'package:conatus_agent/conatus_agent.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_tui/conatus_tui.dart';
 import 'package:test/test.dart';

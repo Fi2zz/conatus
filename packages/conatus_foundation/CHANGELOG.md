@@ -4,6 +4,9 @@
 
 ## [未发布]
 
+- 消息事件名 `kUserMessageEvent` / `kAssistantMessageEvent` / `kToolResultEvent`
+  下沉到本包（会话词汇的拥有者），供压缩与 Agent Loop 共用；`conatus_agent`
+  继续转出这些名字，既有导入面不变。
 - `Session` 新增 `inheritedEventCount` 与 `ownEvents`：构造时可声明由种子继承的事件
   条数（`fork` 会自动把父会话事件标为继承前缀），派生状态因此只折叠本会话自有的后缀；
   `SessionStore.open` 载入的历史仍算自身事件。

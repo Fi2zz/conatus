@@ -40,8 +40,6 @@ export 'src/caching.dart'
         ContextCache,
         ContextCacheContext,
         provideContextCache;
-export 'src/compaction.dart'
-    show CompactionResult, Compactor, Summarizer, provideCompaction;
 export 'src/content_classifier.dart'
     show
         CompressionStrategy,

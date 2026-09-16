@@ -65,7 +65,13 @@ export 'src/session_log_provider.dart'
 export 'src/session_persistence.dart'
     show JsonlSessionPersistence, SessionPersistence, provideSessionPersistence;
 export 'src/session_store.dart' show SessionStore, provideSessions;
-export 'src/session_types.dart' show SessionEvent, nextSessionEventId;
+export 'src/session_types.dart'
+    show
+        SessionEvent,
+        kAssistantMessageEvent,
+        kToolResultEvent,
+        kUserMessageEvent,
+        nextSessionEventId;
 export 'src/shell.dart'
     show
         CollectedOutput,

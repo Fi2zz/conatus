@@ -8,7 +8,7 @@
 本包是 monorepo 的**伞包（umbrella）**：自身不含实现，统一再导出
 `conatus_core` / `conatus_credentials` / `conatus_foundation` / `conatus_llm` /
 `conatus_mcp` / `conatus_schedule` / `conatus_search` / `conatus_asr` /
-`conatus_tts` / `conatus_agent`，
+`conatus_tts` / `conatus_compaction` / `conatus_agent`，
 因此 `import 'package:conatus/conatus.dart';` 仍是完整公开 API。
 也可以按需只引入某个模块包，以获得更小的依赖面。
 
@@ -31,13 +31,13 @@
 - 📦 **零运行时依赖**：核心仅用 Dart 核心库（`llm` / `credentials` / `mcp` / `search` 插件依赖 `http`，`foundation` 的 IANA 时区解析依赖 `timezone`）
 - 🧰 **基础设施插件**：`timer`（定时器即效应）、`logger-console`（分级日志）、`loader`（注册表 + 配置树）、`tools`（`Tool` 基类 + `ParamSpec` + 注册表/执行管线/分组/分级）、`shell` / `fs`（能力缝 + 本地实现）、`search`（搜索能力缝 + web 工具）、`asr`（语音识别能力缝 + `transcribe_audio`）、`tts`（语音合成能力缝 + 音频输出接口）
 - 🔐 **凭据管理**：`credentials`（统一凭据契约 + 五种来源：环境变量 / 内存 / 文件 / Vault KV v2 / AWS Secrets Manager）——`get` / `require` / `validate` 同步读内存快照，远端来源用 `refresh()` 拉取并可定时轮换，对外只出现 `masked`
-- 🗂️ **会话与上下文**：`session`（事件日志 + 仓库 + JSONL 持久化）、`session-log`（多会话只追加日志：fork / replay / 轨迹重建，附「模型可见即已记录」不变式）、`schedule`（会话本地持久提醒：创建 / 列出 / 取消，重启后自动重建）、`system-prompt`（prompt 段装配）、`compaction`（滚动摘要）、`memory`（长记忆库 + 显式记住/遗忘能力与工具）
+- 🗂️ **会话与上下文**：`session`（事件日志 + 仓库 + JSONL 持久化）、`session-log`（多会话只追加日志：fork / replay / 轨迹重建，附「模型可见即已记录」不变式）、`schedule`（会话本地持久提醒：创建 / 列出 / 取消，重启后自动重建）、`system-prompt`（prompt 段装配）、`compaction`（压缩能力缝：滚动摘要 + `compaction/*` 日志事件）、`memory`（长记忆库 + 显式记住/遗忘能力与工具）
 - 🗄️ **持久化**：`database`（KV 存储 hub + 可插拔后端 + JSON 本地实现）
 - 🤖 **Agent Loop**：`agent`（会话事件 + prompt 装配 + 压缩 + 记忆 + 工具闭环）、`tool-result-eviction`（大结果落盘）、`plan`（结构化计划）、`sub-agent`（`spawn_agent` 隔离委托）、`reflection`（工具后自省重试）
 - 🔌 **MCP 生态**：`mcp`（MCP 客户端：stdio / HTTP / SSE 传输 + 握手与工具发现），外部 server 的工具以 `server__tool` 接入同一张工具表，风险缺省 `medium` 走审批
 - 🗜️ **分层压缩与缓存度量**：`content-classifier`（内容分类器能力缝）、`layered-compaction`（按类别分层折叠：工具结果压成指针、用户偏好留原文）、`context-cache`（可缓存前缀指纹 + 命中遥测）
 - 🔭 **产品化**：`telemetry`（事件导出 + 埋点）、`evaluation`（用例评估 + 基线对比）、`approval`（高危工具审批）、`skill`（技能沉淀）、`recovery`（会话快照恢复）
-- ✅ **完整测试覆盖**：691 个单元测试
+- ✅ **完整测试覆盖**：714 个单元测试
 
 ---
 
@@ -62,6 +62,8 @@ dependency_overrides:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_asr}
   conatus_core:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_core}
+  conatus_compaction:
+    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_compaction}
   conatus_credentials:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_credentials}
   conatus_foundation:
@@ -713,13 +715,18 @@ persona = '你是简洁的中文翻译。'; // 下一轮 run() 生效
 
 ### `compaction` — 会话滚动摘要
 
-服务键 `'compaction'`。事件数超过 `keepRecent` 时，把较早的事件连同上一版摘要交给
-注入的 `Summarizer`（通常是 `llm`），产出新摘要并按会话缓存；日志本身不被改写。
+服务键 `'compaction'`（`conatus_compaction` 包）。事件数超过 `keepRecent` 时，把较早
+的事件连同上一版摘要交给注入的 `Summarizer`（通常是 `llm`），产出新摘要并按会话缓存；
+日志本身不被改写，压缩只在其后追加 `compaction/start` → `compaction/summary` →
+`compaction/end` 三个记录事件，使摘要可从日志重建。
+
+切点会先吸附到不劈开工具调用与结果的最近位置（`balancedCutAtOrBefore`），没有可折叠
+的平衡切点时本次不压缩。
 
 ```dart
-final compaction = provideCompaction(app, compaction: Compactor(keepRecent: 20));
-final result = await compaction.compact(session, (events, previous) async {
-  return await summarizeWithLlm(events, previous);
+final compaction = provideCompaction(app, engine: Compactor(keepRecent: 20));
+final result = await compaction.compactIfNeeded(session, (events, previous) async {
+  return CompactionSummary(await summarizeWithLlm(events, previous));
 });
 ```
 
@@ -727,7 +734,7 @@ final result = await compaction.compact(session, (events, previous) async {
 
 服务键同为 `'compaction'`（与 `provideCompaction` **二选一**，重复提供会抛错）。
 `LayeredCompactor` 是 `Compactor` 的 drop-in 替身：接口与契约完全一致，区别在
-`compact` 按内容类别分别处理，而不是一律压成一段摘要。
+`summarizeFolded` 按内容类别分别处理，而不是一律压成一段摘要。
 
 ```dart
 provideContentClassifier(app);    // 服务键 'contentClassifier'
@@ -1138,14 +1145,19 @@ root.provide('x', 1);
 | `assemble({variables}) → PromptAssembly` | 按 `order` + 名字排序求值 |
 | `render(assembly, {separator}) → String` | 拼接并插值 `{{variable}}` |
 
-### `Compactor`（`compaction`）
+### `CompactionEngine` / `Compactor`（`compaction`，`conatus_compaction` 包）
 
 | 成员 | 说明 |
 |------|------|
-| `provideCompaction(ctx, {compaction})` | 提供 `'compaction'` |
-| `Compactor({keepRecent})` | 保留最近事件数 |
-| `compact(session, summarize, {keepRecent}) → Future<CompactionResult?>` | 折叠较早事件，不足预算返回 `null` |
-| `summaryOf(id)` / `forget(id)` | 查询 / 丢弃滚动摘要 |
+| `provideCompaction(ctx, {engine})` | 提供 `'compaction'` |
+| `CompactionEngine` | 压缩能力缝：`keepRecent` / `summaryOf(id)` / `forget(id)` / `compactIfNeeded(session, summarize, {keepRecent})` |
+| `Compactor({keepRecent})` | 默认实现：折叠较早事件，不足预算或无平衡切点返回 `null` |
+| `CompactionResult` | `compactionId` / `startSeq` / `summarySeq` / `endSeq` / `summary` / `shadowedSeqs` / `kept`（`compacted` = 折叠条数） |
+| `CompactionSummary(text, {provider, model})` / `Summarizer` | 汇总产出与汇总器签名 |
+| `balancedCutAtOrBefore(session, cut)` | 把预算切点吸附到不劈开工具配对的最近位置 |
+| `toolPairingBalancedBefore/After(session, seq)` | 查询某个切点是否平衡（seq 不存在或结果先于调用时抛错） |
+| `kCompactionStartEvent` / `kCompactionSummaryEvent` / `kCompactionEndEvent` | 压缩记录事件名 |
+| `checkCompactionInvariant(events)` / `assertCompactionInvariant(events)` | 校验三个事件成对、同身份、折叠区间是日志开头的一段 |
 
 ### `LayeredCompactor` / `ContentClassifier`（`layered-compaction` / `content-classifier`）
 
@@ -1204,7 +1216,7 @@ root.provide('x', 1);
 | `run(userInput) → Future<AgentTurn>` | 跑一轮（多步工具循环直至收口） |
 | `AgentTurn.reply` / `AgentTurn.steps` / `AgentTurn.messages` | 结果 / 工具步骤 / 消息序列 |
 | `deriveAgentMessages(events)` | 会话事件 → 模型消息序列 |
-| `summarizeEvents(llm, events, previous)` | 压缩用的默认汇总器 |
+| `summarizeEvents(llm, events, previous)` | 压缩用的默认汇总器（返回 `CompactionSummary`） |
 
 ### 工具结果驱逐 / 规划
 

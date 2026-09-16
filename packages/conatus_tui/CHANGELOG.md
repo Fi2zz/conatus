@@ -2,6 +2,11 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [未发布]
+
+- 依赖新增 `conatus_compaction`：压缩服务（`provideCompaction`）由该包提供，
+  装配时改从新包导入。
+
 ## [0.15.0] — 2026-09-15
 
 - 新增 `conatus_tui`：基于 [nocterm](https://pub.dev/packages/nocterm) 的文本 TUI。

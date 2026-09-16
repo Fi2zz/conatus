@@ -1,4 +1,5 @@
 import 'package:conatus_agent/conatus_agent.dart';
+import 'package:conatus_compaction/conatus_compaction.dart';
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
@@ -242,6 +243,18 @@ void main() {
       expect(provider.calls, hasLength(2));
       expect(provider.calls.last.first.content, contains('[历史摘要]'));
       expect(provider.calls.last.first.content, contains('这是摘要'));
+      expect(session.events.map((SessionEvent e) => e.type), <String>[
+        kUserMessageEvent,
+        kUserMessageEvent,
+        kUserMessageEvent,
+        kUserMessageEvent,
+        kUserMessageEvent,
+        kCompactionStartEvent,
+        kCompactionSummaryEvent,
+        kCompactionEndEvent,
+        kAssistantMessageEvent,
+      ]);
+      expect(checkCompactionInvariant(session.events), isEmpty);
       expect(turn.reply, '最终回复');
     });
   });

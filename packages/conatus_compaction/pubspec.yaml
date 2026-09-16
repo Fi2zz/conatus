@@ -1,8 +1,7 @@
-name: conatus_agent
+name: conatus_compaction
 description: >-
-  conatus 的 Agent Loop 与产品化能力：会话/记忆/压缩驱动的多步工具循环，
-  以及 plan / sub-agent / reflection / telemetry / evaluation / approval /
-  skill / recovery。
+  conatus 的压缩能力缝：滚动摘要的服务契约、压缩交易身份与
+  compaction/* 日志事件、工具配对平衡切点，以及一个按预算折叠的默认压缩器。
 version: 0.15.0
 repository: https://github.com/Fi2zz/conatus
 issue_tracker: https://github.com/Fi2zz/conatus/issues
@@ -13,16 +12,15 @@ environment:
 resolution: workspace
 
 dependencies:
-  conatus_compaction: ^0.15.0
   conatus_core: ^0.15.0
   conatus_foundation: ^0.15.0
-  conatus_llm: ^0.15.0
 
 dev_dependencies:
   lints: ^4.0.0
   test: ^1.25.0
 
 topics:
-  - agent
-  - llm
   - plugin
+  - compaction
+  - session
+  - context

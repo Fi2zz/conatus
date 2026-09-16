@@ -1,20 +1,17 @@
-/// Agent Loop 的类型词汇：事件名、工具步骤与一轮结局。
+/// Agent Loop 的类型词汇：工具步骤与一轮结局，以及 Session Log 的派生事件名。
 ///
 /// 会话以事件记录一轮轮对话（[kUserMessageEvent] / [kAssistantMessageEvent] /
-/// [kToolResultEvent]）；事件还原、压缩与 system 装配见 `agent_events.dart`。
+/// [kToolResultEvent]）；这三个消息事件名由 `conatus_foundation` 拥有，此处转出。
+/// 事件还原、压缩与 system 装配见 `agent_events.dart`。
 library;
 
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 
-/// 用户消息事件类型。
-const String kUserMessageEvent = 'user/message';
-
-/// 助手消息事件类型（可携带工具调用）。
-const String kAssistantMessageEvent = 'assistant/message';
-
-/// 工具结果事件类型。
-const String kToolResultEvent = 'tool/result';
+// 消息事件名由 `conatus_foundation` 的会话词汇拥有（压缩与 Agent Loop 都要
+// 按事件类型判断），此处只做转出，保持 `agent_types.dart` 的既有导入面。
+export 'package:conatus_foundation/conatus_foundation.dart'
+    show kAssistantMessageEvent, kToolResultEvent, kUserMessageEvent;
 
 /// 模型请求事件类型。
 ///

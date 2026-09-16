@@ -5,12 +5,12 @@ library;
 
 import 'dart:async';
 
+import 'package:conatus_compaction/conatus_compaction.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 import 'agent_cancel.dart';
 import 'agent_events.dart';
 import 'agent_types.dart';
-import 'compaction.dart';
 import 'plan.dart';
 import 'reflection.dart';
 import 'router.dart';
@@ -46,7 +46,7 @@ class AgentLoop {
   final SystemPrompt? systemPrompt;
 
   /// 历史压缩器；null 表示不压缩。
-  final Compactor? compactor;
+  final CompactionEngine? compactor;
 
   /// 长记忆库；null 表示不召回/不记录。
   final MemoryStore? memory;

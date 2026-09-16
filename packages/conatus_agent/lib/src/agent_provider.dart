@@ -1,12 +1,12 @@
 /// Agent Loop 的装配：把 [AgentLoop] 接上上下文里已就绪的服务。
 library;
 
+import 'package:conatus_compaction/conatus_compaction.dart';
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 import 'agent_loop.dart';
 import 'caching.dart';
-import 'compaction.dart';
 import 'reflection.dart';
 import 'router.dart';
 import 'session_log_integration.dart';
@@ -44,7 +44,7 @@ AgentLoop provideAgentLoop(
         tools: tools,
         session: target,
         systemPrompt: ctx.get<SystemPrompt>('systemPrompt'),
-        compactor: ctx.get<Compactor>('compaction'),
+        compactor: ctx.get<CompactionEngine>('compaction'),
         memory: ctx.get<MemoryStore>('memory'),
         reflector: ctx.get<Reflector>('reflection'),
         router: ctx.get<Router>('router'),

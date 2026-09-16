@@ -11,6 +11,7 @@
 /// * [conatus_llm]        — 大模型接入（豆包 / DeepSeek）
 /// * [conatus_mcp]        — MCP 客户端（stdio / HTTP / SSE 传输 + 工具接入）
 /// * [conatus_schedule]   — 会话本地持久提醒（schedule_create / list / delete）
+/// * [conatus_compaction] — 压缩能力缝（滚动摘要 + compaction/* 日志事件）
 /// * [conatus_search]     — 搜索能力缝 + web 工具
 /// * [conatus_asr]        — ASR 能力缝（豆包/火山流式识别）+ transcribe_audio
 /// * [conatus_tts]        — TTS 能力缝（豆包/火山语音合成）+ 音频输出接口
@@ -20,6 +21,7 @@ library;
 
 export 'package:conatus_agent/conatus_agent.dart';
 export 'package:conatus_asr/conatus_asr.dart';
+export 'package:conatus_compaction/conatus_compaction.dart';
 export 'package:conatus_core/conatus_core.dart';
 export 'package:conatus_credentials/conatus_credentials.dart';
 export 'package:conatus_foundation/conatus_foundation.dart';

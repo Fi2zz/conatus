@@ -4,6 +4,26 @@
 
 ## [未发布]
 
+新增 `conatus_compaction` 包 —— 压缩能力缝（依赖 `conatus_core`、
+`conatus_foundation`；压缩实现从 `conatus_agent` 迁入，对应 dsh
+`packages/compaction/compaction`）：
+
+- `CompactionEngine`（服务键 `'compaction'`）：`compactIfNeeded` / `summaryOf` /
+  `forget` / `keepRecent`；`Compactor` 为默认实现，`provideCompaction` 负责装配；
+  `LayeredCompactor` 留在 `conatus_agent`，按类别分层折叠（改为实现同一契约）
+- 压缩在日志末尾追加 `compaction/start` → `compaction/summary` →
+  `compaction/end` 三个纯记录事件：滚动摘要因此可从日志重建，补上「模型可见即已
+  记录」的缺口；`checkCompactionInvariant` 校验这三个事件成对、同身份，且折叠区间
+  是日志开头的一段
+- 压缩切点吸附到不劈开助手工具调用与其 `tool/result` 的最近位置
+  （`balancedCutAtOrBefore` / `toolPairingBalancedBefore` / `toolPairingBalancedAfter`），
+  保留窗口不再可能以孤立的工具结果开头
+- `Summarizer` 的产出改为 `CompactionSummary`，`summarizeEvents` 一并返回写摘要的
+  provider / model，随 `compaction/summary` 落日志
+- `conatus_foundation` 接管消息事件名 `kUserMessageEvent` /
+  `kAssistantMessageEvent` / `kToolResultEvent`（会话词汇下沉，`conatus_agent`
+  继续转出，导入面不变）
+
 新增 `conatus_schedule` 包 —— 会话本地持久提醒（依赖 `conatus_core`、
 `conatus_foundation` 与 `timezone`）：
 
@@ -36,6 +56,7 @@
   session / system-prompt / memory / database / ask-user
 - `conatus_llm` — 大模型接入（豆包 / DeepSeek）
 - `conatus_search` — 搜索能力缝 + `web_search` / `fetch_url`
+- `conatus_compaction` — 压缩能力缝（滚动摘要 + `compaction/*` 日志事件）
 - `conatus_agent` — Agent Loop 与产品化（plan / sub-agent / reflection /
   telemetry / eval / approval / skill / recovery）
 - `conatus` — 伞包，再导出以上全部，保持 `package:conatus/conatus.dart` 兼容
