@@ -19,8 +19,7 @@ class _ScriptedProvider implements LlmProvider {
     Map<String, dynamic>? options,
     List<Map<String, dynamic>>? tools,
   }) async {
-    final int index =
-        calls < script.length ? calls : script.length - 1;
+    final int index = calls < script.length ? calls : script.length - 1;
     calls++;
     return script[index];
   }
@@ -72,11 +71,14 @@ _Setup _assemble(List<LlmResult> script, {SessionLog? withLog}) {
     handler: (ToolContext _) async => ToolResult.success('12:00'),
   );
   final Session session = Session(id: 's1');
-  return _Setup(ctx, session, log, recorder, provideAgentLoop(ctx, session: session));
+  return _Setup(
+      ctx, session, log, recorder, provideAgentLoop(ctx, session: session));
 }
 
 Future<List<String>> _typesOf(SessionLog log, String sessionId) async =>
-    <String>[await for (final SessionEvent event in log.read(sessionId)) event.type];
+    <String>[
+      await for (final SessionEvent event in log.read(sessionId)) event.type
+    ];
 
 Future<List<SessionEvent>> _eventsOf(SessionLog log, String sessionId) =>
     log.read(sessionId).toList();
@@ -96,7 +98,8 @@ void main() {
 
   group('SessionLogRecorder — 镜像与派生', () {
     test('日志是业务会话的超集，业务会话事件序列不变', () async {
-      final _Setup setup = _assemble(<LlmResult>[_call('c1', 'get_time'), _text('12:00')]);
+      final _Setup setup =
+          _assemble(<LlmResult>[_call('c1', 'get_time'), _text('12:00')]);
 
       await setup.loop.run('现在几点');
 
@@ -115,7 +118,8 @@ void main() {
     });
 
     test('模型可见即已记录：每条 llm/request 都能从日志重建', () async {
-      final _Setup setup = _assemble(<LlmResult>[_call('c1', 'get_time'), _text('12:00')]);
+      final _Setup setup =
+          _assemble(<LlmResult>[_call('c1', 'get_time'), _text('12:00')]);
       await setup.loop.run('现在几点');
 
       final List<SessionEvent> events = await _eventsOf(setup.log, 's1');
@@ -126,7 +130,8 @@ void main() {
     });
 
     test('tool/call 记录 group 归因与实参', () async {
-      final _Setup setup = _assemble(<LlmResult>[_call('c1', 'get_time'), _text('12:00')]);
+      final _Setup setup =
+          _assemble(<LlmResult>[_call('c1', 'get_time'), _text('12:00')]);
       await setup.loop.run('现在几点');
 
       final SessionEvent call = (await _eventsOf(setup.log, 's1'))
@@ -140,7 +145,8 @@ void main() {
     });
 
     test('派生事件的 parentEventId 串成因果链', () async {
-      final _Setup setup = _assemble(<LlmResult>[_call('c1', 'get_time'), _text('12:00')]);
+      final _Setup setup =
+          _assemble(<LlmResult>[_call('c1', 'get_time'), _text('12:00')]);
       await setup.loop.run('现在几点');
 
       final List<SessionEvent> events = await _eventsOf(setup.log, 's1');
@@ -171,7 +177,8 @@ void main() {
 
   group('SessionLogRecorder — fork 与 replay', () {
     test('在任意事件点 fork，历史是原日志的前缀', () async {
-      final _Setup setup = _assemble(<LlmResult>[_call('c1', 'get_time'), _text('12:00')]);
+      final _Setup setup =
+          _assemble(<LlmResult>[_call('c1', 'get_time'), _text('12:00')]);
       await setup.loop.run('现在几点');
       final List<SessionEvent> events = await _eventsOf(setup.log, 's1');
       final SessionEvent mark =
@@ -188,7 +195,8 @@ void main() {
     });
 
     test('replay 终态与原会话一致', () async {
-      final _Setup setup = _assemble(<LlmResult>[_call('c1', 'get_time'), _text('12:00')]);
+      final _Setup setup =
+          _assemble(<LlmResult>[_call('c1', 'get_time'), _text('12:00')]);
       await setup.loop.run('现在几点');
       final List<SessionEvent> replayed = <SessionEvent>[];
       final List<SessionEvent> direct = await _eventsOf(setup.log, 's1');
@@ -198,7 +206,9 @@ void main() {
       expect(replayed.map((SessionEvent e) => e.id),
           direct.map((SessionEvent e) => e.id));
       expect(
-        deriveAgentMessages(replayed).map((LlmMessage m) => m.toJson()).toList(),
+        deriveAgentMessages(replayed)
+            .map((LlmMessage m) => m.toJson())
+            .toList(),
         deriveAgentMessages(setup.session.events)
             .map((LlmMessage m) => m.toJson())
             .toList(),

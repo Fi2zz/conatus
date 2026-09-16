@@ -39,7 +39,8 @@ bool isSensitiveKey(String key) {
 bool _lookupToken(String token) {
   if (_sensitiveTokens.contains(token)) return true;
   // 简单复数：`keys` / `tokens` / `secrets`。
-  return token.endsWith('s') && _sensitiveTokens.contains(token.substring(0, token.length - 1));
+  return token.endsWith('s') &&
+      _sensitiveTokens.contains(token.substring(0, token.length - 1));
 }
 
 /// 凭据的脱敏表示：前 4 位 + `...` + 后 4 位。

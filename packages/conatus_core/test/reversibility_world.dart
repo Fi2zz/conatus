@@ -121,10 +121,12 @@ class EffectWorld {
     return keys.map((String k) => '$k=${shared[k]}').join('|');
   }
 
-  String _openHandles() =>
-      (handles.where((ResourceHandle h) => h.open).map((ResourceHandle h) => h.id).toList()
-            ..sort())
-          .join('|');
+  String _openHandles() => (handles
+          .where((ResourceHandle h) => h.open)
+          .map((ResourceHandle h) => h.id)
+          .toList()
+        ..sort())
+      .join('|');
 }
 
 /// 施加一种效果，返回它的逆（**尚未**登记）。

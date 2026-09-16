@@ -14,7 +14,8 @@ import 'package:test/test.dart';
 
 /// 当前进程打开的、FD 名含 [prefix] 的记录数；`lsof` 不存在时返回 `null`。
 Future<int?> openFdsUnder(String prefix) async {
-  final ProcessResult result = await Process.run('lsof', <String>['-p', '$pid']);
+  final ProcessResult result =
+      await Process.run('lsof', <String>['-p', '$pid']);
   if (result.exitCode != 0) return null;
   return (result.stdout as String)
       .split('\n')

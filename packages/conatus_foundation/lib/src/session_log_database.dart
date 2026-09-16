@@ -110,15 +110,14 @@ class DatabaseSessionLog implements SessionLog {
   Future<DatabaseUnit> _resolveUnit() async =>
       _handle ??= database.get(unit) ?? await database.open(unit);
 
-  Future<List<SessionEvent>> _eventsOf(String sessionId) async => <SessionEvent>[
+  Future<List<SessionEvent>> _eventsOf(String sessionId) async =>
+      <SessionEvent>[
         await for (final SessionEvent event in read(sessionId)) event,
       ];
 
   List<String> _keysOf(DatabaseUnit handle, String sessionId) {
     final String prefix = _keyPrefix(sessionId);
-    return handle.keys
-        .where((String key) => key.startsWith(prefix))
-        .toList()
+    return handle.keys.where((String key) => key.startsWith(prefix)).toList()
       ..sort();
   }
 

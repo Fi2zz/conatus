@@ -81,8 +81,7 @@ Map<String, Object?> parseToolArguments(String raw) {
 ///
 /// 摘要请求不是对话窗口，而是把早前事件**转写**成一段文本；Session Log 的
 /// 「模型可见即已记录」校验借此前缀识别并跳过它（见 `model_visible_invariant.dart`）。
-const String kCompactionSummaryPrompt =
-    '请把下面这段对话压缩成简洁的中文要点（保留事实、结论与未完成事项）：';
+const String kCompactionSummaryPrompt = '请把下面这段对话压缩成简洁的中文要点（保留事实、结论与未完成事项）：';
 
 /// 用模型把一组会话事件压缩为要点摘要；[previous] 是上一版摘要。
 Future<String> summarizeEvents(

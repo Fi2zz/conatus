@@ -106,8 +106,7 @@ void main() {
         isEmpty,
       );
       expect(
-        harness.world.streams
-            .where((StreamController<int> c) => c.hasListener),
+        harness.world.streams.where((StreamController<int> c) => c.hasListener),
         isEmpty,
       );
       expect(

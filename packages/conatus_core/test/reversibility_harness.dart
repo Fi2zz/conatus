@@ -85,8 +85,8 @@ class ReversibilityHarness {
       here.add(mount(spec));
       mounted.add(project());
     }
-    final List<int> order = unmountOrder ??
-        <int>[for (int i = specs.length - 1; i >= 0; i--) i];
+    final List<int> order =
+        unmountOrder ?? <int>[for (int i = specs.length - 1; i >= 0; i--) i];
     final List<List<String>> unmounted = <List<String>>[];
     for (final int index in order) {
       here[index].dispose();
@@ -104,7 +104,8 @@ class ReversibilityHarness {
     for (int step = 0; step < playback.unmounted.length; step++) {
       final int index = specs.length - 1 - step;
       problems.addAll(
-        _diff(specs[index].name, playback.mounted[index], playback.unmounted[step]),
+        _diff(specs[index].name, playback.mounted[index],
+            playback.unmounted[step]),
       );
     }
     return problems;

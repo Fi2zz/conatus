@@ -35,7 +35,8 @@ List<String> checkModelVisibleInvariant(Iterable<SessionEvent> events) {
     final List<Object?> logged = _conversation(raw);
     if (_compactionRequest(logged)) continue;
     violations.addAll(
-      _compareRequests(index, deriveAgentMessages(all.sublist(0, index)), logged),
+      _compareRequests(
+          index, deriveAgentMessages(all.sublist(0, index)), logged),
     );
   }
   return violations;
@@ -96,7 +97,7 @@ List<String> _compareRequests(
   if (offset < 0) {
     return <String>[
       '第 $index 条 $kLlmRequestEvent 实际发出 ${logged.length} 条会话消息，'
-      '日志只能重建 ${expected.length} 条',
+          '日志只能重建 ${expected.length} 条',
     ];
   }
   final List<String> problems = <String>[];
@@ -126,6 +127,5 @@ List<Object?> _conversation(List<Object?> messages) {
   return messages.sublist(start);
 }
 
-String? _roleOf(Object? message) => message is Map<Object?, Object?>
-    ? message['role'] as String?
-    : null;
+String? _roleOf(Object? message) =>
+    message is Map<Object?, Object?> ? message['role'] as String? : null;

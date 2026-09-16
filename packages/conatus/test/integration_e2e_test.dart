@@ -74,7 +74,8 @@ class _EchoTransport implements McpTransport {
     _incoming.add(McpMessage.fromJson(<String, Object?>{
       'jsonrpc': '2.0',
       'id': message.id,
-      'result': _respond(message.method!, message.params ?? const <String, Object?>{}),
+      'result': _respond(
+          message.method!, message.params ?? const <String, Object?>{}),
     }));
   }
 
@@ -82,7 +83,10 @@ class _EchoTransport implements McpTransport {
       switch (method) {
         'initialize' => <String, Object?>{
             'protocolVersion': '2025-06-18',
-            'serverInfo': <String, Object?>{'name': 'probe', 'version': '0.0.1'},
+            'serverInfo': <String, Object?>{
+              'name': 'probe',
+              'version': '0.0.1'
+            },
             'capabilities': <String, Object?>{},
           },
         'tools/list' => <String, Object?>{
@@ -158,11 +162,13 @@ void main() {
       handler: (ToolContext _) async => ToolResult.success('12:00'),
     );
 
-    app.provide('llm', _TurnProvider(<LlmResult>[
-      _call('c1', 'get_time'),
-      _call('c2', 'probe__echo'),
-      _text('完成'),
-    ]));
+    app.provide(
+        'llm',
+        _TurnProvider(<LlmResult>[
+          _call('c1', 'get_time'),
+          _call('c2', 'probe__echo'),
+          _text('完成'),
+        ]));
 
     await provideMcp(
       app,
@@ -224,8 +230,7 @@ void main() {
 
     // 3) Session Log 是超集（含派生事件）
     final List<SessionEvent> log = await app.sessionLog.read('e2e').toList();
-    final List<String> logTypes =
-        log.map((SessionEvent e) => e.type).toList();
+    final List<String> logTypes = log.map((SessionEvent e) => e.type).toList();
     expect(logTypes, contains(kLlmRequestEvent));
     expect(logTypes, contains(kLlmResponseEvent));
     expect(logTypes, contains(kToolCallEvent));
@@ -242,7 +247,8 @@ void main() {
         .read(forkId)
         .map((SessionEvent e) => e.type)
         .toList();
-    expect(forkTypes, logTypes.sublist(0, logTypes.indexOf(kToolResultEvent) + 1));
+    expect(
+        forkTypes, logTypes.sublist(0, logTypes.indexOf(kToolResultEvent) + 1));
 
     // 6) 分层压缩真的工作（偏好原文进摘要），缓存度量真的发出
     expect(app.get<Compactor>('compaction')?.summaryOf('e2e'), isNotNull);

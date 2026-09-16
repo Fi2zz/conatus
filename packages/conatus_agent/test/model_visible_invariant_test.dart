@@ -31,7 +31,11 @@ List<SessionEvent> _validLog() => <SessionEvent>[
         <String, Object?>{
           'text': '',
           'toolCalls': <Map<String, Object?>>[
-            <String, Object?>{'id': 'c1', 'name': 'get_time', 'arguments': '{}'},
+            <String, Object?>{
+              'id': 'c1',
+              'name': 'get_time',
+              'arguments': '{}'
+            },
           ],
         },
       ),
@@ -201,10 +205,14 @@ void main() {
       expect(
         sameJson(
           <String, Object?>{
-            'a': <String, Object?>{'b': <Object?>[1]},
+            'a': <String, Object?>{
+              'b': <Object?>[1]
+            },
           },
           <String, Object?>{
-            'a': <String, Object?>{'b': <Object?>[1]},
+            'a': <String, Object?>{
+              'b': <Object?>[1]
+            },
           },
         ),
         isTrue,

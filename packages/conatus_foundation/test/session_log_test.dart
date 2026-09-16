@@ -4,7 +4,8 @@ import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:test/test.dart';
 
 /// 用一条 `e<i>` 事件序列填充 `log` 的 `sessionId` 会话。
-Future<List<SessionEvent>> seed(SessionLog log, String sessionId, int count) async {
+Future<List<SessionEvent>> seed(
+    SessionLog log, String sessionId, int count) async {
   final DateTime base = DateTime(2024);
   final List<SessionEvent> events = <SessionEvent>[
     for (int i = 0; i < count; i++)
@@ -45,7 +46,8 @@ void logSuite(String name, SessionLog Function(Directory dir) build) {
 
       final List<SessionEvent> events = await log.read('s1').toList();
 
-      expect(events.map((SessionEvent e) => e.type), <String>['e0', 'e1', 'e2']);
+      expect(
+          events.map((SessionEvent e) => e.type), <String>['e0', 'e1', 'e2']);
       expect(events.map((SessionEvent e) => e.seq), <int>[0, 1, 2]);
       expect(await log.read('nope').toList(), isEmpty);
       await expectLater(
@@ -75,9 +77,8 @@ void logSuite(String name, SessionLog Function(Directory dir) build) {
       final List<SessionEvent> events = await seed(log, 's1', 3);
       final DateTime mid = events[1].time;
 
-      final List<SessionEvent> window = await log
-          .read('s1', from: mid, to: mid)
-          .toList();
+      final List<SessionEvent> window =
+          await log.read('s1', from: mid, to: mid).toList();
 
       expect(window.map((SessionEvent e) => e.type), <String>['e1']);
       expect(
@@ -139,8 +140,10 @@ void logSuite(String name, SessionLog Function(Directory dir) build) {
 void main() {
   logSuite('InMemorySessionLog', (Directory dir) => InMemorySessionLog());
 
-  logSuite('PersistenceSessionLog', (Directory dir) =>
-      PersistenceSessionLog(JsonlSessionPersistence(dir: dir.path)));
+  logSuite(
+      'PersistenceSessionLog',
+      (Directory dir) =>
+          PersistenceSessionLog(JsonlSessionPersistence(dir: dir.path)));
 
   logSuite('DatabaseSessionLog', (Directory dir) {
     final Database hub = Database(defaultBackend: 'json');

@@ -64,10 +64,7 @@ export 'src/eval.dart'
 export 'src/layered_compaction.dart'
     show LayeredCompactor, provideLayeredCompaction;
 export 'src/model_visible_invariant.dart'
-    show
-        assertModelVisibleInvariant,
-        checkModelVisibleInvariant,
-        sameJson;
+    show assertModelVisibleInvariant, checkModelVisibleInvariant, sameJson;
 export 'src/plan.dart'
     show
         Plan,

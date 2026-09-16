@@ -60,8 +60,8 @@ class InMemorySessionLog implements SessionLog {
     String sessionId,
     void Function(SessionEvent event) handler,
   ) async {
-    for (final SessionEvent event
-        in List<SessionEvent>.of(_sessions[sessionId] ?? const <SessionEvent>[])) {
+    for (final SessionEvent event in List<SessionEvent>.of(
+        _sessions[sessionId] ?? const <SessionEvent>[])) {
       handler(event);
     }
   }
