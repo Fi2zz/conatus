@@ -67,6 +67,30 @@ void main() {
 
       expect(prompt.assemble().contexts.single.text, 'now');
     });
+
+    test('renderContexts 按 order 拼接上下文并插值变量', () {
+      final SystemPrompt prompt = SystemPrompt()
+        ..context(PromptContext(name: 'env', text: () => '环境 A'))
+        ..context(PromptContext(
+            name: 'time', order: -10, text: () => '[当前时间]\n{{today}}'));
+
+      final PromptAssembly assembly = prompt.assemble(
+        variables: <String, String>{'today': '2026-09-16'},
+      );
+
+      expect(
+        prompt.renderContexts(assembly),
+        '[当前时间]\n2026-09-16\n\n环境 A',
+      );
+    });
+
+    test('空上下文不贡献内容', () {
+      final SystemPrompt prompt = SystemPrompt()
+        ..context(PromptContext(name: 'empty', text: () => ''))
+        ..context(PromptContext(name: 'kept', text: () => 'X'));
+
+      expect(prompt.renderContexts(prompt.assemble()), 'X');
+    });
   });
 
   test('provideSystemPrompt 作为 systemPrompt 服务提供', () {

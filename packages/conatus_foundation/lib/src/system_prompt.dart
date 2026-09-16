@@ -2,7 +2,8 @@
 ///
 /// 服务键 `'systemPrompt'`。各插件在各自的上下文里注册段或上下文（都返回
 /// [Disposer]，交给 `ctx.effect(...)` 即可随插件卸载自动撤销），`assemble()`
-/// 按 order 升序求值，`render()` 拼接并做 `{{variable}}` 插值。
+/// 按 order 升序求值，`render()` / `renderContexts()` 分别拼接段与动态上下文，
+/// 并做 `{{variable}}` 插值。
 library;
 
 import 'package:conatus_core/conatus_core.dart';
@@ -67,6 +68,13 @@ class SystemPrompt {
   String render(PromptAssembly assembly, {String separator = '\n\n'}) =>
       assembly.sections
           .map((AssembledSection s) => interpolate(s.text, assembly.variables))
+          .join(separator);
+
+  /// 渲染动态上下文为一段文本，并插值 `{{variable}}`；空文本不贡献内容。
+  String renderContexts(PromptAssembly assembly, {String separator = '\n\n'}) =>
+      assembly.contexts
+          .map((AssembledContext c) => interpolate(c.text, assembly.variables))
+          .where((String text) => text.isNotEmpty)
           .join(separator);
 
   /// 把 `{{name}}` 替换为 [variables] 中的值；未知占位符原样保留。

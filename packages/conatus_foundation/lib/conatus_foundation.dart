@@ -85,6 +85,8 @@ export 'src/shell.dart'
         provideShell;
 export 'src/shell_local.dart' show LocalShellExecutor, provideShellLocal;
 export 'src/system_prompt.dart' show SystemPrompt, provideSystemPrompt;
+export 'src/time_context.dart'
+    show formatClockOffset, kTimeContextName, provideTimePrompt;
 export 'src/timer.dart' show Debounced, Throttled, TimerContext;
 export 'src/tool_fn.dart' show ToolFn;
 export 'src/tool_groups.dart' show ToolGroups;
