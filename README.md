@@ -1436,6 +1436,29 @@ for d in packages/*/; do (cd "$d" && dart test); done
 
 提交前请确保 CI 通过。
 
+## 发版
+
+所有包共用同一个版本号，包间依赖也用同一约束（`^0.15.0` 在 0.x 下等价于
+`>=0.15.0 <0.16.0`，所以每升一次版本，14 个 `pubspec.yaml` 必须一起改）：
+
+```bash
+bash tool/version.sh            # 检查：14 个包版本号一致，且 44 条包间约束都指向它
+bash tool/version.sh 0.16.0     # 统一升版：改 version 行 + 同步所有包间约束
+```
+
+漏改任何一处，`dart pub get` 会在 workspace 内解析阶段直接失败（不会悄悄发出去）。
+
+发布按依赖顺序进行（依赖在前）：
+
+```bash
+for p in conatus_core conatus_foundation conatus_compaction conatus_credentials \
+         conatus_llm conatus_mcp conatus_schedule conatus_search conatus_skill \
+         conatus_asr conatus_tts conatus_agent conatus_tui; do
+  dart pub publish -C "packages/$p"
+done
+dart pub publish            # 最后发布伞包 conatus
+```
+
 ---
 
 ## 致谢
