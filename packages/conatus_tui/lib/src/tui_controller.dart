@@ -6,6 +6,8 @@
 /// 撤销，无需手工清理。
 library;
 
+import 'dart:async';
+
 import 'package:conatus_agent/conatus_agent.dart';
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
@@ -287,6 +289,9 @@ class ConatusTuiController {
     _session = session;
     final Context ctx = _app.plugin('tui-session:$id', (Context child) {
       provideAgentLoop(child, session: session);
+      provideSessionSchedule(child, session: session, sessions: _sessions);
+      provideScheduleTools(child);
+      provideScheduleRuntime(child, deliver: _deliverReminder);
     });
     _sessionCtx = ctx;
     _agent = ctx.agentLoop;
@@ -319,6 +324,17 @@ class ConatusTuiController {
         transcript.add(TuiRole.system, '快照保存失败：$error');
       }
     }
+    // 轮次结束即空闲：让到期的提醒立刻交付，而不必等到下一次定时唤醒。
+    _sessionCtx?.get<ScheduleRuntime>('scheduleRuntime')?.requestDrive();
+  }
+
+  /// 调度交付：空闲时把提醒当作一轮用户输入投递，返回是否成功入队。
+  ///
+  /// 忙时返回 `false`，调度器不会记录派发，记录保持活动并在下一次触发时重试。
+  Future<bool> _deliverReminder(String text) async {
+    if (busy || _agent == null) return false;
+    unawaited(submit(text));
+    return true;
   }
 
   void _refresh() => onChanged?.call();

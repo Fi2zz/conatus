@@ -1,6 +1,6 @@
 # conatus_foundation
 
-conatus 的基础设施插件（仅依赖 `conatus_core`，零外部依赖）：
+conatus 的基础设施插件（依赖 `conatus_core` 与 `timezone` 的 IANA 时区库）：
 
 - `timer` — 定时器即可逆效应（`timeout` / `interval` / `sleep` / `throttle` / `debounce`）
 - `logger-console` — 分级日志服务 + 控制台导出
@@ -13,6 +13,7 @@ conatus 的基础设施插件（仅依赖 `conatus_core`，零外部依赖）：
 - `memory` — 长记忆库（`remember` / `recall` / `forget` / `forgetByText` / `forgetMatching`），另有 `remember` / `forget` 工具
 - `database` — KV 存储 hub + 可插拔后端
 - `ask_user` — 声明式提问
+- `schedule` — 会话本地持久提醒（`schedule_create` / `schedule_list` / `schedule_delete`）：记录写在会话事件流里、重启后自动重建；到期后在会话空闲时作为消息交付，附带 `ScheduleRuntime` 与可注入的交付端口
 
 ```dart
 import 'package:conatus_foundation/conatus_foundation.dart';

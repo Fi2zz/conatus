@@ -27,16 +27,16 @@
 - 🌳 **上下文树**：服务沿父链向下可见，天然支持作用域隔离
 - ⚡ **重入收敛**：服务变更引发的连锁反应在一次 `notify` 内稳定
 - 🛡️ **循环依赖检测**：无法收敛时快速失败，而非死循环
-- 📦 **零运行时依赖**：核心仅用 Dart 核心库（`llm` / `credentials` / `mcp` / `search` 插件依赖 `http`）
+- 📦 **零运行时依赖**：核心仅用 Dart 核心库（`llm` / `credentials` / `mcp` / `search` 插件依赖 `http`，`foundation` 的 IANA 时区解析依赖 `timezone`）
 - 🧰 **基础设施插件**：`timer`（定时器即效应）、`logger-console`（分级日志）、`loader`（注册表 + 配置树）、`tools`（`Tool` 基类 + `ParamSpec` + 注册表/执行管线/分组/分级）、`shell` / `fs`（能力缝 + 本地实现）、`search`（搜索能力缝 + web 工具）、`asr`（语音识别能力缝 + `transcribe_audio`）、`tts`（语音合成能力缝 + 音频输出接口）
 - 🔐 **凭据管理**：`credentials`（统一凭据契约 + 五种来源：环境变量 / 内存 / 文件 / Vault KV v2 / AWS Secrets Manager）——`get` / `require` / `validate` 同步读内存快照，远端来源用 `refresh()` 拉取并可定时轮换，对外只出现 `masked`
-- 🗂️ **会话与上下文**：`session`（事件日志 + 仓库 + JSONL 持久化）、`session-log`（多会话只追加日志：fork / replay / 轨迹重建，附「模型可见即已记录」不变式）、`system-prompt`（prompt 段装配）、`compaction`（滚动摘要）、`memory`（长记忆库 + 显式记住/遗忘能力与工具）
+- 🗂️ **会话与上下文**：`session`（事件日志 + 仓库 + JSONL 持久化）、`session-log`（多会话只追加日志：fork / replay / 轨迹重建，附「模型可见即已记录」不变式）、`schedule`（会话本地持久提醒：创建 / 列出 / 取消，重启后自动重建）、`system-prompt`（prompt 段装配）、`compaction`（滚动摘要）、`memory`（长记忆库 + 显式记住/遗忘能力与工具）
 - 🗄️ **持久化**：`database`（KV 存储 hub + 可插拔后端 + JSON 本地实现）
 - 🤖 **Agent Loop**：`agent`（会话事件 + prompt 装配 + 压缩 + 记忆 + 工具闭环）、`tool-result-eviction`（大结果落盘）、`plan`（结构化计划）、`sub-agent`（`spawn_agent` 隔离委托）、`reflection`（工具后自省重试）
 - 🔌 **MCP 生态**：`mcp`（MCP 客户端：stdio / HTTP / SSE 传输 + 握手与工具发现），外部 server 的工具以 `server__tool` 接入同一张工具表，风险缺省 `medium` 走审批
 - 🗜️ **分层压缩与缓存度量**：`content-classifier`（内容分类器能力缝）、`layered-compaction`（按类别分层折叠：工具结果压成指针、用户偏好留原文）、`context-cache`（可缓存前缀指纹 + 命中遥测）
 - 🔭 **产品化**：`telemetry`（事件导出 + 埋点）、`evaluation`（用例评估 + 基线对比）、`approval`（高危工具审批）、`skill`（技能沉淀）、`recovery`（会话快照恢复）
-- ✅ **完整测试覆盖**：628 个单元测试
+- ✅ **完整测试覆盖**：691 个单元测试
 
 ---
 
@@ -649,6 +649,35 @@ assertModelVisibleInvariant(await log.read(session.id).toList());
 
 `Session` 一侧的 `fork` / `replay` / `read` / `appendEvent` / `lastEventId` 与它配对，
 既有签名全部保持兼容。
+
+### `schedule` — 会话本地持久提醒
+
+服务键 `'schedule'`（`ctx.schedule`）与 `'scheduleRuntime'`（`ctx.scheduleRuntime`）。
+模型用 `schedule_create` / `schedule_list` / `schedule_delete` 三个工具管理当前会话的
+提醒。提醒没有独立存储：唯一权威是会话里的 `schedule/change` 事件（协议版本 1，严格
+解码 —— 未知版本、额外字段、id 复用、指向非活动记录的转换都会失败），因此会话落盘后
+重启会自动重建，而 fork 出的会话不会继承父会话的活动提醒。
+
+选择器三选一：`after_seconds`（正安全整数秒）、`at`（显式偏移的 RFC 3339 串，或
+`{date, time, time_zone}` 本地日历对象；IANA 时区，夏令时缺口拒绝、重叠取较早）、
+`every_seconds`（不小于 300 秒的固定间隔，与创建锚点对齐且只追赶最新一次）。读取与
+变更前会等待持久化检查点，无法确认时返回 `persistence_uncertain`，而不是声称成功。
+
+到期交付由 `ScheduleRuntime` 驱动：折叠 → 采样墙钟 → 构造固定 framing → 经注入的
+交付端口投递 → **投递成功之后**才追加派发记录。端口返回 `false`（例如会话正在回答）
+时不写派发记录，记录保持活动，等下一次触发（轮次结束或定时唤醒）。
+
+```dart
+final schedule = provideSessionSchedule(ctx, session: session, sessions: store);
+provideScheduleTools(ctx);
+
+// 交付端口由宿主提供：空闲时投递并返回 true，忙时返回 false
+provideScheduleRuntime(ctx, deliver: (String text) async => submit(text));
+```
+
+- 一次性提醒优先于固定间隔批次；批次内每条记录只取最新一个发生时点，整批共用同一个
+  决策时点；
+- 交付只在原会话内进行：没有邮件 / 短信 / 推送，冷会话只会在恢复后处理逾期记录。
 
 ### `system-prompt` — prompt 段装配
 

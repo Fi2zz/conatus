@@ -4,6 +4,22 @@
 
 ## [未发布]
 
+`foundation` 新增会话本地持久提醒（schedule）：
+
+- `SessionSchedule` / `provideSessionSchedule`（服务键 `'schedule'`，`ctx.schedule`）——
+  提醒写在会话事件流的 `schedule/change` 事件里（严格版本 1 解码：拒绝未知版本、
+  额外字段、id 复用与指向非活动记录的转换），因此会话落盘后重启即可自动重建；
+  `provideScheduleTools` 注册 `schedule_create` / `schedule_list` /
+  `schedule_delete` 三个工具
+- `ScheduleRuntime` / `provideScheduleRuntime`（服务键 `'scheduleRuntime'`）——
+  到期后折叠、采样墙钟并调用注入的交付端口；交付失败不写派发记录、记录保持活动，
+  追加失败则停止派发（消息可能已经入队）；重试由活动驱动，不额外起私有定时器
+- `at` 支持显式偏移的 RFC 3339 串与 `{date, time, time_zone}` 对象（IANA 时区，
+  夏令时缺口拒绝、重叠取较早）；新增依赖 `timezone`
+- `Session` 新增 `inheritedEventCount` / `ownEvents`：fork 出的会话不继承父会话的
+  活动状态，而 `SessionStore.open` 载入的历史仍算自身事件
+- TUI 的会话子上下文装配提醒服务、工具与运行时；轮次结束即触发一次到期推导
+
 `llm` 流式补全补齐 function calling：
 
 - `LlmProvider.chatStream` / `FallbackLlm.chatStream` 新增 `tools` 参数，与非流式

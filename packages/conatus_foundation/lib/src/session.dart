@@ -17,14 +17,30 @@ class Session {
   Session({
     required this.id,
     Iterable<SessionEvent> seed = const <SessionEvent>[],
+    this.inheritedEventCount = 0,
   }) {
-    _events.addAll(seed);
+    final List<SessionEvent> inherited = List<SessionEvent>.of(seed);
+    if (inheritedEventCount < 0 || inheritedEventCount > inherited.length) {
+      throw ArgumentError('inheritedEventCount 必须落在 seed 范围内');
+    }
+    _events.addAll(inherited);
     _seq = _events.isEmpty ? 0 : _events.last.seq + 1;
     createdAt = _events.isEmpty ? DateTime.now() : _events.first.time;
   }
 
   /// 会话标识（也是持久化文件名）。
   final String id;
+
+  /// 由 [seed] 继承的父会话事件条数（[fork] 时大于 0；重新打开会话时为 0）。
+  ///
+  /// [events] 的前若干条即继承前缀，本会话真正拥有的事件从该切点之后开始
+  /// （见 [ownEvents]）。派生状态只折叠自身后缀，因此 fork 出的会话不会继承
+  /// 父会话的活动状态。
+  final int inheritedEventCount;
+
+  /// 本会话自身拥有的事件（跳过继承前缀）。
+  List<SessionEvent> get ownEvents =>
+      List<SessionEvent>.unmodifiable(_events.skip(inheritedEventCount));
 
   /// 会话创建时间（取首条事件时间）。
   late final DateTime createdAt;
@@ -123,6 +139,7 @@ class Session {
     return Session(
       id: id ?? '$id-fork-$_forks',
       seed: seed,
+      inheritedEventCount: seed.length,
     );
   }
 
