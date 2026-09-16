@@ -60,9 +60,12 @@ Future<void> main() async {
   provideTools(app);
   app.effect(() => app.tools.fn(
         'get_time',
-        description: '返回当前时间',
-        handler: (ToolContext ctx) async =>
-            ToolResult.success(DateTime.now().toIso8601String()),
+        description: '返回当前本地时间（RFC 3339，带时区偏移）',
+        handler: (ToolContext ctx) async {
+          final DateTime now = DateTime.now();
+          return ToolResult.success('${now.toIso8601String()}'
+              '${formatClockOffset(now.timeZoneOffset)}');
+        },
       ));
   app.effect(() => app.tools.fn(
         'echo',
@@ -80,6 +83,7 @@ Future<void> main() async {
   provideSystemPrompt(app).section(
     PromptSection(name: 'persona', text: () => '你是"助手"，需要实时信息时调用工具。'),
   );
+  provideTimePrompt(app); // 日期锚点：模型不必调工具就知道今天
   provideMemory(app);
   provideCompaction(app);
   final AgentLoop agent = provideAgentLoop(app, session: session);

@@ -7,7 +7,8 @@
 // 运行：
 //   dart run example/main.dart
 //
-// 输入 "exit" 结束。试试「现在几点？」观察模型调用 get_time 并回填。
+// 输入 "exit" 结束。试试「现在几点？」观察模型调用 get_time 并回填；
+// 「今天几号？」由 system 里的日期锚点直接回答，不经过工具。
 
 import 'dart:async';
 import 'dart:convert';
@@ -22,9 +23,12 @@ Future<void> main() async {
   provideTools(app);
   app.effect(() => app.tools.fn(
         'get_time',
-        description: '返回当前时间',
-        handler: (ToolContext ctx) async =>
-            ToolResult.success(DateTime.now().toIso8601String()),
+        description: '返回当前本地时间（RFC 3339，带时区偏移）',
+        handler: (ToolContext ctx) async {
+          final DateTime now = DateTime.now();
+          return ToolResult.success('${now.toIso8601String()}'
+              '${formatClockOffset(now.timeZoneOffset)}');
+        },
       ));
 
   // 可观测性：控制台导出 + 工具埋点（tool.called）。
@@ -52,6 +56,7 @@ Future<void> main() async {
     name: 'persona',
     text: () => '你是"助手"，一位耐心的助手。需要实时信息时调用工具；否则直接简洁回答。',
   ));
+  provideTimePrompt(app); // 日期锚点：模型不必调工具就知道今天
 
   provideMemory(app);
   provideCompaction(app);
