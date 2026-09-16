@@ -62,9 +62,12 @@ class ConatusTuiRuntime {
     provideTools(app, timeout: const Duration(seconds: 30));
     app.effect(() => app.tools.fn(
           'get_time',
-          description: '返回当前本地时间（ISO 8601）',
-          handler: (ToolContext ctx) async =>
-              ToolResult.success(DateTime.now().toIso8601String()),
+          description: '返回当前本地时间（RFC 3339，带时区偏移）',
+          handler: (ToolContext ctx) async {
+            final DateTime now = DateTime.now();
+            return ToolResult.success('${now.toIso8601String()}'
+                '${formatClockOffset(now.timeZoneOffset)}');
+          },
         ));
     app.effect(() => app.tools.fn(
           'echo',
@@ -109,6 +112,7 @@ class ConatusTuiRuntime {
       name: 'persona',
       text: () => '你是"助手"，一位耐心、务实的助手。需要实时信息或操作时调用工具；否则直接简洁回答。',
     ));
+    provideTimePrompt(app);
     provideMemory(
       app,
       backend: JsonMemoryBackend(
