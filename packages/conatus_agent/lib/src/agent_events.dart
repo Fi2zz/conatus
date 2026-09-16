@@ -132,7 +132,7 @@ Future<int> compactSession({
   return result?.compacted ?? historyStart;
 }
 
-/// 组装 system 文本：systemPrompt 装配 + 历史摘要 + 当前计划 + 相关记忆。
+/// 组装 system 文本：prompt 段与动态上下文 + 历史摘要 + 当前计划 + 相关记忆。
 String buildSystemText({
   required String userInput,
   String? defaultSystemPrompt,
@@ -143,11 +143,7 @@ String buildSystemText({
   int memoryLimit = 5,
 }) {
   final StringBuffer buffer = StringBuffer();
-  if (systemPrompt != null) {
-    buffer.write(systemPrompt.render(systemPrompt.assemble()));
-  } else if (defaultSystemPrompt != null) {
-    buffer.write(defaultSystemPrompt);
-  }
+  _writePromptBlock(buffer, systemPrompt, defaultSystemPrompt);
   final String? summary = (compactor != null && session != null)
       ? compactor.summaryOf(session.id)
       : null;
@@ -165,4 +161,20 @@ String buildSystemText({
     }
   }
   return buffer.toString();
+}
+
+/// 写入 prompt 部分：prompt 段 + 动态上下文（上下文为空时不占位）。
+void _writePromptBlock(
+  StringBuffer buffer,
+  SystemPrompt? systemPrompt,
+  String? defaultSystemPrompt,
+) {
+  if (systemPrompt == null) {
+    if (defaultSystemPrompt != null) buffer.write(defaultSystemPrompt);
+    return;
+  }
+  final PromptAssembly assembly = systemPrompt.assemble();
+  buffer.write(systemPrompt.render(assembly));
+  final String contexts = systemPrompt.renderContexts(assembly);
+  if (contexts.isNotEmpty) buffer.write('\n\n$contexts');
 }

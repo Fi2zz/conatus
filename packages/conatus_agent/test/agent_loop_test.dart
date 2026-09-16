@@ -180,6 +180,30 @@ void main() {
       expect(provider.calls.first.first.content, contains('你是助手。'));
     });
 
+    test('动态上下文拼进 system，未注册时逐字不变', () async {
+      final SystemPrompt prompt = SystemPrompt()
+        ..section(PromptSection(name: 'persona', text: () => '你是助手。'));
+      final _ScriptedProvider provider =
+          _ScriptedProvider(<LlmResult>[_text('好的'), _text('好的')]);
+      final AgentLoop loop = AgentLoop(
+        llm: provider,
+        tools: ToolRegistry(),
+        systemPrompt: prompt,
+      );
+
+      await loop.run('你好');
+      expect(provider.calls.first.first.content, '你是助手。');
+
+      prompt.context(PromptContext(
+          name: 'time', order: -10, text: () => '[当前时间]\n2026-09-16 周三'));
+      await loop.run('今天几号');
+
+      expect(
+        provider.calls.last.first.content,
+        '你是助手。\n\n[当前时间]\n2026-09-16 周三',
+      );
+    });
+
     test('运行时调整 persona：闭包 text 在下一轮生效', () async {
       String persona = '你是助手。';
       final SystemPrompt prompt = SystemPrompt()
