@@ -20,3 +20,6 @@ coverage/
 
 # conatus TUI runtime data
 .conatus/
+
+# 本地参考资料
+.refs/
