@@ -88,6 +88,9 @@ class LocalShellExecutor implements ShellExecutor {
     final String executable = windows ? 'cmd.exe' : 'bash';
     final List<String> args =
         windows ? <String>['/c', spec.command] : <String>['-c', spec.command];
+    // IRREVERSIBLE: 命令一旦执行，其对外部世界的效果（写文件、发请求、删数据……）
+    // 无法被任何撤销函数回滚。这里只返回进程句柄；不存在、也不假装存在能还原
+    // 副作用的逆——调用前的审批/守卫是唯一的防线。
     return Process.start(
       executable,
       args,

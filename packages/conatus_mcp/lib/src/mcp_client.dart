@@ -101,6 +101,8 @@ class McpClient {
     String name,
     Map<String, Object?> arguments,
   ) async {
+    // IRREVERSIBLE: 服务端会实际执行这个工具；对非只读工具，其效果无法被撤销，
+    // 不存在"事后回滚"。调用前的风险分级与审批（`riskLevel` / Approval）是唯一防线。
     final McpMessage response = await _request('tools/call', <String, Object?>{
       'name': name,
       'arguments': arguments,
