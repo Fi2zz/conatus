@@ -36,6 +36,11 @@ class ScheduleCreateTool extends Tool {
       'and exactly one selector: a positive safe-integer after_seconds delay, '
       'at as a strict offset date-time or local date/time object, or '
       'safe-integer every_seconds of at least $kMinEveryIntervalSeconds. '
+      'A relative delay is measured from creation time; resolve relative '
+      'dates against the current date given in the system prompt. When the '
+      'request is vague (such as "later" or "in a while"), do not invent a '
+      'delay: ask the user to pin down the timing first, or state the delay '
+      'you chose in the reply so it can be corrected. '
       'Fixed-rate reminders stay creation-aligned, skip missed occurrences, and '
       'batch one latest occurrence per overdue rule. Delivery is session-local: '
       'the reminder runs on time only while this session is live and otherwise '
@@ -54,7 +59,9 @@ class ScheduleCreateTool extends Tool {
             description:
                 'Reminder content to present when the target becomes due.'),
         ParamSpec.number('after_seconds',
-            description: 'Positive safe-integer delay in seconds.'),
+            description:
+                'Positive safe-integer delay in seconds, measured from '
+                'creation time.'),
         ParamSpec.number('every_seconds',
             description: 'Fixed-rate safe-integer interval in seconds, at '
                 'least $kMinEveryIntervalSeconds.'),
