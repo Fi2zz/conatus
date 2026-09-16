@@ -4,6 +4,26 @@
 
 ## [未发布]
 
+`conatus_foundation`：新增 `time-context` 插件，并把动态上下文接上消费点 —— 模型没有
+时钟，相对日期（"明天""下周三"）与带本地语义的时刻（"明早九点"）都需要外部锚点：
+
+- `SystemPrompt.renderContexts(assembly, {separator})`：拼接动态上下文并插值
+  `{{variable}}`，空文本不贡献内容；`PromptContext` 此前只注册、不参与渲染
+- `provideTimePrompt(ctx, {prompt, clock, zoneName})`：注册一份日粒度的
+  `PromptContext`（ISO 日期 + 中文星期 + 时区），闭包每轮重新求值、跨天自动更新；
+  `zoneName` 缺省取本地时区名；`formatClockOffset(duration)` 输出 `±HH:MM`
+- 锚点只精确到日：system 是可缓存前缀，秒级变化会让前缀缓存每轮失效；精确到秒交给
+  时间工具
+
+`conatus_agent`：`buildSystemText` 按「段 → 动态上下文 → 历史摘要 → 当前计划 →
+相关记忆」组装 system；没有注册任何上下文时输出与改动前逐字相同。
+
+`conatus_tui`：装配时挂上 `provideTimePrompt`；`get_time` 改为返回带时区偏移的
+RFC 3339（此前是无偏移的本地时间串，模型无法判断时区）。
+
+`conatus_schedule`：`schedule_create` 的描述写明相对时长以创建时刻为基准、相对日期要
+对齐 system 中的当前日期，意图模糊时先与用户确认而非自行编造延迟。
+
 新增 `conatus_skill` 包 —— 技能加载（依赖 `conatus_core`、`conatus_foundation` 与
 `yaml`；从 `deepseek-harness` 的 `packages/skill` 包族移植）：
 

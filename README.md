@@ -62,7 +62,7 @@ conatus_tui ────▶ conatus_agent、conatus_compaction、conatus_schedul
 - 📦 **零运行时依赖**：核心仅用 Dart 核心库（`llm` / `credentials` / `mcp` / `search` 插件依赖 `http`，`foundation` 的 IANA 时区解析依赖 `timezone`）
 - 🧰 **基础设施插件**：`timer`（定时器即效应）、`logger-console`（分级日志）、`loader`（注册表 + 配置树）、`tools`（`Tool` 基类 + `ParamSpec` + 注册表/执行管线/分组/分级）、`shell` / `fs`（能力缝 + 本地实现）、`search`（搜索能力缝 + web 工具）、`asr`（语音识别能力缝 + `transcribe_audio`）、`tts`（语音合成能力缝 + 音频输出接口）
 - 🔐 **凭据管理**：`credentials`（统一凭据契约 + 五种来源：环境变量 / 内存 / 文件 / Vault KV v2 / AWS Secrets Manager）——`get` / `require` / `validate` 同步读内存快照，远端来源用 `refresh()` 拉取并可定时轮换，对外只出现 `masked`
-- 🗂️ **会话与上下文**：`session`（事件日志 + 仓库 + JSONL 持久化）、`session-log`（多会话只追加日志：fork / replay / 轨迹重建，附「模型可见即已记录」不变式）、`schedule`（会话本地持久提醒：创建 / 列出 / 取消，重启后自动重建）、`system-prompt`（prompt 段装配）、`compaction`（压缩能力缝：滚动摘要 + `compaction/*` 日志事件）、`memory`（长记忆库 + 显式记住/遗忘能力与工具）
+- 🗂️ **会话与上下文**：`session`（事件日志 + 仓库 + JSONL 持久化）、`session-log`（多会话只追加日志：fork / replay / 轨迹重建，附「模型可见即已记录」不变式）、`schedule`（会话本地持久提醒：创建 / 列出 / 取消，重启后自动重建）、`system-prompt`（prompt 段装配 + 动态上下文）、`time-context`（日粒度日期锚点）、`compaction`（压缩能力缝：滚动摘要 + `compaction/*` 日志事件）、`memory`（长记忆库 + 显式记住/遗忘能力与工具）
 - 🗄️ **持久化**：`database`（KV 存储 hub + 可插拔后端 + JSON 本地实现）
 - 🤖 **Agent Loop**：`agent`（会话事件 + prompt 装配 + 压缩 + 记忆 + 工具闭环）、`tool-result-eviction`（大结果落盘）、`plan`（结构化计划）、`sub-agent`（`spawn_agent` 隔离委托）、`reflection`（工具后自省重试）
 - 🔌 **MCP 生态**：`mcp`（MCP 客户端：stdio / HTTP / SSE 传输 + 握手与工具发现），外部 server 的工具以 `server__tool` 接入同一张工具表，风险缺省 `medium` 走审批
@@ -759,7 +759,10 @@ provideScheduleRuntime(ctx, deliver: (String text) async => submit(text));
 ### `system-prompt` — prompt 段装配
 
 服务键 `'systemPrompt'`。各插件注册 `PromptSection` / `PromptContext`（`order` 升序、
-同序按名字），`assemble()` 每次求值 provider，`render()` 拼接并插值 `{{variable}}`。
+同序按名字），`assemble()` 每次求值 provider，`render()` 拼接段、`renderContexts()`
+拼接动态上下文（空文本不贡献内容），两者都插值 `{{variable}}`。`AgentLoop` 组装
+system 时按「段 → 上下文 → 历史摘要 → 当前计划 → 相关记忆」的顺序拼接：人设与环境
+事实分开注册，各自都能每轮刷新。
 
 ```dart
 final prompt = provideSystemPrompt(app);
@@ -781,6 +784,29 @@ prompt.section(PromptSection(name: 'persona', text: () => persona));
 
 persona = '你是简洁的中文翻译。'; // 下一轮 run() 生效
 ```
+
+### `time-context` — 日期锚点
+
+模型没有时钟：相对日期（"明天""下周三"）与带本地语义的时刻（"明早九点"）都需要一个
+外部锚点才能换算成绝对时间。`provideTimePrompt` 注册一份日粒度的 `PromptContext`
+（`prompt` 缺省取上下文里的 `'systemPrompt'` 服务），每轮装配重新求值，因此跨天自动
+更新。
+
+```dart
+provideSystemPrompt(app);
+provideTimePrompt(app);                            // 本地时区名
+provideTimePrompt(app, zoneName: 'Asia/Shanghai'); // 指定时区名
+```
+
+渲染为：
+
+```text
+[当前时间]
+2026-09-16 周三 · Asia/Shanghai (UTC+08:00)
+```
+
+锚点只精确到日：system 是可缓存前缀，秒级变化会让前缀缓存每轮失效；要精确到秒的场景
+交给时间工具（如 `get_time`）。
 
 需注意：`AgentLoop` 持有的是同一个 `SystemPrompt` 实例引用，替换 `'systemPrompt'`
 服务不会影响已建好的 loop，必须改原实例；同名 `section` 重复注册会抛 `StateError`。
@@ -1230,7 +1256,16 @@ root.provide('x', 1);
 | `provideSystemPrompt(ctx, {prompt})` | 提供 `'systemPrompt'` |
 | `section(PromptSection) → Disposer` / `context(PromptContext) → Disposer` | 注册段 / 动态上下文（重名抛错） |
 | `assemble({variables}) → PromptAssembly` | 按 `order` + 名字排序求值 |
-| `render(assembly, {separator}) → String` | 拼接并插值 `{{variable}}` |
+| `render(assembly, {separator}) → String` | 拼接段并插值 `{{variable}}` |
+| `renderContexts(assembly, {separator}) → String` | 拼接动态上下文并插值；空文本不贡献内容 |
+
+### `provideTimePrompt`（`time-context`）
+
+| 成员 | 说明 |
+|------|------|
+| `provideTimePrompt(ctx, {prompt, clock, zoneName}) → Disposer` | 注册日粒度日期锚点；`prompt` 缺省取 `'systemPrompt'`，`clock` 缺省 `DateTime.now` |
+| `kTimeContextName` | 锚点在 system prompt 里的名字（`time`） |
+| `formatClockOffset(Duration) → String` | 时区偏移格式化（`+08:00` / `-05:30`） |
 
 ### `CompactionEngine` / `Compactor`（`compaction`，`conatus_compaction` 包）
 
