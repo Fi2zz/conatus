@@ -12,12 +12,11 @@ environment:
 
 resolution: workspace
 
-# 第 1 步只声明流程定义类型，不引用 conatus_core / conatus_agent /
-# conatus_team。待第 4 步引擎落地、conatus_team 进入 workspace 后再补：
-#   conatus_agent: ^0.15.0
-#   conatus_core: ^0.15.0
-#   conatus_team: ^0.15.0
 dependencies:
+  conatus_agent: ^0.15.0
+  conatus_core: ^0.15.0
+  conatus_foundation: ^0.15.0
+  conatus_team: ^0.1.0
 
 dev_dependencies:
   lints: ^4.0.0

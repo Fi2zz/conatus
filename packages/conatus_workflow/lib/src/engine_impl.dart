@@ -61,6 +61,7 @@ class WorkflowEngineImpl implements WorkflowEngine {
     String workflowName, {
     Map<String, Object?> inputs = const <String, Object?>{},
     String? runId,
+    String? parentRunId,
   }) async {
     final definition = _definitions[workflowName];
     if (definition == null) {
@@ -84,6 +85,7 @@ class WorkflowEngineImpl implements WorkflowEngine {
       },
       createdAt: now,
       startedAt: now,
+      parentRunId: parentRunId,
     );
     _runs[id] = run;
     await _store.saveRun(run);

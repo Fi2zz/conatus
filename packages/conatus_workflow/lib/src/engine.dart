@@ -29,11 +29,13 @@ abstract class WorkflowEngine {
   /// 查询流程定义。
   WorkflowDefinition? definition(String name);
 
-  /// 启动一次执行。
+  /// 启动一次执行。子流程节点经 [parentRunId] 挂到调用它的运行，
+  /// 用于递归深度限制。
   Future<WorkflowRun> start(
     String workflowName, {
     Map<String, Object?> inputs = const <String, Object?>{},
     String? runId,
+    String? parentRunId,
   });
 
   /// 查询运行。

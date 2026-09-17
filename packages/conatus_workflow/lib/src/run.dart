@@ -25,6 +25,7 @@ class WorkflowRun {
     required this.nodes,
     required this.createdAt,
     this.outputs = const <String, Object?>{},
+    this.parentRunId,
     this.startedAt,
     this.finishedAt,
     this.error,
@@ -54,6 +55,10 @@ class WorkflowRun {
   /// 输出。引擎在运行完成时按流程定义声明写入。
   final Map<String, Object?> outputs;
 
+  /// 父运行 ID（子流程运行时指向调用它的运行）。用于子流程递归
+  /// 深度限制。
+  final String? parentRunId;
+
   /// 创建时间。
   final DateTime createdAt;
 
@@ -81,6 +86,7 @@ class WorkflowRun {
     RunStatus? status,
     Map<String, RunNode>? nodes,
     Map<String, Object?>? outputs,
+    Object? parentRunId = _unset,
     Object? startedAt = _unset,
     Object? finishedAt = _unset,
     Object? error = _unset,
@@ -93,6 +99,9 @@ class WorkflowRun {
       inputs: inputs,
       nodes: nodes ?? this.nodes,
       outputs: outputs ?? this.outputs,
+      parentRunId: identical(parentRunId, _unset)
+          ? this.parentRunId
+          : parentRunId as String?,
       createdAt: createdAt,
       startedAt: identical(startedAt, _unset)
           ? this.startedAt
@@ -115,6 +124,7 @@ class WorkflowRun {
               MapEntry<String, Object?>(nodeId, node.toJson()),
         ),
         'outputs': outputs,
+        'parentRunId': parentRunId,
         'createdAt': createdAt.toIso8601String(),
         'startedAt': startedAt?.toIso8601String(),
         'finishedAt': finishedAt?.toIso8601String(),
@@ -130,6 +140,7 @@ class WorkflowRun {
         inputs: requiredStringMap(json, 'inputs'),
         nodes: _parseRunNodes(json['nodes']),
         outputs: optionalStringMap(json, 'outputs'),
+        parentRunId: optionalString(json, 'parentRunId'),
         createdAt: requiredDateTime(json, 'createdAt'),
         startedAt: optionalDateTime(json, 'startedAt'),
         finishedAt: optionalDateTime(json, 'finishedAt'),

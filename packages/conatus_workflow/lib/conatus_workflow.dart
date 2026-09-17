@@ -26,6 +26,7 @@ export 'src/engine.dart'
         WorkflowRegistered;
 export 'src/engine_impl.dart' show WorkflowEngineImpl;
 export 'src/errors.dart' show WorkflowException;
+export 'src/executor.dart' show buildNodeExecutor;
 export 'src/node.dart' show AgentNode, SubWorkflowNode, ToolNode, WorkflowNode;
 export 'src/run.dart' show WorkflowRun;
 export 'src/run_node.dart' show RunNode;
