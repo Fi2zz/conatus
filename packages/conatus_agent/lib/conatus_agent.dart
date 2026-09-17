@@ -59,6 +59,7 @@ export 'src/eval.dart'
         EvalRunner,
         Evaluator,
         defaultEvalJudge;
+export 'src/exit_plan_mode.dart' show ExitPlanModeTool, kExitPlanModeToolName;
 export 'src/layered_compaction.dart'
     show LayeredCompactor, provideLayeredCompaction;
 export 'src/model_visible_invariant.dart'
@@ -75,6 +76,15 @@ export 'src/plan.dart'
         readPlan,
         runPlanningPhase,
         writePlan;
+export 'src/plan_mode.dart'
+    show
+        PlanMode,
+        PlanModeContext,
+        PlanModeState,
+        kPlanModeEvent,
+        kPlanModePolicy,
+        restorePlanModeState;
+export 'src/plan_mode_default.dart' show DefaultPlanMode, providePlanMode;
 export 'src/recovery.dart'
     show RecoveryContext, RecoveryService, provideRecovery;
 export 'src/reflection.dart'
