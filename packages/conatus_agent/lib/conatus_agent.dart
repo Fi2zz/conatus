@@ -60,6 +60,34 @@ export 'src/eval.dart'
         Evaluator,
         defaultEvalJudge;
 export 'src/exit_plan_mode.dart' show ExitPlanModeTool, kExitPlanModeToolName;
+export 'src/goal.dart'
+    show
+        Goal,
+        GoalException,
+        GoalRevision,
+        GoalStatus,
+        kGoalEvent,
+        kGoalRoundLimitReason,
+        restoreGoalState;
+export 'src/goal_default.dart' show DefaultGoalService;
+export 'src/goal_provider.dart' show provideGoal;
+export 'src/goal_round_driver.dart'
+    show
+        GoalContinuation,
+        GoalRoundDriver,
+        GoalRoundDriverContext,
+        kGoalContinuationPrompt;
+export 'src/goal_service.dart' show GoalContext, GoalService;
+export 'src/goal_tools.dart'
+    show
+        ClearGoalTool,
+        CompleteGoalTool,
+        CreateGoalTool,
+        EditGoalTool,
+        kClearGoalToolName,
+        kCompleteGoalToolName,
+        kCreateGoalToolName,
+        kEditGoalToolName;
 export 'src/layered_compaction.dart'
     show LayeredCompactor, provideLayeredCompaction;
 export 'src/model_visible_invariant.dart'

@@ -11,6 +11,7 @@ import 'package:conatus_llm/conatus_llm.dart';
 import 'agent_cancel.dart';
 import 'agent_events.dart';
 import 'agent_types.dart';
+import 'goal_round_driver.dart';
 import 'plan.dart';
 import 'reflection.dart';
 import 'router.dart';
@@ -72,6 +73,10 @@ class AgentLoop {
   /// 未提供 [systemPrompt] 时的兜底人设。
   final String defaultSystemPrompt;
 
+  /// Goal 续行驱动器；非空时，一轮收口后按其决策自动续行（缺省 null，
+  /// 不续行）。由 `provideGoal` 在 `goal` 与 `agentLoop` 齐备时后置挂载。
+  GoalRoundDriver? goalDriver;
+
   int _historyStart = 0;
   bool _needsReplan = false;
 
@@ -79,7 +84,20 @@ class AgentLoop {
   ///
   /// [cancel] 非空时，模型调用、工具执行与路由都与其竞速；取消后本方法以
   /// [AgentCancelled] 结束（结果丢弃，调用方可立即开始新一轮）。
+  ///
+  /// 若挂载了 [goalDriver]，一轮收口后按其决策自动续行：继续则递增轮次并
+  /// 以 [kGoalContinuationPrompt] 再跑一轮，直到等待用户或停止为止。
   Future<AgentTurn> run(String userInput, {AgentCancel? cancel}) async {
+    final AgentTurn turn = await _runOnce(userInput, cancel: cancel);
+    final GoalRoundDriver? driver = goalDriver;
+    if (driver == null) return turn;
+    if (session?.closed ?? false) return turn;
+    final AgentTurn? next = await driver.advance(cancel: cancel);
+    return next ?? turn;
+  }
+
+  /// 单轮实现：从 [userInput] 到最终文本回复。
+  Future<AgentTurn> _runOnce(String userInput, {AgentCancel? cancel}) async {
     final Session? session = this.session;
     ensureSessionOpen(session);
     session
