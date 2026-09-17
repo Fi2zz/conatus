@@ -51,6 +51,10 @@
 （会话子上下文与内置插件就绪后回调，宿主可挂 `provideTaskCenter` /
 `provideTaskTracking` 等会话级服务；缺省 null，行为不变）。
 
+`conatus_tui`：新增 `/cron` 斜杠命令（不经模型管理定时任务：list / add /
+remove / enable / disable / history；add 绑定当前会话，规则四选一
+at / every / daily / cron）。
+
 `conatus_foundation`：新增 `time-context` 插件，并把动态上下文接上消费点 —— 模型没有
 时钟，相对日期（"明天""下周三"）与带本地语义的时刻（"明早九点"）都需要外部锚点：
 

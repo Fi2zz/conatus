@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:conatus_agent/conatus_agent.dart';
 import 'package:conatus_core/conatus_core.dart';
+import 'package:conatus_cron/conatus_cron.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 import 'package:conatus_tasks/conatus_tasks.dart';
@@ -72,9 +73,39 @@ class _ScriptedProvider implements LlmProvider {
   void close() {}
 }
 
+/// 内存版 cron 存储：测试替身，不落盘。
+class _MemoryCronStorage implements CronStorage {
+  CronStorageSnapshot _tasks = const CronStorageSnapshot();
+  List<Map<String, Object?>> _history = <Map<String, Object?>>[];
+
+  @override
+  CronStorageSnapshot loadTasks() => _tasks;
+
+  @override
+  void saveTasks({
+    required List<Map<String, Object?>> tasks,
+    required Map<String, CronRunStamp> runStamps,
+    required Map<String, bool> overrides,
+  }) {
+    _tasks = CronStorageSnapshot(
+      dynamicTasks: tasks,
+      runStamps: runStamps,
+      overrides: overrides,
+    );
+  }
+
+  @override
+  List<Map<String, Object?>> loadHistory() => _history;
+
+  @override
+  void saveHistory(List<Map<String, Object?>> records) =>
+      _history = records;
+}
+
 Future<(ConatusTuiController, Context)> _build(
   List<LlmResult> replies, {
   void Function(Context ctx, Session session)? configureSession,
+  bool withCron = false,
 }) async {
   final Context app = Context.root();
   provideTools(app);
@@ -85,6 +116,9 @@ Future<(ConatusTuiController, Context)> _build(
       ));
   provideLlm(app, llm: FallbackLlm(<LlmProvider>[_ScriptedProvider(replies)]));
   provideMemory(app);
+  if (withCron) {
+    provideCron(app, storage: _MemoryCronStorage());
+  }
   final SessionStore sessions = provideSessions(app);
   final ConatusTuiController controller = ConatusTuiController(
     app: app,
@@ -495,6 +529,126 @@ void main() {
     expect(bound.last.id, 'work');
     expect(oldCtx.disposed, isTrue);
     expect(oldCtx.get<TaskCenter>('tasks'), isNull);
+    app.dispose();
+  });
+
+  test('/cron 未装配 cron 服务时提示不可用', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+    );
+
+    await controller.handleLine('/cron');
+
+    expect(controller.transcript.messages.last.text, contains('定时任务不可用'));
+    app.dispose();
+  });
+
+  test('/cron 空列表与 add / remove / enable / disable 全流程', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+      withCron: true,
+    );
+    final CronService cron = app.require<CronService>('cron');
+
+    await controller.handleLine('/cron');
+    expect(controller.transcript.messages.last.text, contains('当前没有定时任务'));
+
+    await controller.handleLine('/cron add 每十分钟提醒 every 600');
+    expect(controller.transcript.messages.last.text, contains('已添加定时任务'));
+    final String id = cron.tasks.single.id;
+    expect(cron.tasks.single.prompt, '每十分钟提醒');
+    expect(cron.tasks.single.every, 600);
+    expect(cron.tasks.single.sessionId, 's1'); // add 绑定当前会话
+
+    await controller.handleLine('/cron');
+    expect(controller.transcript.messages.last.text, contains(id));
+    expect(controller.transcript.messages.last.text, contains('启用'));
+    expect(controller.transcript.messages.last.text, contains('每十分钟提醒'));
+
+    await controller.handleLine('/cron disable $id');
+    expect(controller.transcript.messages.last.text, contains('已停用'));
+    expect(cron.listTasks().single.enabled, isFalse);
+
+    await controller.handleLine('/cron enable $id');
+    expect(controller.transcript.messages.last.text, contains('已启用'));
+    expect(cron.listTasks().single.enabled, isTrue);
+
+    await controller.handleLine('/cron remove $id');
+    expect(controller.transcript.messages.last.text, contains('已删除'));
+    expect(cron.tasks, isEmpty);
+    app.dispose();
+  });
+
+  test('/cron add 解析多词内容与四种规则', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+      withCron: true,
+    );
+    final CronService cron = app.require<CronService>('cron');
+
+    await controller.handleLine('/cron add 每天早上九点 提醒站会 daily 09:00');
+    expect(cron.tasks.single.prompt, '每天早上九点 提醒站会');
+    expect(cron.tasks.single.daily, '09:00');
+
+    await controller.handleLine('/cron add 明早八点发邮件 at 2026-09-18T08:00:00');
+    expect(cron.tasks, hasLength(2));
+    expect(cron.tasks.last.at, '2026-09-18T08:00:00');
+
+    await controller.handleLine('/cron add 每半小时同步 cron 0,30 * * * *');
+    expect(cron.tasks, hasLength(3));
+    expect(cron.tasks.last.cron, '0,30 * * * *');
+    expect(cron.tasks.last.prompt, '每半小时同步');
+    app.dispose();
+  });
+
+  test('/cron add 参数不足或规则非法时给出用法', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+      withCron: true,
+    );
+    final CronService cron = app.require<CronService>('cron');
+
+    await controller.handleLine('/cron add');
+    expect(controller.transcript.messages.last.text, contains('用法：/cron'));
+
+    await controller.handleLine('/cron add 提醒 every 太快');
+    expect(controller.transcript.messages.last.text, contains('用法：/cron'));
+
+    await controller.handleLine('/cron add 提醒 every 5');
+    expect(controller.transcript.messages.last.text, contains('定时任务操作失败'));
+    expect(cron.tasks, isEmpty);
+
+    await controller.handleLine('/cron nope');
+    expect(controller.transcript.messages.last.text, contains('用法：/cron'));
+    app.dispose();
+  });
+
+  test('/cron history 展示运行记录', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+      withCron: true,
+    );
+    final CronService cron = app.require<CronService>('cron');
+
+    await controller.handleLine('/cron history');
+    expect(
+        controller.transcript.messages.last.text, contains('尚无定时任务运行记录'));
+
+    cron.addDynamicTask(<String, Object?>{
+      'id': 't1',
+      'prompt': '报时',
+      'every': 60,
+    });
+    final DateTime now = DateTime.now();
+    final CronRecordRef ref = cron.allocateRecordRef(now);
+    cron.commitFire(ref: ref, taskId: 't1', slot: now, firedAt: now);
+    cron.finishRun(ref.id, ok: true, excerpt: '一切正常');
+
+    await controller.handleLine('/cron history');
+    final String text = controller.transcript.messages.last.text;
+    expect(text, contains('完成'));
+    expect(text, contains('t1'));
+    expect(text, contains('一切正常'));
     app.dispose();
   });
 }

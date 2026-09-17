@@ -28,6 +28,11 @@ bool isValidSessionId(String id) =>
 const String kGoalUsage =
     '用法：/goal [status|set <文本>|edit <文本>|pause|resume|done|clear]';
 
+/// `/cron` 用法提示。
+const String kCronUsage =
+    '用法：/cron [list|add <内容> <at|every|daily|cron> <规则>|'
+    'remove <id>|enable <id>|disable <id>|history [条数]]';
+
 /// TUI 会话控制器。
 class ConatusTuiController {
   ConatusTuiController({
@@ -229,6 +234,8 @@ class ConatusTuiController {
         _togglePlanMode();
       case 'goal':
         await _handleGoal(arg);
+      case 'cron':
+        await _handleCron(arg);
       case 'remember':
         await _remember(arg);
       case 'forget':
@@ -341,6 +348,167 @@ class ConatusTuiController {
       buffer.write('\n阻塞原因：${goal.blockReason}');
     }
     return buffer.toString();
+  }
+
+  /// `/cron [子命令]`：不经模型直接管理定时任务。
+  Future<void> _handleCron(String arg) async {
+    final CronService? cron = _app.get<CronService>('cron');
+    if (cron == null) {
+      transcript.add(TuiRole.system, '定时任务不可用：未装配 cron 服务。');
+      return;
+    }
+    final int space = arg.indexOf(' ');
+    final String sub = space < 0 ? arg.trim() : arg.substring(0, space).trim();
+    final String rest = space < 0 ? '' : arg.substring(space + 1).trim();
+    try {
+      await _runCronSub(cron, sub, rest);
+    } on CronException catch (e) {
+      transcript.add(TuiRole.system, '定时任务操作失败：${e.message}');
+    }
+  }
+
+  Future<void> _runCronSub(CronService cron, String sub, String rest) async {
+    switch (sub) {
+      case '' || 'list':
+        _showCronTasks(cron);
+      case 'add':
+        _cronAdd(cron, rest);
+      case 'remove':
+        _cronRemove(cron, rest);
+      case 'enable':
+        _cronSetEnabled(cron, rest, enabled: true);
+      case 'disable':
+        _cronSetEnabled(cron, rest, enabled: false);
+      case 'history':
+        _showCronHistory(cron, rest);
+      default:
+        transcript.add(TuiRole.system, kCronUsage);
+    }
+  }
+
+  void _cronAdd(CronService cron, String rest) {
+    final Map<String, Object?>? input = _parseCronAdd(rest);
+    if (input == null) {
+      transcript.add(TuiRole.system, kCronUsage);
+      return;
+    }
+    final CronTaskView view =
+        cron.addDynamicTask(input, callerSessionId: _sessionId);
+    transcript.add(TuiRole.system, '已添加定时任务 ${view.id}。');
+  }
+
+  /// 解析 `/cron add` 的 `<内容> <at|every|daily|cron> <规则>`；形状不符返回 null。
+  ///
+  /// 规则在末尾：`at` / `every` / `daily` 各 1 个 token，`cron` 表达式 5 个 token
+  /// （含空格），内容可含任意空格。
+  Map<String, Object?>? _parseCronAdd(String rest) {
+    final List<String> parts = rest
+        .split(RegExp(r'\s+'))
+        .where((String part) => part.isNotEmpty)
+        .toList();
+    if (parts.length < 3) return null;
+    if (parts.length >= 7 && parts[parts.length - 6] == 'cron') {
+      return <String, Object?>{
+        'prompt': parts.sublist(0, parts.length - 6).join(' '),
+        'cron': parts.sublist(parts.length - 5).join(' '),
+      };
+    }
+    final String prompt =
+        parts.sublist(0, parts.length - 2).join(' ');
+    final String kind = parts[parts.length - 2];
+    final String value = parts[parts.length - 1];
+    return switch (kind) {
+      'at' => <String, Object?>{'prompt': prompt, 'at': value},
+      'every' => _parseEvery(prompt, value),
+      'daily' => <String, Object?>{'prompt': prompt, 'daily': value},
+      _ => null,
+    };
+  }
+
+  Map<String, Object?>? _parseEvery(String prompt, String value) {
+    final num? seconds = num.tryParse(value);
+    if (seconds == null) return null;
+    return <String, Object?>{'prompt': prompt, 'every': seconds};
+  }
+
+  void _cronRemove(CronService cron, String id) {
+    if (id.isEmpty) {
+      transcript.add(TuiRole.system, kCronUsage);
+      return;
+    }
+    cron.removeDynamicTask(id);
+    transcript.add(TuiRole.system, '已删除定时任务 $id。');
+  }
+
+  void _cronSetEnabled(CronService cron, String id, {required bool enabled}) {
+    if (id.isEmpty) {
+      transcript.add(TuiRole.system, kCronUsage);
+      return;
+    }
+    final CronTaskView view = cron.setEnabled(id, enabled);
+    transcript.add(
+        TuiRole.system, '已${enabled ? '启用' : '停用'}定时任务 ${view.id}。');
+  }
+
+  void _showCronTasks(CronService cron) {
+    final List<CronTaskView> tasks = cron.listTasks();
+    if (tasks.isEmpty) {
+      transcript.add(TuiRole.system, '当前没有定时任务。');
+      return;
+    }
+    final StringBuffer buffer = StringBuffer('定时任务（${tasks.length}）：');
+    for (final CronTaskView view in tasks) {
+      buffer
+        ..write('\n  ${view.id} [${view.enabled ? '启用' : '停用'}] '
+            '${_cronScheduleText(view)}')
+        ..write(
+            view.nextRunAt == null ? '' : ' 下次=${_formatLocal(view.nextRunAt!)}')
+        ..write(' 内容=${view.prompt}');
+    }
+    transcript.add(TuiRole.system, buffer.toString());
+  }
+
+  String _cronScheduleText(CronTaskView view) {
+    final MapEntry<String, Object?> entry = view.schedule.entries.first;
+    final String value = '${entry.value}';
+    return switch (entry.key) {
+      'at' => 'at $value',
+      'everySeconds' => 'every ${value}s',
+      'daily' => 'daily $value',
+      _ => 'cron $value',
+    };
+  }
+
+  void _showCronHistory(CronService cron, String rest) {
+    final int? limit = int.tryParse(rest);
+    final List<CronRunRecord> records = cron.listHistory(limit: limit ?? 10);
+    if (records.isEmpty) {
+      transcript.add(TuiRole.system, '尚无定时任务运行记录。');
+      return;
+    }
+    final StringBuffer buffer = StringBuffer('运行记录（最新在前）：');
+    for (final CronRunRecord record in records) {
+      buffer
+        ..write('\n  #${record.seq} ${record.taskId} '
+            '${_cronStatusText(record.status)} 排期=${_formatLocal(record.scheduledFor)}')
+        ..write(record.excerpt == null ? '' : ' 结果=${record.excerpt}');
+    }
+    transcript.add(TuiRole.system, buffer.toString());
+  }
+
+  String _cronStatusText(String status) => switch (status) {
+        CronRunStatus.completed => '完成',
+        CronRunStatus.failed => '失败',
+        CronRunStatus.delivered => '已交付',
+        _ => status,
+      };
+
+  /// 本地时区的 `yyyy-MM-dd HH:mm` 展示。
+  String _formatLocal(DateTime instant) {
+    final DateTime local = instant.toLocal();
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${local.year}-${two(local.month)}-${two(local.day)} '
+        '${two(local.hour)}:${two(local.minute)}';
   }
 
   /// `/remember <内容>`：直接调用记忆能力，绕过模型。

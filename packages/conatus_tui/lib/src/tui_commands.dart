@@ -49,6 +49,11 @@ const List<TuiCommand> tuiCommands = <TuiCommand>[
     argHint: '<子命令>',
   ),
   TuiCommand(
+    name: 'cron',
+    description: '管理定时任务（list / add / remove / enable / disable / history）',
+    argHint: '<子命令>',
+  ),
+  TuiCommand(
     name: 'remember',
     description: '直接记住一段信息（不经模型）',
     argHint: '<内容>',
