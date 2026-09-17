@@ -25,7 +25,8 @@ export 'src/cron_errors.dart' show CronErrorCode, CronException;
 export 'src/cron_history.dart'
     show CronRecordRef, CronRunRecord, decodeCronInstant, decodeCronInt;
 export 'src/cron_message.dart' show buildTaskView, renderTaskMessage;
-export 'src/cron_notify.dart' show CronNotifier, systemCronNotifier;
+export 'src/cron_notify.dart'
+    show CronNotifier, mobileCronNotifier, systemCronNotifier;
 export 'src/cron_parse.dart'
     show
         CronExpression,

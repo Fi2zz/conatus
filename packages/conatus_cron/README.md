@@ -55,8 +55,13 @@ cron 表达式支持 `*`、列表、范围与步进（`*/n`、`a-b/n`、`a/n` �
 - **交付形态**：dsh 用 `agent.followup()` + 会话事件流自动推进运行状态；本包是
   `CronDelivery` 注入端口 + 装配方显式调 `finishRun`（conatus 没有等价事件流，
   且这让投递策略完全由宿主决定）。
-- **通知**：系统通知（macOS `osascript` / Linux `notify-send`）为可选注入端口，
-  默认关闭。
+- **通知**：系统通知为可选注入端口，默认关闭——macOS / Linux 用
+  `systemCronNotifier()`（`osascript` / `notify-send`）；iOS / Android 用
+  `mobileCronNotifier()`：条件导出让 Flutter 环境自动经 MethodChannel
+  `conatus/cron` 投递 `notify` 调用（参数 `{'title', 'body'}`），原生壳实现
+  UNUserNotificationCenter / NotificationManager 即可接入，纯 Dart 环境返回
+  null（自行注入 `CronNotifier` 或换 Flutter 构建）；Windows 请注入
+  `CronNotifier`。
 - 其余语义（四种规则、daily 补发、每 tick 任务隔离、重启不重发、历史 500 封顶、
   防注入 framing）逐条对齐，53 条测试锁定。
 
