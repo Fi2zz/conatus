@@ -27,6 +27,7 @@ workspace:
   - packages/conatus_team
   - packages/conatus_tts
   - packages/conatus_tui
+  - packages/conatus_workflow
 
 dependencies:
   conatus_agent: ^0.15.0
