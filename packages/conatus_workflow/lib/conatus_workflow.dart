@@ -51,3 +51,11 @@ export 'src/tools/workflow_tools.dart'
         WorkflowRunTool,
         WorkflowStatusTool,
         provideWorkflowTools;
+export 'src/voice.dart'
+    show
+        WorkflowVoice,
+        workflowCreatedMessage,
+        workflowFailedMessage,
+        workflowProgressMessage,
+        workflowResultMessage,
+        workflowUpdatedMessage;
