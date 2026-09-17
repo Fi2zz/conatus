@@ -39,21 +39,30 @@ class MakerCheckerPattern implements TeamPattern {
     String feedback = input;
     String proposal = '';
     for (int i = 0; i < maxIter; i++) {
-      proposal = await team.ask(
-          maker.id, i == 0 ? input : '根据反馈修订：$feedback');
-      final String verdict =
-          await team.ask(checker.id, '审查这个提案：$proposal');
+      proposal = await team.ask(maker.id, i == 0 ? input : '根据反馈修订：$feedback');
+      final String verdict = await team.ask(checker.id, '审查这个提案：$proposal');
       if (_approved(verdict)) return proposal;
       feedback = verdict;
     }
     return proposal;
   }
 
-  /// 通过判定：verdict 含批准关键词。
+  /// 通过判定：先排除否定表述，再看肯定关键词。
+  ///
+  /// 否定必须先判——「不通过」是「通过」的超串，只做肯定匹配会把驳回
+  /// 误判为放行。
   bool _approved(String verdict) {
     final String lower = verdict.toLowerCase();
+    if (lower.contains('reject') ||
+        lower.contains('not approve') ||
+        verdict.contains('不通过') ||
+        verdict.contains('未通过') ||
+        verdict.contains('不满意') ||
+        verdict.contains('不认可') ||
+        verdict.contains('驳回')) {
+      return false;
+    }
     return lower.contains('approve') ||
-        lower.contains('approved') ||
         verdict.contains('通过') ||
         verdict.contains('满意') ||
         verdict.contains('认可');

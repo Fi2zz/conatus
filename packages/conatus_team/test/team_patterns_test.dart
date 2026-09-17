@@ -111,12 +111,12 @@ void main() {
     team.dispose();
   });
 
-  test('MakerCheckerPattern：未通过则迭代修订', () async {
+  test('MakerCheckerPattern：驳回后迭代修订（「不通过」不算通过）', () async {
     final AgentTeamImpl team = _newTeam(_ScriptedProvider(<LlmResult>[
       _text('提案V1'),
-      _text('不行'),
+      _text('不通过：缺少缓存穿透的降级说明。'),
       _text('提案V2'),
-      _text('通过'),
+      _text('通过：认可。'),
     ]));
     const MakerCheckerPattern p = MakerCheckerPattern();
     final Object? result = await p.execute(
