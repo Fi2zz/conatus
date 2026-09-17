@@ -10,6 +10,6 @@ jobs:
           fetch-depth: 0
       - name: Push to Gitee
         run: |
-          git remote add gitee https://${{ secrets.GITEE_USER }}:${{ secrets.GITEE_TOKEN }}@gitee.com/<你的用户名>/<仓库名>fitzy/conatus.git
+          git remote add gitee https://${{ secrets.GITEE_USER }}:${{ secrets.GITEE_TOKEN }}@gitee.com/fitzy/conatus.git
           git push gitee --all --force
           git push gitee --tags --force
