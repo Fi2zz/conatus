@@ -116,7 +116,7 @@ class CronRuntime {
     final CronNotifier? notifier = _notifier;
     if (record == null || notifier == null) return;
     final String title =
-        ok ? '定时任务完成：${record.taskId}' : '定时任务失败：${record.taskId}';
+        ok ? '定时任务完成：${record.prompt}' : '定时任务失败：${record.prompt}';
     notifier(title, record.excerpt ?? record.prompt);
   }
 

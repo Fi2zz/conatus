@@ -78,7 +78,7 @@ void main() {
     final String recordId = harness.records.single;
 
     runtime.finishRun(recordId, ok: true, excerpt: '构建通过');
-    expect(notifications, <String>['定时任务完成：demo|构建通过']);
+    expect(notifications, <String>['定时任务完成：原始 prompt|构建通过']);
     expect(
         harness.service.listHistory().single.status, CronRunStatus.completed);
 
@@ -86,7 +86,7 @@ void main() {
     now = base.add(const Duration(seconds: 1202));
     await runtime.tick();
     runtime.finishRun(harness.records.last, ok: false);
-    expect(notifications.last, '定时任务失败：demo|原始 prompt',
+    expect(notifications.last, '定时任务失败：原始 prompt|原始 prompt',
         reason: '无摘要时回退到 prompt 快照');
   });
 
