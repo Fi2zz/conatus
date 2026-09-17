@@ -12,6 +12,19 @@
 library;
 
 export 'src/definition.dart' show WorkflowDefinition, WorkflowInput;
+export 'src/engine.dart'
+    show
+        NodeExecutor,
+        RunCompleted,
+        RunFailed,
+        RunNodeCompleted,
+        RunNodeFailed,
+        RunNodeStarted,
+        RunStarted,
+        WorkflowEngine,
+        WorkflowEvent,
+        WorkflowRegistered;
+export 'src/engine_impl.dart' show WorkflowEngineImpl;
 export 'src/errors.dart' show WorkflowException;
 export 'src/node.dart' show AgentNode, SubWorkflowNode, ToolNode, WorkflowNode;
 export 'src/run.dart' show WorkflowRun;

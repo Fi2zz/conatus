@@ -24,7 +24,13 @@ enum RunStatus {
   failed,
 
   /// 取消（终态）。
-  cancelled,
+  cancelled;
+
+  /// 是否为终态（completed / failed / cancelled）。
+  bool get isTerminal =>
+      this == RunStatus.completed ||
+      this == RunStatus.failed ||
+      this == RunStatus.cancelled;
 }
 
 /// 节点运行状态。
@@ -45,5 +51,11 @@ enum RunNodeStatus {
   skipped,
 
   /// 失败（终态）。
-  failed,
+  failed;
+
+  /// 是否为终态（completed / skipped / failed）。
+  bool get isTerminal =>
+      this == RunNodeStatus.completed ||
+      this == RunNodeStatus.skipped ||
+      this == RunNodeStatus.failed;
 }
