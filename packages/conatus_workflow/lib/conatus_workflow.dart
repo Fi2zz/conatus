@@ -38,3 +38,16 @@ export 'src/run.dart' show WorkflowRun;
 export 'src/run_node.dart' show RunNode;
 export 'src/status.dart' show RunNodeStatus, RunStatus;
 export 'src/store.dart' show InMemoryWorkflowStore, WorkflowStore;
+export 'src/tools/workflow_control_tools.dart'
+    show
+        WorkflowCancelTool,
+        WorkflowPauseTool,
+        WorkflowRerunTool,
+        WorkflowResumeTool;
+export 'src/tools/workflow_tools.dart'
+    show
+        WorkflowCreateTool,
+        WorkflowListTool,
+        WorkflowRunTool,
+        WorkflowStatusTool,
+        provideWorkflowTools;
