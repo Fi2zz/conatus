@@ -35,7 +35,9 @@ const String kGoalUsage =
 
 /// `/cron` 用法提示。
 const String kCronUsage = '用法：/cron [list|add <内容> <at|every|daily|cron> <规则>|'
-    'remove <id>|enable <id>|disable <id>|history [条数]]';
+    'remove <id>|enable <id>|disable <id>|history [条数]]\n'
+    '规则：at=ISO 时刻；every=秒或 10分钟/1小时；daily/每天=HH:MM；'
+    '每周X=HH:MM；cron=5 段表达式';
 
 /// `/team` 用法提示。
 const String kTeamUsage = '用法：/team [status|interrupt <成员 id>]';
@@ -431,7 +433,8 @@ class ConatusTuiController {
   /// 解析 `/cron add` 的 `<内容> <at|every|daily|cron> <规则>`；形状不符返回 null。
   ///
   /// 规则在末尾：`at` / `every` / `daily` 各 1 个 token，`cron` 表达式 5 个 token
-  /// （含空格），内容可含任意空格。
+  /// （含空格），内容可含任意空格。规则词接受中文别名：`每天` / `每日` / `每隔` /
+  /// `每周X`；`every` 间隔可带单位（10分钟 / 1小时）。
   Map<String, Object?>? _parseCronAdd(String rest) {
     final List<String> parts = rest
         .split(RegExp(r'\s+'))
@@ -444,21 +447,84 @@ class ConatusTuiController {
         'cron': parts.sublist(parts.length - 5).join(' '),
       };
     }
+    // `every 10 分钟`：数字与单位分空格，合并尾部两 token。
+    if (parts.length >= 4 && _isEvery(parts[parts.length - 3])) {
+      final num? seconds = _parseInterval(
+          '${parts[parts.length - 2]} ${parts[parts.length - 1]}');
+      if (seconds != null) {
+        return <String, Object?>{
+          'prompt': parts.sublist(0, parts.length - 3).join(' '),
+          'every': seconds,
+        };
+      }
+    }
     final String prompt = parts.sublist(0, parts.length - 2).join(' ');
     final String kind = parts[parts.length - 2];
     final String value = parts[parts.length - 1];
+    final String? weekday = _weeklyWeekday(kind);
+    if (weekday != null) {
+      final String? cron = _dailyCron(value, weekday);
+      return cron == null
+          ? null
+          : <String, Object?>{'prompt': prompt, 'cron': cron};
+    }
     return switch (kind) {
       'at' => <String, Object?>{'prompt': prompt, 'at': value},
-      'every' => _parseEvery(prompt, value),
-      'daily' => <String, Object?>{'prompt': prompt, 'daily': value},
+      'daily' || '每天' || '每日' =>
+        <String, Object?>{'prompt': prompt, 'daily': value},
+      'every' || '每隔' => _parseEvery(prompt, value),
+      _ => null,
+    };
+  }
+
+  bool _isEvery(String kind) => kind == 'every' || kind == '每隔';
+
+  /// 间隔文本 → 秒；纯秒数或「数字 + 单位」。
+  num? _parseInterval(String raw) {
+    final String text = raw.trim().toLowerCase();
+    if (text.isEmpty) return null;
+    final num? plain = num.tryParse(text);
+    if (plain != null) return plain;
+    final RegExpMatch? match = RegExp(
+      r'^(\d+(?:\.\d+)?)\s*(秒|s|分钟|分|min|mins|m|小时|时|h|hour|hours)$',
+    ).firstMatch(text);
+    if (match == null) return null;
+    final double value = double.parse(match[1]!);
+    return switch (match[2]!) {
+      '秒' || 's' => value,
+      '分钟' || '分' || 'min' || 'mins' || 'm' => value * 60,
+      '小时' || '时' || 'h' || 'hour' || 'hours' => value * 3600,
       _ => null,
     };
   }
 
   Map<String, Object?>? _parseEvery(String prompt, String value) {
-    final num? seconds = num.tryParse(value);
+    final num? seconds = _parseInterval(value);
     if (seconds == null) return null;
     return <String, Object?>{'prompt': prompt, 'every': seconds};
+  }
+
+  /// `每周X` → cron 星期数（'1'-'6' 周一~六，'0' 周日）；非每周X 返回 null。
+  String? _weeklyWeekday(String kind) {
+    final RegExpMatch? match =
+        RegExp(r'^每周([一二三四五六日天])$').firstMatch(kind);
+    if (match == null) return null;
+    return switch (match.group(1)!) {
+      '一' => '1',
+      '二' => '2',
+      '三' => '3',
+      '四' => '4',
+      '五' => '5',
+      '六' => '6',
+      _ => '0',
+    };
+  }
+
+  /// `HH:MM` + cron 星期数 → cron 表达式 `分 时 * * 星期`。
+  String? _dailyCron(String value, String weekday) {
+    final RegExpMatch? match = kCronDailyPattern.firstMatch(value);
+    if (match == null) return null;
+    return '${int.parse(match[2]!)} ${int.parse(match[1]!)} * * $weekday';
   }
 
   void _cronRemove(CronService cron, String id) {

@@ -17,6 +17,8 @@
   - 新增 `VoiceReporter`（订阅团队事件经 TTS 播报，`minInterval` 节流 + 可选
     音频目标）与 `summarizeTeamProgress` 进度摘要
   - 新增斜杠命令 `/team`（status / interrupt）与 `/task`（claim / release）
+- `conatus_tui` `/cron add` 支持中文规则词（每天 / 每周X）与间隔单位
+  （秒 / 分钟 / 小时）。
 
 ## [0.15.0] — 2026-09-15
 

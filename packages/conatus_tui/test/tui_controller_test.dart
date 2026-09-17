@@ -601,6 +601,53 @@ void main() {
     app.dispose();
   });
 
+  test('/cron add 支持中文规则词与间隔单位', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+      withCron: true,
+    );
+    final CronService cron = app.require<CronService>('cron');
+
+    await controller.handleLine('/cron add 喝水 every 600');
+    expect(cron.tasks.single.every, 600);
+
+    await controller.handleLine('/cron add 喝水 every 10分钟');
+    expect(cron.tasks, hasLength(2));
+    expect(cron.tasks.last.every, 600);
+
+    await controller.handleLine('/cron add 喝水 every 600秒');
+    expect(cron.tasks, hasLength(3));
+    expect(cron.tasks.last.every, 600);
+
+    await controller.handleLine('/cron add 喝水 every 1小时');
+    expect(cron.tasks, hasLength(4));
+    expect(cron.tasks.last.every, 3600);
+
+    await controller.handleLine('/cron add 喝水 every 10 分钟');
+    expect(cron.tasks, hasLength(5));
+    expect(cron.tasks.last.every, 600);
+
+    await controller.handleLine('/cron add 吃药 每天 07:00');
+    expect(cron.tasks, hasLength(6));
+    expect(cron.tasks.last.daily, '07:00');
+
+    await controller.handleLine('/cron add 吃药 每日 07:00');
+    expect(cron.tasks, hasLength(7));
+    expect(cron.tasks.last.daily, '07:00');
+
+    await controller.handleLine('/cron add 站会 每周一 09:00');
+    expect(cron.tasks, hasLength(8));
+    expect(cron.tasks.last.cron, '0 9 * * 1');
+
+    await controller.handleLine('/cron add 站会 每周日 09:00');
+    expect(cron.tasks, hasLength(9));
+    expect(cron.tasks.last.cron, '0 9 * * 0');
+
+    await controller.handleLine('/cron add 站会 每周一 09');
+    expect(controller.transcript.messages.last.text, contains('用法：/cron'));
+    app.dispose();
+  });
+
   test('/cron add 参数不足或规则非法时给出用法', () async {
     final (ConatusTuiController controller, Context app) = await _build(
       const <LlmResult>[],
