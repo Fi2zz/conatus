@@ -23,9 +23,10 @@
 | [`conatus_tts`](packages/conatus_tts) | TTS 能力缝（豆包/火山语音合成）+ 可替换音频输出接口 | `conatus_core`、`http` |
 | [`conatus_mcp`](packages/conatus_mcp) | MCP（Model Context Protocol）客户端：stdio / HTTP / SSE 传输 + 工具接入 | `conatus_core`、`conatus_credentials`、`conatus_foundation`、`http` |
 | [`conatus_schedule`](packages/conatus_schedule) | 会话本地持久提醒：`schedule_create` / `schedule_list` / `schedule_delete` + 到期交付 | `conatus_core`、`conatus_foundation`、`timezone` |
+| [`conatus_cron`](packages/conatus_cron) | 定时任务（dsh-cron 移植，不含 web）：at / every / daily / cron 规则 + `cron_list` / `cron_add` / `cron_update` / `cron_remove` / `cron_history` + 运行历史持久化 | `conatus_core`、`conatus_foundation` |
 | [`conatus_compaction`](packages/conatus_compaction) | 压缩能力缝：滚动摘要契约 + `compaction/*` 日志事件 + 工具配对平衡切点 | `conatus_core`、`conatus_foundation` |
 | [`conatus_agent`](packages/conatus_agent) | Agent Loop 与产品化：plan / sub-agent / reflection / telemetry / eval / approval / skill / recovery | `conatus_compaction`、`conatus_core`、`conatus_foundation`、`conatus_llm` |
-| [`conatus_tui`](packages/conatus_tui) | 基于 [nocterm](https://pub.dev/packages/nocterm) 的文本 TUI：对话 + 工具闭环、斜杠命令、会话选择面板 | `conatus_agent`、`conatus_compaction`、`conatus_llm`、`conatus_schedule`、`conatus_search`、`conatus_skill`、`nocterm` |
+| [`conatus_tui`](packages/conatus_tui) | 基于 [nocterm](https://pub.dev/packages/nocterm) 的文本 TUI：对话 + 工具闭环、斜杠命令、会话选择面板 | `conatus_agent`、`conatus_compaction`、`conatus_cron`、`conatus_llm`、`conatus_schedule`、`conatus_search`、`conatus_skill`、`nocterm` |
 
 依赖方向自上而下，无环：
 
@@ -36,11 +37,12 @@ conatus ─▶ conatus_agent ─▶ conatus_llm ─▶ conatus_core
                 └▶ conatus_compaction ─▶ conatus_foundation
 conatus_mcp ────▶ conatus_foundation、conatus_credentials
 conatus_schedule ▶ conatus_foundation、timezone
+conatus_cron ────▶ conatus_foundation
 conatus_search ─▶ conatus_foundation
 conatus_skill ──▶ conatus_foundation
 conatus_asr ────▶ conatus_foundation
 conatus_tts ────▶ conatus_core
-conatus_tui ────▶ conatus_agent、conatus_compaction、conatus_schedule、conatus_search、conatus_skill
+conatus_tui ────▶ conatus_agent、conatus_compaction、conatus_cron、conatus_schedule、conatus_search、conatus_skill
 ```
 
 用于构建**可动态加载、卸载、热替换**的插件化系统。核心解决两个正交维度的问题：
@@ -62,7 +64,7 @@ conatus_tui ────▶ conatus_agent、conatus_compaction、conatus_schedul
 - 📦 **零运行时依赖**：核心仅用 Dart 核心库（`llm` / `credentials` / `mcp` / `search` 插件依赖 `http`，`foundation` 的 IANA 时区解析依赖 `timezone`）
 - 🧰 **基础设施插件**：`timer`（定时器即效应）、`logger-console`（分级日志）、`loader`（注册表 + 配置树）、`tools`（`Tool` 基类 + `ParamSpec` + 注册表/执行管线/分组/分级）、`shell` / `fs`（能力缝 + 本地实现）、`search`（搜索能力缝 + web 工具）、`asr`（语音识别能力缝 + `transcribe_audio`）、`tts`（语音合成能力缝 + 音频输出接口）
 - 🔐 **凭据管理**：`credentials`（统一凭据契约 + 五种来源：环境变量 / 内存 / 文件 / Vault KV v2 / AWS Secrets Manager）——`get` / `require` / `validate` 同步读内存快照，远端来源用 `refresh()` 拉取并可定时轮换，对外只出现 `masked`
-- 🗂️ **会话与上下文**：`session`（事件日志 + 仓库 + JSONL 持久化）、`session-log`（多会话只追加日志：fork / replay / 轨迹重建，附「模型可见即已记录」不变式）、`schedule`（会话本地持久提醒：创建 / 列出 / 取消，重启后自动重建）、`system-prompt`（prompt 段装配 + 动态上下文）、`time-context`（日粒度日期锚点）、`compaction`（压缩能力缝：滚动摘要 + `compaction/*` 日志事件）、`memory`（长记忆库 + 显式记住/遗忘能力与工具）
+- 🗂️ **会话与上下文**：`session`（事件日志 + 仓库 + JSONL 持久化）、`session-log`（多会话只追加日志：fork / replay / 轨迹重建，附「模型可见即已记录」不变式）、`schedule`（会话本地持久提醒：创建 / 列出 / 取消，重启后自动重建）、`cron`（定时任务：at / every / daily / cron 规则调度 + 运行历史持久化 + cron_* 管理工具）、`system-prompt`（prompt 段装配 + 动态上下文）、`time-context`（日粒度日期锚点）、`compaction`（压缩能力缝：滚动摘要 + `compaction/*` 日志事件）、`memory`（长记忆库 + 显式记住/遗忘能力与工具）
 - 🗄️ **持久化**：`database`（KV 存储 hub + 可插拔后端 + JSON 本地实现）
 - 🤖 **Agent Loop**：`agent`（会话事件 + prompt 装配 + 压缩 + 记忆 + 工具闭环）、`tool-result-eviction`（大结果落盘）、`plan`（结构化计划）、`sub-agent`（`spawn_agent` 隔离委托）、`reflection`（工具后自省重试）
 - 🔌 **MCP 生态**：`mcp`（MCP 客户端：stdio / HTTP / SSE 传输 + 握手与工具发现），外部 server 的工具以 `server__tool` 接入同一张工具表，风险缺省 `medium` 走审批
@@ -726,6 +728,30 @@ assertModelVisibleInvariant(await log.read(session.id).toList());
 
 `Session` 一侧的 `fork` / `replay` / `read` / `appendEvent` / `lastEventId` 与它配对，
 既有签名全部保持兼容。
+
+### `cron` — 定时任务（`conatus_cron` 包）
+
+服务键 `'cron'`（`ctx.cron`）与 `'cronRuntime'`（`ctx.cronRuntime`）。语义移植自
+dsh-cron（不含 web 部分）：任务规则四选一——`at` 一次性 / `every` 固定间隔（最小
+10s）/ `daily` 本地 `HH:MM`（错过补发）/ `cron` 5 段表达式（本地时间）；到点把任务
+提示以 `[cron]` framing 交付给宿主注入的 `CronDelivery` 端口，成功才消费时段，
+拒绝则下个 tick 重试。
+
+```dart
+final service = provideCron(ctx,
+    storage: JsonCronStorage(tasksPath: tasksFile, historyPath: historyFile));
+provideCronTools(ctx);
+provideCronRuntime(ctx, deliver: (recordId, framing) async => submit(framing));
+// turn 结束后：ctx.cronRuntime.finishRun(recordId, ok: …, excerpt: …);
+```
+
+- [CronStorage] 是抽象端口（本地 [JsonCronStorage]、数据库、远程 KV 均可接入）；
+  `configTasks` 可声明静态任务（运行时不可增删改）；`conatus_tui` 已默认接上
+  （任务与历史落在 `<baseDir>/cron-tasks.json` / `cron-history.jsonl`）
+- 运行历史 JSONL 封顶 500，`finishRun` 推进 `delivered` → `completed` / `failed`
+  并截断摘要到 300 字符；`systemCronNotifier()` 提供 macOS / Linux 系统通知
+- 模型工具：`cron_list` / `cron_add` / `cron_update` / `cron_remove` /
+  `cron_history`
 
 ### `schedule` — 会话本地持久提醒
 

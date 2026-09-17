@@ -4,6 +4,27 @@
 
 ## [未发布]
 
+新增 `conatus_cron` 包 —— 定时任务（dsh-cron 移植，不含 web 部分；依赖
+`conatus_core`、`conatus_foundation`）：
+
+- `CronService` / `provideCron`（服务键 `'cron'`）：任务规则四选一——`at` 一次性 /
+  `every` 固定间隔（最小 10s）/ `daily` 本地 `HH:MM`（错过当天补发）/ `cron` 5 段
+  表达式（Vixie 步进、标准 dom/dow 语义）；规则计算不读墙钟，注入 `clock` 可回放
+- `CronStorage` 抽象端口 + `JsonCronStorage` 本地实现（原子 tmp+rename、损坏降级），
+  宿主可实现同一接口接入任意后端；`configTasks` 静态任务运行时不可增删改
+- `CronRuntime` / `provideCronRuntime`（服务键 `'cronRuntime'`）：tick 轮询（默认
+  15s、3s 首 tick）+ 每任务隔离；到点经 `CronDelivery` 端口交付 `[cron]` framing，
+  成功才消费时段、拒绝下个 tick 重试；装配方在 turn 结束后调 `finishRun` 推进
+  `delivered` → `completed` / `failed`（摘要截断 300 字符），
+  `systemCronNotifier()` 提供可选系统通知（macOS osascript / Linux notify-send）
+- 运行历史 JSONL 封顶 500，任务与运行戳持久化——重启不重发已消费时段
+- 模型工具 `cron_list` / `cron_add` / `cron_update` / `cron_remove` /
+  `cron_history`；`conatus_tui` 已默认接上（交付进当前会话，收口回报运行状态）
+- 未移植：管理抽屉、`/cron/api` HTTP 层及配套 trust fence
+
+`conatus_tui`：`ConatusTuiRuntime.create` 新增 `baseDir` 参数（`sessionDir` /
+`memoryFile` / cron 存储的缺省根，便于测试隔离）。
+
 `conatus_foundation`：新增 `time-context` 插件，并把动态上下文接上消费点 —— 模型没有
 时钟，相对日期（"明天""下周三"）与带本地语义的时刻（"明早九点"）都需要外部锚点：
 
