@@ -4,6 +4,39 @@
 
 ## [未发布]
 
+新增 `conatus_browser_use` 包 —— 浏览器操作（实验性，不导出到伞包；依赖
+`conatus_agent`、`conatus_core`、`conatus_credentials`、`conatus_foundation`、
+`conatus_mcp`、`conatus_tasks`）：
+
+- `BrowserUseRegistry` / `provideBrowserUse`（服务键 `'browserUse'`）：唯一
+  Provider 注册（第二个注册失败、释放后可重注册）；浏览器绑定 Session，
+  Session 释放时关闭其启动的资源，fork / 新 Session 经 `initializeBrowserFor`
+  创建全新浏览器状态（登录状态不从 Session 日志恢复）
+- `BrowserUseProvider` / `SessionBrowser` / `BrowserConfig`（launch / attach
+  模式）：`PlaywrightMcpProvider`（默认，`npx @playwright/mcp`）与
+  `ChromeDevToolsMcpProvider` 复用 `conatus_mcp` 客户端（transportFactory 可
+  注入 Mock）；`StagehandProvider` 为骨架（需外部 SDK）
+- `BrowserActionTool` 接入 ToolRegistry，风险分级（只读 low / 交互 medium /
+  敏感 high）供审批门控；可选 seam：`taskCenter`（Task）、`approval`
+  （高危操作审批）、Session Log（`browser/action` 事件）、`telemetry`
+  （`browser.*` 埋点）
+
+新增 `conatus_computer_use` 包 —— 桌面操作（实验性，不导出到伞包；依赖
+同 `conatus_browser_use`）：
+
+- `ComputerUseRegistry` / `provideComputerUse`（服务键 `'computerUse'`）：
+  唯一 Provider 注册；**无 Session 所有权**（桌面是共享资源），启动失败释放
+  此次尝试的注册、MCP 重连保留注册
+- `ComputerUseProvider` / `DesktopSession` / `ScreenRegion` / `Screenshot` /
+  `AttachmentStore`（含内存实现）：`CuaDriverMcpProvider`（默认，
+  `cua-driver mcp`，断连标记后重连）与 `CuaDriverNativeProvider`（骨架）
+- `ImageSupport` 图像路由：视觉模型接收持久化截图（挂附件存储回填
+  `attachmentRef`），其余接收 MCP 图像诊断
+- `DesktopActionTool` 接入 ToolRegistry：**所有输入操作一律 high 风险**走
+  审批；可选 seam：`taskCenter`、`approval`、`sessionLog`（经
+  `registerDesktopTools` 记录到触发它的 Session）、`telemetry`
+  （`computer.*` 埋点）
+
 新增 `conatus_tasks` 包 —— 任务中心（Task Center）：运行时的任务追踪中枢，
 只回答「现在有哪些任务在跑、各自什么状态、能不能取消」，不负责调度与执行
 （依赖 `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_schedule`）：
