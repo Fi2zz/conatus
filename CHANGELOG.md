@@ -4,6 +4,28 @@
 
 ## [未发布]
 
+新增 `conatus_tasks` 包 —— 任务中心（Task Center）：运行时的任务追踪中枢，
+只回答「现在有哪些任务在跑、各自什么状态、能不能取消」，不负责调度与执行
+（依赖 `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_schedule`）：
+
+- `TaskCenter` / `provideTaskCenter`（服务键 `'tasks'`）：任务树（`parentTaskId`）
+  组织，`task/changed` 事件整值替换持久化到会话，恢复时按 id 折叠最后一个，
+  未完成任务标记 failed（执行环境已丢失）
+- 状态机：pending → running ⇄ paused → completed / failed / cancelled，
+  终态不可再变更；`cancel` 级联取消活跃子任务并执行取消回调，shell 类任务
+  走 approval 确认（缺省自动批准）；`task.*` 埋点（created / started /
+  paused / resumed / completed / failed / cancelled）
+- `provideTaskTracking`：运行时接入装饰器——Agent Loop 轮次钩子（新增
+  `AgentLoop.turnTracker`，经 `ctx.inject` 后置挂载、依赖消失自动摘除）、
+  `spawn_agent` 中间件（`ToolRegistry.use`，按结果值 `status` 判定子 Agent
+  成败）、`TrackingShellExecutor`（shell 前后台执行追踪）、
+  `trackScheduleDelivery`（提醒交付追踪）
+- 模型工具 `list_tasks`（low，按状态/类型/父任务过滤，口语化播报）与
+  `cancel_task`（medium，走审批）；不暴露 `create`——任务由运行时自动创建
+
+`conatus_agent`：`AgentLoop` 新增可选生命周期钩子 `turnTracker`
+（`AgentTurnTracker`：beginTurn / endTurn，一轮各一次，含 goalDriver 续行）。
+
 新增 `conatus_cron` 包 —— 定时任务（dsh-cron 移植，不含 web 部分；依赖
 `conatus_core`、`conatus_foundation`）：
 

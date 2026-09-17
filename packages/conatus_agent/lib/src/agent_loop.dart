@@ -16,6 +16,17 @@ import 'plan.dart';
 import 'reflection.dart';
 import 'router.dart';
 
+/// 一轮 Agent 执行的生命周期钩子：begin 在 user 事件写入后调用，end 在
+/// 收口（或失败）后调用，一轮恰好各一次。由 TaskCenter 等运行时组件经
+/// `ctx.inject(['agentLoop'], ...)` 后置挂载（参照 [AgentLoop.goalDriver]）。
+abstract class AgentTurnTracker {
+  /// 一轮开始。
+  Future<void> beginTurn(String userInput);
+
+  /// 一轮结束；[result] 为最终回复，[error] 为失败原因（互斥，可都为空）。
+  Future<void> endTurn({Object? result, Object? error});
+}
+
 /// Agent Loop。
 class AgentLoop {
   AgentLoop({
@@ -77,6 +88,10 @@ class AgentLoop {
   /// 不续行）。由 `provideGoal` 在 `goal` 与 `agentLoop` 齐备时后置挂载。
   GoalRoundDriver? goalDriver;
 
+  /// 每轮生命周期钩子（TaskCenter 等运行时追踪接入）；缺省 null，不追踪。
+  /// 与 [goalDriver] 一样由插件在 `agentLoop` 可用时经 `ctx.inject` 后置挂载。
+  AgentTurnTracker? turnTracker;
+
   int _historyStart = 0;
   bool _needsReplan = false;
 
@@ -88,6 +103,20 @@ class AgentLoop {
   /// 若挂载了 [goalDriver]，一轮收口后按其决策自动续行：继续则递增轮次并
   /// 以 [kGoalContinuationPrompt] 再跑一轮，直到等待用户或停止为止。
   Future<AgentTurn> run(String userInput, {AgentCancel? cancel}) async {
+    final AgentTurnTracker? tracker = turnTracker;
+    await tracker?.beginTurn(userInput);
+    try {
+      final AgentTurn turn = await _continue(userInput, cancel: cancel);
+      await tracker?.endTurn(result: turn.reply);
+      return turn;
+    } catch (error) {
+      await tracker?.endTurn(error: error);
+      rethrow;
+    }
+  }
+
+  /// run() 的追踪外壳主体：单轮加 goalDriver 续行。
+  Future<AgentTurn> _continue(String userInput, {AgentCancel? cancel}) async {
     final AgentTurn turn = await _runOnce(userInput, cancel: cancel);
     final GoalRoundDriver? driver = goalDriver;
     if (driver == null) return turn;

@@ -11,7 +11,7 @@ export 'src/agent_events.dart'
         summarizeEvents,
         toolCallsFromJson,
         toolCallsToJson;
-export 'src/agent_loop.dart' show AgentLoop;
+export 'src/agent_loop.dart' show AgentLoop, AgentTurnTracker;
 export 'src/agent_provider.dart'
     show AgentContext, composeLlm, provideAgentLoop;
 export 'src/agent_types.dart'

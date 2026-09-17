@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# 统一版本管理：伞包与 13 个模块包共用同一个版本号，包间的版本约束也指向它。
+# 统一版本管理：伞包与各模块包共用同一个版本号，包间的版本约束也指向它。
 #
 #   bash tool/version.sh            # 检查（缺省）：版本一致、约束指向它
 #   bash tool/version.sh 0.16.0     # 把所有包升到 0.16.0，并同步包间约束
@@ -89,7 +89,7 @@ bump() {
 
   check
   printf '%s\n' "下一步：按依赖顺序发布 —— core、foundation、compaction、credentials、llm、mcp、" \
-    "schedule、search、skill、asr、tts、agent、tui，最后是仓库根的 conatus"
+    "schedule、search、skill、asr、tts、agent、tasks、tui，最后是仓库根的 conatus"
 }
 
 case "${1:-}" in

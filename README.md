@@ -26,6 +26,7 @@
 | [`conatus_cron`](packages/conatus_cron) | 定时任务（dsh-cron 移植，不含 web）：at / every / daily / cron 规则 + `cron_list` / `cron_add` / `cron_update` / `cron_remove` / `cron_history` + 运行历史持久化 | `conatus_core`、`conatus_foundation` |
 | [`conatus_compaction`](packages/conatus_compaction) | 压缩能力缝：滚动摘要契约 + `compaction/*` 日志事件 + 工具配对平衡切点 | `conatus_core`、`conatus_foundation` |
 | [`conatus_agent`](packages/conatus_agent) | Agent Loop 与产品化：plan / sub-agent / reflection / telemetry / eval / approval / skill / recovery | `conatus_compaction`、`conatus_core`、`conatus_foundation`、`conatus_llm` |
+| [`conatus_tasks`](packages/conatus_tasks) | 任务中心（Task Center）：Agent Loop / sub-agent / shell / schedule 运行时任务追踪（任务树 + `task/changed` 持久化 + `list_tasks` / `cancel_task` 工具） | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_schedule` |
 | [`conatus_tui`](packages/conatus_tui) | 基于 [nocterm](https://pub.dev/packages/nocterm) 的文本 TUI：对话 + 工具闭环、斜杠命令、会话选择面板 | `conatus_agent`、`conatus_compaction`、`conatus_cron`、`conatus_llm`、`conatus_schedule`、`conatus_search`、`conatus_skill`、`nocterm` |
 
 依赖方向自上而下，无环：
@@ -42,6 +43,7 @@ conatus_search ─▶ conatus_foundation
 conatus_skill ──▶ conatus_foundation
 conatus_asr ────▶ conatus_foundation
 conatus_tts ────▶ conatus_core
+conatus_tasks ──▶ conatus_agent
 conatus_tui ────▶ conatus_agent、conatus_compaction、conatus_cron、conatus_schedule、conatus_search、conatus_skill
 ```
 
@@ -1547,10 +1549,10 @@ for d in packages/*/; do (cd "$d" && dart test); done
 ## 发版
 
 所有包共用同一个版本号，包间依赖也用同一约束（`^0.15.0` 在 0.x 下等价于
-`>=0.15.0 <0.16.0`，所以每升一次版本，14 个 `pubspec.yaml` 必须一起改）：
+`>=0.15.0 <0.16.0`，所以每升一次版本，16 个 `pubspec.yaml` 必须一起改）：
 
 ```bash
-bash tool/version.sh            # 检查：14 个包版本号一致，且 44 条包间约束都指向它
+bash tool/version.sh            # 检查：16 个包版本号一致，且 54 条包间约束都指向它
 bash tool/version.sh 0.16.0     # 统一升版：改 version 行 + 同步所有包间约束
 ```
 
@@ -1561,7 +1563,7 @@ bash tool/version.sh 0.16.0     # 统一升版：改 version 行 + 同步所有�
 ```bash
 for p in conatus_core conatus_foundation conatus_compaction conatus_credentials \
          conatus_llm conatus_mcp conatus_schedule conatus_search conatus_skill \
-         conatus_asr conatus_tts conatus_agent conatus_tui; do
+         conatus_asr conatus_tts conatus_agent conatus_tasks conatus_tui; do
   dart pub publish -C "packages/$p"
 done
 dart pub publish            # 最后发布伞包 conatus
