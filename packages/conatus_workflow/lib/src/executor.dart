@@ -12,6 +12,7 @@ import 'package:conatus_team/conatus_team.dart';
 import 'engine.dart';
 import 'errors.dart';
 import 'node.dart';
+import 'refs.dart';
 import 'run.dart';
 import 'status.dart';
 
@@ -43,7 +44,10 @@ Future<Object?> _runTool(
     throw WorkflowException('unknown-tool', '未注册的工具: ${node.tool}');
   }
   final result = await tools.call(
-    ToolCall(name: node.tool, arguments: node.arguments),
+    ToolCall(
+      name: node.tool,
+      arguments: resolveArguments(node.arguments, run),
+    ),
   );
   if (result.isError) {
     throw WorkflowException(
@@ -79,7 +83,7 @@ Future<Object?> _runSubWorkflow(
   }
   final child = await engine.start(
     node.workflow,
-    inputs: node.inputs,
+    inputs: resolveArguments(node.inputs, parent),
     parentRunId: parent.id,
   );
   await _waitTerminal(engine, child.id);

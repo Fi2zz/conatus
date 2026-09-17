@@ -108,6 +108,14 @@ class RunNodeFailed extends WorkflowEvent {
   final Object? error;
 }
 
+/// 节点跳过（条件不满足）。
+class RunNodeSkipped extends WorkflowEvent {
+  const RunNodeSkipped(this.runId, this.nodeId);
+
+  final String runId;
+  final String nodeId;
+}
+
 /// 运行完成。
 class RunCompleted extends WorkflowEvent {
   const RunCompleted(this.run);

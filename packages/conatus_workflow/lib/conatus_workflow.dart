@@ -19,6 +19,7 @@ export 'src/engine.dart'
         RunFailed,
         RunNodeCompleted,
         RunNodeFailed,
+        RunNodeSkipped,
         RunNodeStarted,
         RunStarted,
         WorkflowEngine,
@@ -28,6 +29,8 @@ export 'src/engine_impl.dart' show WorkflowEngineImpl;
 export 'src/errors.dart' show WorkflowException;
 export 'src/executor.dart' show buildNodeExecutor;
 export 'src/node.dart' show AgentNode, SubWorkflowNode, ToolNode, WorkflowNode;
+export 'src/refs.dart'
+    show evaluateCondition, resolveArguments, resolveReference, resolveValue;
 export 'src/run.dart' show WorkflowRun;
 export 'src/run_node.dart' show RunNode;
 export 'src/status.dart' show RunNodeStatus, RunStatus;

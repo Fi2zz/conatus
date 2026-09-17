@@ -11,6 +11,7 @@ import 'definition.dart';
 import 'engine.dart';
 import 'errors.dart';
 import 'node.dart';
+import 'refs.dart';
 import 'run.dart';
 import 'run_node.dart';
 import 'status.dart';
@@ -183,6 +184,7 @@ class WorkflowEngineImpl implements WorkflowEngine {
       final definition = _definitions[_runs[runId]!.workflowName]!;
       while (_runs[runId]!.status == RunStatus.running) {
         if (await _handleControl(runId)) return;
+        await _skipUnmet(runId, definition);
         final ready = findReadyNodeIds(definition, _runs[runId]!);
         if (ready.isEmpty) break;
         await _runBatch(runId, ready);
@@ -204,6 +206,41 @@ class WorkflowEngineImpl implements WorkflowEngine {
       return true;
     }
     return false;
+  }
+
+  /// 把「依赖满足但 when 条件为假」的节点标记为 skipped。
+  Future<void> _skipUnmet(
+    String runId,
+    WorkflowDefinition definition,
+  ) async {
+    final run = _runs[runId]!;
+    for (final WorkflowNode node in definition.nodes) {
+      final when = node.when;
+      final runNode = run.nodes[node.id];
+      final shouldSkip = when != null &&
+          runNode?.status == RunNodeStatus.pending &&
+          depsMet(node, run) &&
+          !evaluateCondition(when, run);
+      if (!shouldSkip) continue;
+      await _skipNode(runId, node.id);
+    }
+  }
+
+  /// 标记节点为跳过并发出事件。
+  Future<void> _skipNode(String runId, String nodeId) async {
+    final current = _runs[runId]!;
+    final updated = current.copyWith(
+      nodes: <String, RunNode>{
+        ...current.nodes,
+        nodeId: current.nodes[nodeId]!.copyWith(
+          status: RunNodeStatus.skipped,
+          finishedAt: DateTime.now(),
+        ),
+      },
+    );
+    _runs[runId] = updated;
+    await _store.saveRun(updated);
+    _changes.add(RunNodeSkipped(runId, nodeId));
   }
 
   /// 更新运行状态并持久化；终态时记录结束时间。
