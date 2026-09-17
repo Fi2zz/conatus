@@ -1,0 +1,25 @@
+name: conatus_team
+description: >-
+  [实验性] conatus 的多智能体协作包。API 可能随时变更，不建议在生产环境依赖。
+version: 0.1.0
+repository: https://github.com/Fi2zz/conatus
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+dependencies:
+  conatus_agent: ^0.15.0
+  conatus_core: ^0.15.0
+  conatus_foundation: ^0.15.0
+  conatus_llm: ^0.15.0
+
+dev_dependencies:
+  conatus_tasks: ^0.15.0
+  lints: ^4.0.0
+  test: ^1.25.0
+
+topics:
+  - agent
+  - experimental

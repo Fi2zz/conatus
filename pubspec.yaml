@@ -24,6 +24,7 @@ workspace:
   - packages/conatus_search
   - packages/conatus_skill
   - packages/conatus_tasks
+  - packages/conatus_team
   - packages/conatus_tts
   - packages/conatus_tui
 
