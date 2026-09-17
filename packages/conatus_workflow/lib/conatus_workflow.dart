@@ -7,8 +7,10 @@
 /// [WorkflowNode] 三种节点（[ToolNode] / [AgentNode] / [SubWorkflowNode]），
 /// 声明式 JSON 序列化（[WorkflowNode.fromJson] 按 `type` 分派，非法输入
 /// 抛 [WorkflowException]）；运行词汇 —— [WorkflowRun] / [RunNode] /
-/// [RunStatus] / [RunNodeStatus]，可序列化。执行引擎（DAG 遍历 / 暂停
-/// 恢复 / 工具层）尚未实现，见 `.handoffs/HANDOFF-7.md`。
+/// [RunStatus] / [RunNodeStatus]，可序列化；执行引擎 —— DAG 遍历、暂停 /
+/// 恢复 / 重跑 / 取消与事件流（[WorkflowEngine] / [WorkflowEngineImpl]，
+/// 节点执行经 [NodeExecutor] 接到工具 / 成员 / 子流程）；8 个面向模型的
+/// 流程工具（[provideWorkflowTools]）与语音播报 seam（[WorkflowVoice]）。
 library;
 
 export 'src/definition.dart' show WorkflowDefinition, WorkflowInput;
