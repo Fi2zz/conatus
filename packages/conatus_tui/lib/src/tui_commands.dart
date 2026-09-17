@@ -40,6 +40,10 @@ const List<TuiCommand> tuiCommands = <TuiCommand>[
   TuiCommand(name: 'sessions', description: '打开会话选择面板（↑↓ 选择，Enter 切换）'),
   TuiCommand(name: 'tools', description: '列出当前已注册的工具'),
   TuiCommand(
+    name: 'plan',
+    description: '进入 / 退出 Plan Mode（先规划，经 exit_plan_mode 提交后执行）',
+  ),
+  TuiCommand(
     name: 'remember',
     description: '直接记住一段信息（不经模型）',
     argHint: '<内容>',

@@ -64,6 +64,7 @@ class ConatusTuiController {
   Session? _session;
   Context? _sessionCtx;
   AgentLoop? _agent;
+  PlanMode? _planMode;
   Disposer? _eventSub;
 
   /// 在飞轮次的取消句柄（Esc / 打断）；null = 无在飞轮次。
@@ -212,6 +213,8 @@ class ConatusTuiController {
         }
       case 'tools':
         _showTools();
+      case 'plan':
+        _togglePlanMode();
       case 'remember':
         await _remember(arg);
       case 'forget':
@@ -236,6 +239,26 @@ class ConatusTuiController {
       TuiRole.system,
       '已注册工具（${tools.names.length}）：${tools.names.join('、')}',
     );
+  }
+
+  /// `/plan`：进入 / 退出 Plan Mode（先规划、经 exit_plan_mode 提交后执行）。
+  void _togglePlanMode() {
+    final PlanMode? planMode = _planMode;
+    if (planMode == null) {
+      transcript.add(TuiRole.system, 'Plan Mode 不可用：会话尚未绑定。');
+      return;
+    }
+    if (planMode.state == PlanModeState.active) {
+      planMode.exit();
+      transcript.add(TuiRole.system, '已退出 Plan Mode。');
+      return;
+    }
+    planMode.enter();
+    final String reviewNote = _app.has('approval')
+        ? '计划经 exit_plan_mode 提交后等待审批。'
+        : '计划经 exit_plan_mode 提交后即获批执行（未配置审批端口）。';
+    transcript.add(
+        TuiRole.system, '已进入 Plan Mode：有副作用的工具被拦截，模型先规划再执行。$reviewNote');
   }
 
   /// `/remember <内容>`：直接调用记忆能力，绕过模型。
@@ -300,12 +323,14 @@ class ConatusTuiController {
     _session = session;
     final Context ctx = _app.plugin('tui-session:$id', (Context child) {
       provideAgentLoop(child, session: session);
+      providePlanMode(child, session: session);
       provideSessionSchedule(child, session: session, sessions: _sessions);
       provideScheduleTools(child);
       provideScheduleRuntime(child, deliver: _deliverReminder);
     });
     _sessionCtx = ctx;
     _agent = ctx.agentLoop;
+    _planMode = ctx.planMode;
     transcript.rebuildFrom(session);
     _eventSub = session.onEvent((SessionEvent event) {
       transcript.apply(event);
@@ -320,6 +345,7 @@ class ConatusTuiController {
     _sessionCtx?.dispose();
     _sessionCtx = null;
     _agent = null;
+    _planMode = null;
     _session = null;
     ready = false;
   }

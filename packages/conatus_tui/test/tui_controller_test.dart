@@ -3,6 +3,7 @@ library;
 
 import 'dart:async';
 
+import 'package:conatus_agent/conatus_agent.dart';
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
@@ -170,6 +171,59 @@ void main() {
     await controller.handleLine('/tools');
 
     expect(controller.transcript.messages.single.text, contains('get_time'));
+    app.dispose();
+  });
+
+  test('/plan 切换 Plan Mode 并给出提示', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+    );
+
+    await controller.handleLine('/plan');
+    expect(controller.transcript.messages.last.text, contains('已进入 Plan Mode'));
+    expect(
+        controller.transcript.messages.last.text, contains('exit_plan_mode'));
+
+    await controller.handleLine('/plan');
+    expect(controller.transcript.messages.last.text, contains('已退出 Plan Mode'));
+    app.dispose();
+  });
+
+  test('Plan Mode 激活时拦截 medium 工具，退出后放行', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+    );
+    app.effect(() => app.tools.fn(
+          'danger',
+          description: '有副作用的操作',
+          riskLevel: ToolRisk.medium,
+          handler: (ToolContext ctx) async => ToolResult.success('done'),
+        ));
+    Future<ToolResult> callDanger() =>
+        app.tools.call(const ToolCall(name: 'danger'));
+
+    expect((await callDanger()).isError, isFalse);
+
+    await controller.handleLine('/plan');
+    final ToolResult blocked = await callDanger();
+    expect(blocked.isError, isTrue);
+    expect(blocked.error!.code, 'PLAN_MODE_BLOCKED');
+
+    await controller.handleLine('/plan');
+    expect((await callDanger()).isError, isFalse);
+    app.dispose();
+  });
+
+  test('exit_plan_mode 随会话绑定注册，切换会话后保持可用', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+    );
+
+    expect(app.tools.get(kExitPlanModeToolName), isNotNull);
+
+    await controller.handleLine('/session work');
+
+    expect(app.tools.get(kExitPlanModeToolName), isNotNull);
     app.dispose();
   });
 
