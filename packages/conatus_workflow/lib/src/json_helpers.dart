@@ -72,3 +72,35 @@ Map<String, Object?> optionalStringMap(
   if (value is! Map) return const <String, Object?>{};
   return Map<String, Object?>.from(value);
 }
+
+/// 读取必填字符串键 map 字段；缺失或类型错误抛 [WorkflowException]。
+Map<String, Object?> requiredStringMap(
+  Map<String, Object?> json,
+  String field,
+) {
+  final value = json[field];
+  if (value is Map) return Map<String, Object?>.from(value);
+  throw value == null
+      ? WorkflowException('missing-field', '缺少必填字段: $field')
+      : WorkflowException('bad-type', '字段类型错误: $field');
+}
+
+/// 读取必填时间字段；缺失、非字符串或格式错误抛 [WorkflowException]。
+DateTime requiredDateTime(Map<String, Object?> json, String field) {
+  final value = json[field];
+  if (value is String) {
+    final parsed = DateTime.tryParse(value);
+    if (parsed != null) return parsed;
+    throw WorkflowException('bad-type', '字段类型错误: $field');
+  }
+  throw value == null
+      ? WorkflowException('missing-field', '缺少必填字段: $field')
+      : WorkflowException('bad-type', '字段类型错误: $field');
+}
+
+/// 读取可选时间字段；缺失或格式错误返回 null。
+DateTime? optionalDateTime(Map<String, Object?> json, String field) {
+  final value = json[field];
+  if (value is String) return DateTime.tryParse(value);
+  return null;
+}

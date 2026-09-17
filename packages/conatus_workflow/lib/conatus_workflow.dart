@@ -6,10 +6,14 @@
 /// 已落地：流程定义词汇 —— [WorkflowDefinition] / [WorkflowInput] /
 /// [WorkflowNode] 三种节点（[ToolNode] / [AgentNode] / [SubWorkflowNode]），
 /// 声明式 JSON 序列化（[WorkflowNode.fromJson] 按 `type` 分派，非法输入
-/// 抛 [WorkflowException]）。执行引擎（DAG 遍历 / 暂停恢复 / 工具层）
-/// 尚未实现，见 `.handoffs/HANDOFF-7.md`。
+/// 抛 [WorkflowException]）；运行词汇 —— [WorkflowRun] / [RunNode] /
+/// [RunStatus] / [RunNodeStatus]，可序列化。执行引擎（DAG 遍历 / 暂停
+/// 恢复 / 工具层）尚未实现，见 `.handoffs/HANDOFF-7.md`。
 library;
 
 export 'src/definition.dart' show WorkflowDefinition, WorkflowInput;
 export 'src/errors.dart' show WorkflowException;
 export 'src/node.dart' show AgentNode, SubWorkflowNode, ToolNode, WorkflowNode;
+export 'src/run.dart' show WorkflowRun;
+export 'src/run_node.dart' show RunNode;
+export 'src/status.dart' show RunNodeStatus, RunStatus;
