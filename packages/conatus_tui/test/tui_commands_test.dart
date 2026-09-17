@@ -69,6 +69,8 @@ void main() {
     expect(tuiHelpText, contains('/session <id>'));
     expect(tuiHelpText, contains('/tools'));
     expect(tuiHelpText, contains('/exit'));
+    expect(tuiHelpText, contains('/team <子命令>'));
+    expect(tuiHelpText, contains('/task <子命令>'));
     expect(tuiHelpText, contains('其他输入直接进入 Agent 对话链路。'));
   });
 }

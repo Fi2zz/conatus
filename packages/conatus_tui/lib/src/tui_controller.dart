@@ -14,11 +14,16 @@ import 'package:conatus_cron/conatus_cron.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 import 'package:conatus_schedule/conatus_schedule.dart';
+import 'package:conatus_team/conatus_team.dart';
+import 'package:conatus_tts/conatus_tts.dart';
 
+import 'team_snapshot.dart';
+import 'team_subscription.dart';
 import 'transcript.dart';
 import 'tui_help.dart';
 import 'tui_message.dart';
 import 'tui_session_picker.dart';
+import 'voice_reporter.dart';
 
 /// 会话 id 规则：字母 / 数字 / 下划线 / 中文 / 短横，长度 1—64。
 bool isValidSessionId(String id) =>
@@ -29,9 +34,14 @@ const String kGoalUsage =
     '用法：/goal [status|set <文本>|edit <文本>|pause|resume|done|clear]';
 
 /// `/cron` 用法提示。
-const String kCronUsage =
-    '用法：/cron [list|add <内容> <at|every|daily|cron> <规则>|'
+const String kCronUsage = '用法：/cron [list|add <内容> <at|every|daily|cron> <规则>|'
     'remove <id>|enable <id>|disable <id>|history [条数]]';
+
+/// `/team` 用法提示。
+const String kTeamUsage = '用法：/team [status|interrupt <成员 id>]';
+
+/// `/task` 用法提示。
+const String kTaskUsage = '用法：/task [claim <任务 id>|release <任务 id>]';
 
 /// TUI 会话控制器。
 class ConatusTuiController {
@@ -42,6 +52,8 @@ class ConatusTuiController {
     required String initialSession,
     required this.modelLabel,
     this.onExit,
+    this.tts,
+    this.ttsSink,
   })  : _app = app,
         _sessions = sessions,
         _sessionId = initialSession {
@@ -59,6 +71,12 @@ class ConatusTuiController {
 
   /// 退出请求（`/exit`、`/quit`、Ctrl+C）；由宿主接 `shutdownApp`。
   final void Function()? onExit;
+
+  /// TTS 服务（可选）。注入后随会话装配团队语音播报。
+  final TtsService? tts;
+
+  /// TTS 音频输出目标（可选）。缺省 no-op，桌面 TUI 无声。
+  final TtsAudioSink? ttsSink;
 
   /// 会话装配钩子：会话子上下文与 Session 建好、内置插件提供完毕后回调。
   ///
@@ -87,6 +105,12 @@ class ConatusTuiController {
   /// 在飞轮次的取消句柄（Esc / 打断）；null = 无在飞轮次。
   AgentCancel? _cancel;
 
+  /// 团队订阅（随会话绑定/解绑）。
+  TeamSubscription? _teamSub;
+
+  /// 团队语音播报（随会话绑定/解绑；tts 注入时启用）。
+  VoiceReporter? _voice;
+
   /// 是否有在途轮次。
   bool busy = false;
 
@@ -95,6 +119,9 @@ class ConatusTuiController {
 
   /// 当前会话 id。
   String get sessionId => _sessionId;
+
+  /// 团队状态快照（未装配团队或未绑定时为空）。
+  TeamSnapshot get teamSnapshot => _teamSub?.snapshot ?? const TeamSnapshot();
 
   /// 绑定初始会话。
   Future<void> start() async {
@@ -236,6 +263,10 @@ class ConatusTuiController {
         await _handleGoal(arg);
       case 'cron':
         await _handleCron(arg);
+      case 'team':
+        await _handleTeam(arg);
+      case 'task':
+        await _handleTask(arg);
       case 'remember':
         await _remember(arg);
       case 'forget':
@@ -413,8 +444,7 @@ class ConatusTuiController {
         'cron': parts.sublist(parts.length - 5).join(' '),
       };
     }
-    final String prompt =
-        parts.sublist(0, parts.length - 2).join(' ');
+    final String prompt = parts.sublist(0, parts.length - 2).join(' ');
     final String kind = parts[parts.length - 2];
     final String value = parts[parts.length - 1];
     return switch (kind) {
@@ -446,8 +476,7 @@ class ConatusTuiController {
       return;
     }
     final CronTaskView view = cron.setEnabled(id, enabled);
-    transcript.add(
-        TuiRole.system, '已${enabled ? '启用' : '停用'}定时任务 ${view.id}。');
+    transcript.add(TuiRole.system, '已${enabled ? '启用' : '停用'}定时任务 ${view.id}。');
   }
 
   void _showCronTasks(CronService cron) {
@@ -461,8 +490,9 @@ class ConatusTuiController {
       buffer
         ..write('\n  ${view.id} [${view.enabled ? '启用' : '停用'}] '
             '${_cronScheduleText(view)}')
-        ..write(
-            view.nextRunAt == null ? '' : ' 下次=${_formatLocal(view.nextRunAt!)}')
+        ..write(view.nextRunAt == null
+            ? ''
+            : ' 下次=${_formatLocal(view.nextRunAt!)}')
         ..write(' 内容=${view.prompt}');
     }
     transcript.add(TuiRole.system, buffer.toString());
@@ -568,6 +598,74 @@ class ConatusTuiController {
     transcript.add(TuiRole.system, '最近遥测：${names.join('、')}');
   }
 
+  /// `/team [status|interrupt <id>]`：团队状态摘要与成员管理（不经模型）。
+  Future<void> _handleTeam(String arg) async {
+    final AgentTeam? team = _sessionCtx?.get<AgentTeam>('team');
+    if (team == null) {
+      transcript.add(TuiRole.system, '团队不可用：会话尚未装配团队服务。');
+      return;
+    }
+    final int space = arg.indexOf(' ');
+    final String sub = space < 0 ? arg.trim() : arg.substring(0, space).trim();
+    final String rest = space < 0 ? '' : arg.substring(space + 1).trim();
+    try {
+      switch (sub) {
+        case '' || 'status':
+          transcript.add(TuiRole.system, summarizeTeamProgress(teamSnapshot));
+        case 'interrupt':
+          if (rest.isEmpty) {
+            transcript.add(TuiRole.system, kTeamUsage);
+            return;
+          }
+          await team.interrupt(rest);
+          transcript.add(TuiRole.system, '已中断成员 $rest。');
+        default:
+          transcript.add(TuiRole.system, kTeamUsage);
+      }
+    } on TeamException catch (e) {
+      transcript.add(TuiRole.system, '团队操作失败：${e.message}');
+    }
+  }
+
+  /// `/task [claim|release <id>]`：任务板手动干预（不经模型）。
+  Future<void> _handleTask(String arg) async {
+    final AgentTeam? team = _sessionCtx?.get<AgentTeam>('team');
+    if (team == null) {
+      transcript.add(TuiRole.system, '团队不可用：会话尚未装配团队服务。');
+      return;
+    }
+    final int space = arg.indexOf(' ');
+    final String sub = space < 0 ? arg.trim() : arg.substring(0, space).trim();
+    final String rest = space < 0 ? '' : arg.substring(space + 1).trim();
+    try {
+      switch (sub) {
+        case 'claim':
+          if (rest.isEmpty) {
+            transcript.add(TuiRole.system, kTaskUsage);
+            return;
+          }
+          final TeamTask? task = team.task(rest);
+          if (task == null) {
+            transcript.add(TuiRole.system, '任务不存在：$rest');
+            return;
+          }
+          await team.claimTask(rest, 'user');
+          transcript.add(TuiRole.system, '已领取任务：${task.description}');
+        case 'release':
+          if (rest.isEmpty) {
+            transcript.add(TuiRole.system, kTaskUsage);
+            return;
+          }
+          await team.releaseTask(rest, 'user');
+          transcript.add(TuiRole.system, '已释放任务 $rest。');
+        default:
+          transcript.add(TuiRole.system, kTaskUsage);
+      }
+    } on TeamException catch (e) {
+      transcript.add(TuiRole.system, '任务操作失败：${e.message}');
+    }
+  }
+
   Future<void> _bind(String id) async {
     final Session session = await _sessions.open(id);
     _session = session;
@@ -578,6 +676,12 @@ class ConatusTuiController {
       provideSessionSchedule(child, session: session, sessions: _sessions);
       provideScheduleTools(child);
       provideScheduleRuntime(child, deliver: _deliverReminder);
+      provideAgentTeam(
+        child,
+        session: session,
+        telemetry: _app.get<Telemetry>('telemetry'),
+      );
+      provideTeamTools(child);
       configureSession?.call(child, session);
     });
     _sessionCtx = ctx;
@@ -589,12 +693,31 @@ class ConatusTuiController {
       transcript.apply(event);
       _refresh();
     });
+    _bindTeam(ctx);
     ready = true;
+  }
+
+  /// 绑定团队订阅与语音播报（装配了团队服务时生效）。
+  void _bindTeam(Context ctx) {
+    final AgentTeam? team = ctx.get<AgentTeam>('team');
+    if (team == null) return;
+    _teamSub = TeamSubscription(
+      team: team,
+      onChanged: (TeamSnapshot _) => _refresh(),
+    );
+    final TtsService? tts = this.tts;
+    if (tts != null) {
+      _voice = VoiceReporter(team: team, tts: tts, sink: ttsSink);
+    }
   }
 
   void _unbind() {
     _eventSub?.call();
     _eventSub = null;
+    _voice?.dispose();
+    _voice = null;
+    _teamSub?.dispose();
+    _teamSub = null;
     _sessionCtx?.dispose();
     _sessionCtx = null;
     _agent = null;

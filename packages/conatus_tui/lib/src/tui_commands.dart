@@ -64,6 +64,16 @@ const List<TuiCommand> tuiCommands = <TuiCommand>[
     argHint: '<id 或 关键字>',
   ),
   TuiCommand(name: 'telemetry', description: '显示最近的可观测性事件'),
+  TuiCommand(
+    name: 'team',
+    description: '团队视图/成员管理（status / interrupt <成员 id>）',
+    argHint: '<子命令>',
+  ),
+  TuiCommand(
+    name: 'task',
+    description: '任务板操作（claim <任务 id> / release <任务 id>）',
+    argHint: '<子命令>',
+  ),
   TuiCommand(name: 'clear', description: '清空屏上记录（不改动会话数据）'),
   TuiCommand(name: 'exit', description: '退出并关闭 TUI（同 /quit、Ctrl+C）'),
 ];

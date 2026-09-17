@@ -7,6 +7,8 @@ import 'dart:async';
 
 import 'package:nocterm/nocterm.dart';
 
+import 'team_snapshot.dart';
+import 'team_views.dart';
 import 'tui_chrome.dart';
 import 'tui_command_menu_view.dart';
 import 'tui_commands.dart';
@@ -43,6 +45,7 @@ class _AgentTuiState extends State<AgentTui> {
   int _tick = 0;
   bool _exiting = false;
   bool _confirmExit = false;
+  ViewMode _view = ViewMode.chat;
 
   @override
   void initState() {
@@ -107,8 +110,12 @@ class _AgentTuiState extends State<AgentTui> {
   }
 
   /// 输入框按键拦截：`/` 菜单打开时用 ↑↓ 选择、Enter 运行、Tab 补全、Esc 关闭；
-  /// 菜单未打开时 Esc 打断在飞轮次。
+  /// 菜单未打开时 Esc 打断在飞轮次。Ctrl+T 恒为视图切换，先于文本域消费。
   bool _onInputKey(KeyboardEvent event) {
+    if (event.matches(LogicalKey.keyT, ctrl: true)) {
+      _toggleView();
+      return true;
+    }
     if (!_menu.open) {
       if (event.logicalKey == LogicalKey.escape) {
         _controller.interrupt();
@@ -171,6 +178,11 @@ class _AgentTuiState extends State<AgentTui> {
   }
 
   bool _onKey(KeyboardEvent event) {
+    // Ctrl+T 切换对话/团队视图（兜底：输入框聚焦时由 _onInputKey 先行处理）。
+    if (event.matches(LogicalKey.keyT, ctrl: true)) {
+      _toggleView();
+      return true;
+    }
     // Ctrl+C 恒可用：首次提示确认，窗口内再按一次才退出。
     if (event.logicalKey == LogicalKey.keyC && event.isControlPressed) {
       _confirmExitChord();
@@ -206,6 +218,13 @@ class _AgentTuiState extends State<AgentTui> {
     });
   }
 
+  /// 切换对话 / 团队视图。
+  void _toggleView() {
+    setState(() {
+      _view = _view == ViewMode.chat ? ViewMode.team : ViewMode.chat;
+    });
+  }
+
   @override
   Component build(BuildContext context) {
     return Focusable(
@@ -219,9 +238,14 @@ class _AgentTuiState extends State<AgentTui> {
             sessionId: _controller.sessionId,
             modelLabel: _controller.modelLabel,
           ),
-          Expanded(child: _body()),
+          Expanded(
+            child: _view == ViewMode.chat
+                ? _body()
+                : TeamView(snapshot: _controller.teamSnapshot),
+          ),
           if (_menu.open)
             TuiCommandMenuView(matches: _menu.matches, selected: _menu.index),
+          TeamStatusBar(snapshot: _controller.teamSnapshot),
           TuiInputBar(
             controller: _input,
             focused: !_controller.picker.open,
