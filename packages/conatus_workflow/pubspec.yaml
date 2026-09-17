@@ -16,6 +16,7 @@ dependencies:
   conatus_agent: ^0.15.0
   conatus_core: ^0.15.0
   conatus_foundation: ^0.15.0
+  conatus_tasks: ^0.15.0
   conatus_team: ^0.1.0
 
 dev_dependencies:

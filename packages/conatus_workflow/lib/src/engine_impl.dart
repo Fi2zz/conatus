@@ -10,6 +10,7 @@ import 'dag.dart';
 import 'definition.dart';
 import 'engine.dart';
 import 'errors.dart';
+import 'hooks.dart';
 import 'node.dart';
 import 'refs.dart';
 import 'run.dart';
@@ -22,11 +23,14 @@ class WorkflowEngineImpl implements WorkflowEngine {
   WorkflowEngineImpl({
     required NodeExecutor executor,
     WorkflowStore? store,
+    WorkflowHooks? hooks,
   })  : _executor = executor,
-        _store = store ?? InMemoryWorkflowStore();
+        _store = store ?? InMemoryWorkflowStore(),
+        _hooks = hooks;
 
   final NodeExecutor _executor;
   final WorkflowStore _store;
+  final WorkflowHooks? _hooks;
   final Map<String, WorkflowDefinition> _definitions =
       <String, WorkflowDefinition>{};
   final Map<String, WorkflowRun> _runs = <String, WorkflowRun>{};
@@ -41,6 +45,7 @@ class WorkflowEngineImpl implements WorkflowEngine {
   Future<void> register(WorkflowDefinition definition) async {
     _definitions[definition.name] = definition;
     await _store.saveDefinition(definition);
+    _hooks?.onRegistered(definition);
     _changes.add(WorkflowRegistered(definition));
   }
 
@@ -90,6 +95,7 @@ class WorkflowEngineImpl implements WorkflowEngine {
     );
     _runs[id] = run;
     await _store.saveRun(run);
+    _hooks?.onRunStarted(run);
     _changes.add(RunStarted(run));
     unawaited(_tick(id));
     return run;
@@ -116,6 +122,7 @@ class WorkflowEngineImpl implements WorkflowEngine {
     }
     if (current.status != RunStatus.paused) return current;
     await _setStatus(runId, RunStatus.running);
+    _hooks?.onRunResumed(_runs[runId]!);
     unawaited(_tick(runId));
     return _runs[runId]!;
   }
@@ -240,10 +247,12 @@ class WorkflowEngineImpl implements WorkflowEngine {
     );
     _runs[runId] = updated;
     await _store.saveRun(updated);
+    _hooks?.onNodeSkipped(updated, nodeId);
     _changes.add(RunNodeSkipped(runId, nodeId));
   }
 
-  /// 更新运行状态并持久化；终态时记录结束时间。
+  /// 更新运行状态并持久化；终态时记录结束时间。paused / completed /
+  /// failed 状态经 hooks 上报。
   Future<void> _setStatus(String runId, RunStatus status) async {
     final run = _runs[runId]!;
     final updated = run.copyWith(
@@ -252,6 +261,18 @@ class WorkflowEngineImpl implements WorkflowEngine {
     );
     _runs[runId] = updated;
     await _store.saveRun(updated);
+    switch (status) {
+      case RunStatus.paused:
+        _hooks?.onRunPaused(updated);
+      case RunStatus.completed:
+        _hooks?.onRunCompleted(updated);
+      case RunStatus.failed:
+        _hooks?.onRunFailed(updated);
+      case RunStatus.running:
+      case RunStatus.pending:
+      case RunStatus.cancelled:
+        break;
+    }
   }
 
   /// 并发执行一批节点。
@@ -277,15 +298,24 @@ class WorkflowEngineImpl implements WorkflowEngine {
     );
     _runs[runId] = updated;
     await _store.saveRun(updated);
+    await _hooks?.onNodeStarted(updated, nodeId);
     _changes.add(RunNodeStarted(runId, nodeId));
   }
 
-  /// 执行单个节点：成功写输出，异常记失败。
+  /// 执行单个节点：审批通过后执行，成功写输出，异常记失败。
   Future<void> _executeNode(String runId, String nodeId) async {
     final definition = _definitions[_runs[runId]!.workflowName]!;
     final node = definition.nodes.firstWhere(
       (WorkflowNode n) => n.id == nodeId,
     );
+    if (!await (_hooks?.checkApproval(node) ?? Future<bool>.value(true))) {
+      await _failNode(
+        runId,
+        nodeId,
+        WorkflowException('approval-denied', '节点「$nodeId」未获批'),
+      );
+      return;
+    }
     try {
       final outputs = await _executor(node, _runs[runId]!);
       await _completeNode(runId, nodeId, outputs);
@@ -310,6 +340,7 @@ class WorkflowEngineImpl implements WorkflowEngine {
     );
     _runs[runId] = updated;
     await _store.saveRun(updated);
+    await _hooks?.onNodeCompleted(updated, nodeId);
     _changes.add(RunNodeCompleted(runId, nodeId, outputs));
   }
 
@@ -328,6 +359,7 @@ class WorkflowEngineImpl implements WorkflowEngine {
     );
     _runs[runId] = updated;
     await _store.saveRun(updated);
+    await _hooks?.onNodeFailed(updated, nodeId, error);
     _changes.add(RunNodeFailed(runId, nodeId, error));
   }
 
@@ -366,6 +398,7 @@ class WorkflowEngineImpl implements WorkflowEngine {
     );
     _runs[runId] = updated;
     await _store.saveRun(updated);
+    _hooks?.onRunCompleted(updated);
     _changes.add(RunCompleted(updated));
   }
 

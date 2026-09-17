@@ -28,7 +28,10 @@ export 'src/engine.dart'
 export 'src/engine_impl.dart' show WorkflowEngineImpl;
 export 'src/errors.dart' show WorkflowException;
 export 'src/executor.dart' show buildNodeExecutor;
+export 'src/hooks.dart'
+    show WorkflowHooks, kWorkflowRunEvent, restoreWorkflowRun;
 export 'src/node.dart' show AgentNode, SubWorkflowNode, ToolNode, WorkflowNode;
+export 'src/provider.dart' show WorkflowContext, provideWorkflow;
 export 'src/refs.dart'
     show evaluateCondition, resolveArguments, resolveReference, resolveValue;
 export 'src/run.dart' show WorkflowRun;
