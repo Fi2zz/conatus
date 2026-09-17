@@ -22,6 +22,10 @@ for (final Span span in spans) {
 }
 ```
 
+详细装配、场景示例与已知限制见 **[使用文档](doc/usage.md)**；可运行示例
+`cd packages/conatus_observability && dart run example/observability_demo.dart`
+（完全离线，不需要 API Key）。
+
 ## 核心概念
 
 **Span 语义（`Span` / `SpanStatus`）**：不可变模型，字段与 OTel 对齐——
