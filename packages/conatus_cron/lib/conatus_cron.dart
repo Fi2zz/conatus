@@ -8,7 +8,7 @@
 ///
 /// ```dart
 /// final service = provideCron(ctx,
-///     storage: CronStorage(tasksPath: tasksFile, historyPath: historyFile));
+///     storage: JsonCronStorage(tasksPath: tasksFile, historyPath: historyFile));
 /// provideCronTools(ctx);
 /// final runtime = provideCronRuntime(ctx, deliver: (recordId, framing) async {
 ///   // 把 framing 投递进目标会话；返回 false 表示暂时无法投递。
@@ -45,11 +45,7 @@ export 'src/cron_rules.dart'
         taskRuleKind,
         validateTaskInput;
 export 'src/cron_runtime.dart'
-    show
-        CronDelivery,
-        CronRuntime,
-        CronRuntimeOptions,
-        kDefaultCronTickSeconds;
+    show CronDelivery, CronRuntime, CronRuntimeOptions, kDefaultCronTickSeconds;
 export 'src/cron_runtime_provider.dart'
     show CronRuntimeContext, provideCronRuntime;
 export 'src/cron_storage.dart'
@@ -81,3 +77,4 @@ export 'src/cron_update.dart'
         patchTouchesSchedule,
         resetCronRunState,
         resolveCronPrompt;
+export 'src/json_cron_storage.dart' show JsonCronStorage;

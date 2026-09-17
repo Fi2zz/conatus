@@ -45,7 +45,8 @@ class CronTaskRegistry {
     for (final Map<String, Object?> raw in configTasks) {
       _tryAddRaw(raw, CronTaskOrigin.config, 'config task');
     }
-    for (final MapEntry<String, CronRunStamp> entry in stored.runStamps.entries) {
+    for (final MapEntry<String, CronRunStamp> entry
+        in stored.runStamps.entries) {
       _tasks[entry.key]
         ?..lastRunAt = entry.value.lastRunAt
         ..firedAt = entry.value.firedAt;
@@ -59,7 +60,9 @@ class CronTaskRegistry {
   CronTask addDynamic(Map<String, Object?> input, {String? callerSessionId}) {
     final Map<String, Object?> normalized = Map<String, Object?>.of(input);
     if (_isBlank(normalized['id'])) normalized['id'] = allocateTaskId();
-    if (_isBlank(normalized['sessionId'])) normalized['sessionId'] = callerSessionId;
+    if (_isBlank(normalized['sessionId'])) {
+      normalized['sessionId'] = callerSessionId;
+    }
     final CronTask task = addFromRaw(normalized, CronTaskOrigin.dynamic);
     save();
     return task;
@@ -75,10 +78,13 @@ class CronTaskRegistry {
       daily: raw['daily'],
       cron: raw['cron'],
     ));
-    if (invalid != null) throw CronException(CronErrorCode.invalidTask, invalid);
+    if (invalid != null) {
+      throw CronException(CronErrorCode.invalidTask, invalid);
+    }
     final String id = raw['id']! as String;
     if (_tasks.containsKey(id)) {
-      throw CronException(CronErrorCode.duplicateId, 'task "$id" already exists');
+      throw CronException(
+          CronErrorCode.duplicateId, 'task "$id" already exists');
     }
     final Object? sessionId = raw['sessionId'];
     final CronTask task = CronTask(
@@ -112,15 +118,14 @@ class CronTaskRegistry {
   /// 按 id 取任务；不存在抛 [CronErrorCode.notFound]。
   CronTask requireTask(String id) =>
       _tasks[id] ??
-      (throw CronException(
-          CronErrorCode.notFound, 'no task with id "$id"'));
+      (throw CronException(CronErrorCode.notFound, 'no task with id "$id"'));
 
   /// 按 id 取动态任务；配置任务抛 [CronErrorCode.configTask]。
   CronTask requireDynamicTask(String id, String verb) {
     final CronTask task = requireTask(id);
     if (task.origin != CronTaskOrigin.dynamic) {
-      throw CronException(
-          CronErrorCode.configTask, 'task "$id" comes from config; $verb it there');
+      throw CronException(CronErrorCode.configTask,
+          'task "$id" comes from config; $verb it there');
     }
     return task;
   }
@@ -141,7 +146,8 @@ class CronTaskRegistry {
       runStamps: <String, CronRunStamp>{
         for (final CronTask task in _tasks.values)
           if (task.lastRunAt != null || task.firedAt != null)
-            task.id: CronRunStamp(lastRunAt: task.lastRunAt, firedAt: task.firedAt),
+            task.id:
+                CronRunStamp(lastRunAt: task.lastRunAt, firedAt: task.firedAt),
       },
       overrides: <String, bool>{
         for (final CronTask task in _tasks.values)

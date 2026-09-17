@@ -91,7 +91,9 @@ class CronService {
       daily: merged['daily'],
       cron: merged['cron'],
     ));
-    if (invalid != null) throw CronException(CronErrorCode.invalidTask, invalid);
+    if (invalid != null) {
+      throw CronException(CronErrorCode.invalidTask, invalid);
+    }
     applyTaskRules(task, merged);
     if (touched) resetCronRunState(task);
     _registry.save();

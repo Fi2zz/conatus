@@ -40,7 +40,8 @@ String? _validateId(Object? id) {
   return null;
 }
 
-String _describeValue(Object? value) => value is String ? jsonEncode(value) : '$value';
+String _describeValue(Object? value) =>
+    value is String ? jsonEncode(value) : '$value';
 
 String? _validateShape(CronTaskInput input) {
   final Object? prompt = input.prompt;
@@ -116,8 +117,8 @@ DateTime? dailySlot(String daily, DateTime now) {
   final RegExpMatch? match = kCronDailyPattern.firstMatch(daily);
   if (match == null) return null;
   final DateTime local = now.toLocal();
-  return DateTime(
-      local.year, local.month, local.day, int.parse(match[1]!), int.parse(match[2]!));
+  return DateTime(local.year, local.month, local.day, int.parse(match[1]!),
+      int.parse(match[2]!));
 }
 
 /// 缓存的下一个 cron 触发分钟；缓存 miss 时按锚点重算并写回。
@@ -173,7 +174,8 @@ DateTime? _cronDueSlot(CronTask task, DateTime now, DateTime startedAt) {
 DateTime? nextRunAtOf(CronTask task, DateTime now, DateTime startedAt) {
   if (!taskEnabled(task)) return null;
   return switch (taskRuleKind(task)) {
-    CronRuleKind.at => task.firedAt != null ? null : DateTime.tryParse(task.at!),
+    CronRuleKind.at =>
+      task.firedAt != null ? null : DateTime.tryParse(task.at!),
     CronRuleKind.every =>
       (task.lastRunAt ?? startedAt).add(_everyInterval(task.every!)),
     CronRuleKind.daily => _dailyNextRun(task, now),

@@ -42,10 +42,12 @@ String _squash(String body) {
 void _dispatch(String command, List<String> args) {
   try {
     final Future<ProcessResult> run = Process.run(command, args);
-    unawaited(run.timeout(
-      _notifyTimeout,
-      onTimeout: () => ProcessResult(-1, -1, '', 'notify timeout'),
-    ).catchError((Object _) => ProcessResult(-1, -1, '', 'notify failed')));
+    unawaited(run
+        .timeout(
+          _notifyTimeout,
+          onTimeout: () => ProcessResult(-1, -1, '', 'notify timeout'),
+        )
+        .catchError((Object _) => ProcessResult(-1, -1, '', 'notify failed')));
   } on Object {
     // best effort only：通知失败不影响调度。
   }

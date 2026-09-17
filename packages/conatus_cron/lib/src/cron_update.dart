@@ -30,8 +30,10 @@ Map<String, Object?> mergeTaskRules(
   bool touched,
   Map<String, Object?> patch,
 ) {
-  final Map<String, Object?> merged =
-      <String, Object?>{'id': task.id, 'prompt': prompt};
+  final Map<String, Object?> merged = <String, Object?>{
+    'id': task.id,
+    'prompt': prompt
+  };
   for (final String key in kCronRuleKeys) {
     final Object? value = touched ? patch[key] : cronTaskRuleValue(task, key);
     if (value != null) merged[key] = value;

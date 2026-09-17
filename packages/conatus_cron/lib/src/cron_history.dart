@@ -121,6 +121,8 @@ int? decodeCronInt(Object? value) {
 /// 宽容解码瞬时：ISO 串或毫秒数（dsh-cron 兼容），其余返回 null。
 DateTime? decodeCronInstant(Object? value) {
   if (value is String) return DateTime.tryParse(value);
-  if (value is int) return DateTime.fromMillisecondsSinceEpoch(value, isUtc: true);
+  if (value is int) {
+    return DateTime.fromMillisecondsSinceEpoch(value, isUtc: true);
+  }
   return null;
 }

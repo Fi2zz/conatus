@@ -60,8 +60,7 @@ class CronRuntime {
   })  : _clock = options.clock ?? DateTime.now,
         _notifier = options.notifier,
         _onWarning = options.onWarning ?? service.onWarning,
-        _tickSeconds =
-            options.tickSeconds < 1 ? 1 : options.tickSeconds {
+        _tickSeconds = options.tickSeconds < 1 ? 1 : options.tickSeconds {
     _arm(options.firstTickDelay);
   }
 

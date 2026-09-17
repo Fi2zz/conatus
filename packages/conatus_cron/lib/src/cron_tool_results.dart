@@ -21,5 +21,5 @@ ToolResult cronErrorResult(String code, String message) => ToolResult.failure(
     );
 
 /// 不暴露内部细节的兜底失败结果。
-ToolResult cronInternalResult() => cronErrorResult(
-    CronErrorCode.internal, 'The cron operation failed.');
+ToolResult cronInternalResult() =>
+    cronErrorResult(CronErrorCode.internal, 'The cron operation failed.');

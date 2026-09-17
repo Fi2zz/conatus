@@ -119,10 +119,12 @@ class CronUpdateTool extends Tool {
 
   @override
   List<ParamSpec> get params => <ParamSpec>[
-        ParamSpec.string('id', required: true, description: 'Id of the task to edit.'),
+        ParamSpec.string('id',
+            required: true, description: 'Id of the task to edit.'),
         ParamSpec.string('prompt', description: 'New task prompt.'),
         ParamSpec.string('at',
-            description: 'Replace the schedule with a one-shot ISO 8601 instant.'),
+            description:
+                'Replace the schedule with a one-shot ISO 8601 instant.'),
         ParamSpec.number('every',
             description:
                 'Replace the schedule with a fixed interval in seconds (min $kCronMinEverySeconds).'),

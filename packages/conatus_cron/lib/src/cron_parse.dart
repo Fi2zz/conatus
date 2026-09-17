@@ -110,8 +110,8 @@ CronExpression? parseCronExpression(String expression) {
   if (fields.length != 5) return null;
   final List<Set<int>> parsed = <Set<int>>[];
   for (int i = 0; i < 5; i++) {
-    final Set<int>? values =
-        parseCronField(fields[i], kCronFieldRanges[i].min, kCronFieldRanges[i].max);
+    final Set<int>? values = parseCronField(
+        fields[i], kCronFieldRanges[i].min, kCronFieldRanges[i].max);
     if (values == null) return null;
     parsed.add(values);
   }
