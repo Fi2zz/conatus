@@ -1,0 +1,24 @@
+name: conatus_observability
+description: >-
+  [实验性] conatus 的可观测性导出器：OTel / Prometheus / JSONL，
+  以及成本追踪和分布式追踪语义。API 可能随时变更，不建议在生产环境依赖。
+version: 0.15.0
+publish_to: none # 实验性包暂不发布
+repository: https://github.com/Fi2zz/conatus
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+dependencies:
+  conatus_agent: ^0.15.0
+  conatus_foundation: ^0.15.0
+
+dev_dependencies:
+  lints: ^4.0.0
+  test: ^1.25.0
+
+topics:
+  - observability
+  - experimental
