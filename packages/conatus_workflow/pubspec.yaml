@@ -2,7 +2,7 @@ name: conatus_workflow
 description: >-
   [实验性] conatus 的编排引擎。把多 Agent 协作沉淀为可复用的流程资产。
   API 可能随时变更，不建议在生产环境依赖。
-version: 0.1.0
+version: 0.15.0
 repository: https://github.com/Fi2zz/conatus
 issue_tracker: https://github.com/Fi2zz/conatus/issues
 publish_to: none # 实验性包暂不发布
@@ -17,7 +17,7 @@ dependencies:
   conatus_core: ^0.15.0
   conatus_foundation: ^0.15.0
   conatus_tasks: ^0.15.0
-  conatus_team: ^0.1.0
+  conatus_team: ^0.15.0
 
 dev_dependencies:
   lints: ^4.0.0
