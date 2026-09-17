@@ -4,6 +4,22 @@
 
 ## [未发布]
 
+新增 `conatus_alerting` 包 —— 告警（实验性，不导出到伞包；依赖
+`conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_tts`、`http`）：
+
+- `Alert` / `AlertSeverity`（info / warning / critical）+ `AlertRule`（声明式
+  条件 + 冷却期）+ `AlertContext`（滑动窗口统计 / 冷却状态 / 定期清理，
+  时间来源可注入）
+- `Alerting` / `provideAlerting`（服务键 `'alerting'`）：订阅 `Telemetry.events`
+  逐规则判定，单规则异常隔离、通知失败不阻塞、`fire` / `resolve` / `activeAlerts` /
+  `history` / `alerts` 流；关联 `sessionId` / `goalId`（从事件 data 提取）
+- 默认规则集 8 条（LLM 慢 / 工具慢 / 工具连续失败 / Session 与当日预算 /
+  Agent 轮次超限 / 子 Agent 卡住）；`RuleParser` 从 JSON 加载规则（字段比较 /
+  窗口计数）
+- 通知渠道（Seam）：`ConsoleNotifier`（缺省）/ `WebhookNotifier`（Slack 兼容）/
+  `AskUserNotifier`（TTS 播报 + 口头响应回调）/ `CompositeNotifier` /
+  `QuietHoursNotifier`（静默期 critical 例外）
+
 新增 `conatus_browser_use` 包 —— 浏览器操作（实验性，不导出到伞包；依赖
 `conatus_agent`、`conatus_core`、`conatus_credentials`、`conatus_foundation`、
 `conatus_mcp`、`conatus_tasks`）：
