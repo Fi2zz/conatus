@@ -7,6 +7,7 @@ import 'package:conatus_agent/conatus_agent.dart';
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
+import 'package:conatus_tasks/conatus_tasks.dart';
 import 'package:conatus_tui/conatus_tui.dart';
 import 'package:test/test.dart';
 
@@ -71,7 +72,10 @@ class _ScriptedProvider implements LlmProvider {
   void close() {}
 }
 
-Future<(ConatusTuiController, Context)> _build(List<LlmResult> replies) async {
+Future<(ConatusTuiController, Context)> _build(
+  List<LlmResult> replies, {
+  void Function(Context ctx, Session session)? configureSession,
+}) async {
   final Context app = Context.root();
   provideTools(app);
   app.effect(() => app.tools.fn(
@@ -90,6 +94,7 @@ Future<(ConatusTuiController, Context)> _build(List<LlmResult> replies) async {
     modelLabel: 'scripted',
     onExit: () {},
   );
+  controller.configureSession = configureSession;
   await controller.start();
   return (controller, app);
 }
@@ -431,6 +436,65 @@ void main() {
     );
     expect(controller.transcript.messages.last.text, contains('已打断'));
     provider.release.complete();
+    app.dispose();
+  });
+
+  test('configureSession 缺省 null：会话绑定正常，钩子不参与', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+    );
+
+    expect(controller.configureSession, isNull);
+    expect(controller.ready, isTrue);
+    await controller.handleLine('/tools');
+    expect(controller.transcript.messages.single.text, contains('get_time'));
+    app.dispose();
+  });
+
+  test('configureSession 随会话绑定回调：agentLoop 可见、tasks 可注入', () async {
+    final List<Session> bound = <Session>[];
+    TaskCenter? center;
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+      configureSession: (Context ctx, Session session) {
+        bound.add(session);
+        expect(ctx.has('agentLoop'), isTrue);
+        expect(ctx.require<AgentLoop>('agentLoop'), isNotNull);
+        center = provideTaskCenter(ctx, session: session);
+        provideTaskTracking(ctx);
+        expect(ctx.require<TaskCenter>('tasks'), same(center));
+        expect(ctx.require<AgentLoop>('agentLoop').turnTracker, isNotNull);
+      },
+    );
+
+    expect(bound, hasLength(1));
+    expect(bound.single.id, 's1');
+    expect(center, isNotNull);
+    app.dispose();
+  });
+
+  test('切会话：旧子上下文释放、tasks 移除，新会话再次回调', () async {
+    final List<Session> bound = <Session>[];
+    final List<Context> contexts = <Context>[];
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+      configureSession: (Context ctx, Session session) {
+        bound.add(session);
+        contexts.add(ctx);
+        provideTaskCenter(ctx, session: session);
+        provideTaskTracking(ctx);
+      },
+    );
+
+    expect(bound, hasLength(1));
+    final Context oldCtx = contexts.single;
+
+    await controller.handleLine('/session work');
+
+    expect(bound, hasLength(2));
+    expect(bound.last.id, 'work');
+    expect(oldCtx.disposed, isTrue);
+    expect(oldCtx.get<TaskCenter>('tasks'), isNull);
     app.dispose();
   });
 }

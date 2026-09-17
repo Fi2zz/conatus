@@ -55,6 +55,13 @@ class ConatusTuiController {
   /// 退出请求（`/exit`、`/quit`、Ctrl+C）；由宿主接 `shutdownApp`。
   final void Function()? onExit;
 
+  /// 会话装配钩子：会话子上下文与 Session 建好、内置插件提供完毕后回调。
+  ///
+  /// 宿主可在此往该会话的子上下文里挂自己的插件/服务（如提供 'tasks' 任务中心）。
+  /// 缺省 null，不注入时行为与接入前一致。随会话绑定调用一次；切会话时子上下文
+  /// 释放，钩子里登记的效应自动撤销。
+  void Function(Context sessionCtx, Session session)? configureSession;
+
   /// 屏上记录。
   final Transcript transcript = Transcript();
 
@@ -403,6 +410,7 @@ class ConatusTuiController {
       provideSessionSchedule(child, session: session, sessions: _sessions);
       provideScheduleTools(child);
       provideScheduleRuntime(child, deliver: _deliverReminder);
+      configureSession?.call(child, session);
     });
     _sessionCtx = ctx;
     _agent = ctx.agentLoop;

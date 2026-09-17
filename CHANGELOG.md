@@ -47,6 +47,10 @@
 `conatus_tui`：`ConatusTuiRuntime.create` 新增 `baseDir` 参数（`sessionDir` /
 `memoryFile` / cron 存储的缺省根，便于测试隔离）。
 
+`conatus_tui`：`ConatusTuiController` 新增可选会话装配钩子 `configureSession`
+（会话子上下文与内置插件就绪后回调，宿主可挂 `provideTaskCenter` /
+`provideTaskTracking` 等会话级服务；缺省 null，行为不变）。
+
 `conatus_foundation`：新增 `time-context` 插件，并把动态上下文接上消费点 —— 模型没有
 时钟，相对日期（"明天""下周三"）与带本地语义的时刻（"明早九点"）都需要外部锚点：
 
