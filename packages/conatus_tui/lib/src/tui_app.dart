@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:conatus_agent/conatus_agent.dart';
 import 'package:conatus_compaction/conatus_compaction.dart';
 import 'package:conatus_core/conatus_core.dart';
+import 'package:conatus_cron/conatus_cron.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 import 'package:conatus_search/conatus_search.dart';
@@ -38,15 +39,18 @@ class ConatusTuiRuntime {
 
   /// 装配一个默认运行时。
   ///
-  /// [sessionDir] / [memoryFile] 缺省落在 `<cwd>/.conatus` 下；
-  /// [webTools] 为 true 时注册 DuckDuckGo（有 [exaApiKey] 则 Exa 优先）；
-  /// [skills] 为 true 时从 `.conatus/skills` 等目录发现技能，注入目录段并注册
-  /// `skill` 工具。
+  /// [sessionDir] / [memoryFile] / cron 任务与运行历史缺省落在 [baseDir]
+  /// （默认 `<cwd>/.conatus`）下；[webTools] 为 true 时注册 DuckDuckGo（有
+  /// [exaApiKey] 则 Exa 优先）；[skills] 为 true 时从 `.conatus/skills` 等目录
+  /// 发现技能，注入目录段并注册 `skill` 工具。
   /// [llm] 缺省用 `FallbackLlm.withDefaults()`（豆包 → DeepSeek）；传入后按注入的
   /// 提供商为准（如 DeepSeek-only 的 Demo）。[modelLabel] 覆盖顶栏模型标签。
+  // REASON: 装配入口的参数聚合是既定形态（本参数之前已 7 个），调用方是进程级
+  // main，不存在逐层透传问题。
   static Future<ConatusTuiRuntime> create({
     String? sessionDir,
     String? memoryFile,
+    String? baseDir,
     String? exaApiKey,
     bool webTools = true,
     bool skills = true,
@@ -54,8 +58,8 @@ class ConatusTuiRuntime {
     String? modelLabel,
   }) async {
     final Context app = Context.root(name: 'conatus');
-    final String baseDir =
-        '${Directory.current.path}${Platform.pathSeparator}.conatus';
+    final String resolvedBaseDir =
+        baseDir ?? '${Directory.current.path}${Platform.pathSeparator}.conatus';
     final String sep = Platform.pathSeparator;
 
     // ── 工具：时间 / 回显 / 文件读取 / 联网（可选）──────────────
@@ -101,7 +105,7 @@ class ConatusTuiRuntime {
     provideSessionPersistence(
       app,
       persistence: JsonlSessionPersistence(
-        dir: sessionDir ?? '$baseDir${sep}sessions',
+        dir: sessionDir ?? '$resolvedBaseDir${sep}sessions',
       ),
     );
     final SessionStore sessions = provideSessions(app);
@@ -116,7 +120,7 @@ class ConatusTuiRuntime {
     provideMemory(
       app,
       backend: JsonMemoryBackend(
-        file: File(memoryFile ?? '$baseDir${sep}memory.json'),
+        file: File(memoryFile ?? '$resolvedBaseDir${sep}memory.json'),
       ),
     );
     provideMemoryTools(app);
@@ -134,6 +138,26 @@ class ConatusTuiRuntime {
     provideDatabaseJson(app);
     provideRecovery(app);
 
+    // ── cron 定时任务：全局任务表 + 运行历史 + 到点交付 ─────────
+    provideCron(
+      app,
+      storage: JsonCronStorage(
+        tasksPath: '$resolvedBaseDir${sep}cron-tasks.json',
+        historyPath: '$resolvedBaseDir${sep}cron-history.jsonl',
+      ),
+    );
+    provideCronTools(app);
+    provideCronRuntime(
+      app,
+      deliver: (String recordId, String framing) async {
+        final ConatusTuiController? controller =
+            app.get<ConatusTuiController>('tuiController');
+        if (controller == null) return false;
+        return controller.deliverCron(recordId, framing);
+      },
+      options: CronRuntimeOptions(notifier: systemCronNotifier()),
+    );
+
     return ConatusTuiRuntime._(
       app: app,
       sessions: sessions,
@@ -147,15 +171,20 @@ class ConatusTuiRuntime {
     String initialSession = 'tui',
     required void Function() onExit,
     String name = '默认',
-  }) =>
-      ConatusTuiController(
-        app: app,
-        sessions: sessions,
-        name: name,
-        initialSession: initialSession,
-        modelLabel: modelLabel,
-        onExit: onExit,
-      );
+  }) {
+    final ConatusTuiController controller = ConatusTuiController(
+      app: app,
+      sessions: sessions,
+      name: name,
+      initialSession: initialSession,
+      modelLabel: modelLabel,
+      onExit: onExit,
+    );
+    // cron 运行时的交付端口经服务键找到当前控制器（首个 tick 前有 3s 延迟，
+    // createController 在此之前完成即可）。
+    app.provide('tuiController', controller);
+    return controller;
+  }
 
   /// 结束运行时：等待在途写入落定后释放根上下文。
   Future<void> dispose() async {

@@ -10,6 +10,7 @@ import 'dart:async';
 
 import 'package:conatus_agent/conatus_agent.dart';
 import 'package:conatus_core/conatus_core.dart';
+import 'package:conatus_cron/conatus_cron.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 import 'package:conatus_schedule/conatus_schedule.dart';
@@ -123,16 +124,25 @@ class ConatusTuiController {
     _cancel = cancel;
     busy = true;
     _refresh();
+    bool turnOk = true;
+    String reply = '';
     try {
-      await agent.run(text, cancel: cancel);
+      final AgentTurn turn = await agent.run(text, cancel: cancel);
+      reply = turn.reply;
     } on AgentCancelled {
+      turnOk = false;
       transcript.add(TuiRole.system, '已打断这一轮。');
     } on LlmException catch (error) {
+      turnOk = false;
       transcript.add(TuiRole.system, '模型调用失败：${error.message}');
     } catch (error) {
+      turnOk = false;
       transcript.add(TuiRole.system, '出错：$error');
     } finally {
       _cancel = null;
+      // 同步收尾先行：轮询 busy 的调用方（如 cron 交付）在置闲后即可看到
+      // 运行记录已是终态。
+      _settleCronRuns(ok: turnOk, reply: reply);
       busy = false;
       await _afterTurn();
       _refresh();
@@ -336,6 +346,32 @@ class ConatusTuiController {
     if (busy || _agent == null) return false;
     unawaited(submit(text));
     return true;
+  }
+
+  /// 已入队、等待轮次收口回报状态的 cron 运行记录 id。
+  final Set<String> _cronRuns = <String>{};
+
+  /// cron 交付：空闲时把任务 framing 当作一轮用户输入投递，返回是否成功入队。
+  ///
+  /// 忙时返回 `false`，cron 运行时不写运行戳，下个 tick 重试；轮次收口时经
+  /// [_settleCronRuns] 把执行结果回报给 cron 运行历史。
+  Future<bool> deliverCron(String recordId, String framing) async {
+    if (busy || _agent == null) return false;
+    _cronRuns.add(recordId);
+    unawaited(submit(framing));
+    return true;
+  }
+
+  /// 轮次收口：把本轮结果回报给所有待收口的 cron 运行记录。
+  void _settleCronRuns({required bool ok, required String reply}) {
+    if (_cronRuns.isEmpty) return;
+    final CronRuntime? runtime = _app.get<CronRuntime>('cronRuntime');
+    final String excerpt = reply.trim();
+    for (final String recordId in _cronRuns.toList()) {
+      runtime?.finishRun(recordId,
+          ok: ok, excerpt: excerpt.isEmpty ? null : excerpt);
+    }
+    _cronRuns.clear();
   }
 
   void _refresh() => onChanged?.call();

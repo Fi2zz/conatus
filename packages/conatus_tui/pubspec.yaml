@@ -15,6 +15,7 @@ dependencies:
   conatus_agent: ^0.15.0
   conatus_compaction: ^0.15.0
   conatus_core: ^0.15.0
+  conatus_cron: ^0.15.0
   conatus_foundation: ^0.15.0
   conatus_llm: ^0.15.0
   conatus_schedule: ^0.15.0
