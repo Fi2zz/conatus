@@ -66,10 +66,11 @@ class TaskCenterTeamTracker implements TeamTaskTracker {
     Object? result,
     Object? error,
   }) async {
-    final String? taskId = _taskByTeammate.remove(teammateId);
+    final String? taskId = _taskByTeammate[teammateId];
     if (taskId == null) return;
     await _safeUpdate(taskId,
         status: status, result: result, error: error);
+    _taskByTeammate.remove(teammateId);
   }
 
   /// 容忍任务已终态 / 已不存在（级联清理顺序可能先落定）。

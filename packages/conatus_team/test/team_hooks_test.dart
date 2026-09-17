@@ -35,6 +35,24 @@ class _FakeTracker implements TeamTaskTracker {
   }
 }
 
+class _ThrowingTracker implements TeamTaskTracker {
+  @override
+  Future<String?> beginMember({
+    required String teammateId,
+    required String name,
+    required String leadId,
+  }) async =>
+      throw StateError('tracker down');
+
+  @override
+  Future<void> completeMember(String teammateId, {Object? result}) async =>
+      throw StateError('tracker down');
+
+  @override
+  Future<void> failMember(String teammateId, {Object? error}) async =>
+      throw StateError('tracker down');
+}
+
 void main() {
   test('onSpawn 记录任务 / 会话 / 遥测；返回 tracker taskId', () async {
     final _FakeTracker tracker = _FakeTracker();
@@ -138,5 +156,22 @@ void main() {
     final TeamHooks hooks = TeamHooks(session: session);
     expect(
         () => hooks.onSend(from: 'a', to: 'b', message: 'x'), returnsNormally);
+  });
+
+  test('seam 异常降级：tracker beginMember 抛错不冒泡，返回 null', () async {
+    final TeamHooks hooks = TeamHooks(taskTracker: _ThrowingTracker());
+    final String? taskId = await hooks.onSpawn(
+      teammateId: 'm1',
+      name: 'a',
+      leadId: 'lead',
+      tools: const <String>[],
+    );
+    expect(taskId, isNull);
+  });
+
+  test('seam 异常降级：tracker completeMember 抛错不冒泡', () async {
+    final TeamHooks hooks = TeamHooks(taskTracker: _ThrowingTracker());
+    await expectLater(
+        hooks.onRemove(teammateId: 'm1', completed: true), completes);
   });
 }

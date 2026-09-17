@@ -4,7 +4,8 @@
 /// / [agent_team]；默认实现与成员运行时 / 任务板 / 服务入口 / 运行时
 /// hook 分布在 [team_impl] / [team_member_runtime] / [team_board] /
 /// [team_hooks] / [team_task_tracker]；协作模式接口在 [team_pattern]，
-/// 四种内置模式在 patterns/。团队工具将在后续步骤加入。
+/// 四种内置模式在 patterns/；面向模型的团队工具在 tools/
+/// （[provideTeamTools] 一次性注册）。
 library;
 
 export 'agent_team.dart' show AgentTeam, TeamException;

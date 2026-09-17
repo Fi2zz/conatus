@@ -116,7 +116,7 @@ void main() {
       final Teammate m = await team.spawn(name: 'a');
       await team.send(m.id, '干活');
       final Teammate done = await team.wait(m.id);
-      expect(done.status, TeammateStatus.idle);
+      expect(done.status, TeammateStatus.finished);
       team.dispose();
     });
 
@@ -127,7 +127,7 @@ void main() {
       await team.send(m.id, '第一');
       await team.send(m.id, '第二');
       await team.wait(m.id);
-      expect(team.members.single.status, TeammateStatus.idle);
+      expect(team.members.single.status, TeammateStatus.finished);
       team.dispose();
     });
 
@@ -156,7 +156,8 @@ void main() {
       await team.send(b.id, 'xB');
       final List<Teammate> all = await team.waitAll();
       expect(all.length, 2);
-      expect(all.every((Teammate t) => t.status == TeammateStatus.idle), true);
+      expect(all.every((Teammate t) => t.status == TeammateStatus.finished),
+          true);
       team.dispose();
     });
 

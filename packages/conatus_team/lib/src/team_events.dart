@@ -18,7 +18,7 @@ class TeammateSpawned extends AgentTeamEvent {
   final Teammate teammate;
 }
 
-/// 成员状态变更（idle / working / waiting / done / failed）。
+/// 成员状态变更（idle / working / waiting / finished / done / failed）。
 class TeammateStatusChanged extends AgentTeamEvent {
   const TeammateStatusChanged(this.teammate);
   final Teammate teammate;

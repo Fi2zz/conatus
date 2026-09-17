@@ -24,7 +24,8 @@ class TeamTurn {
   final String reply;
 }
 
-/// 成员状态变更回调：runtime 在 idle / working / failed 之间切换时调用。
+/// 成员状态变更回调：runtime 在 idle / working / finished / failed 之间
+/// 切换时调用。
 typedef TeammateMutation = void Function(TeammateStatus next);
 
 /// 一个成员的运行时：持有独立 [Session] 与 [AgentLoop]，串行处理消息队列。
@@ -95,7 +96,7 @@ class MemberRuntime {
         onStatus(TeammateStatus.working);
         try {
           final AgentTurn turn = await loop.run(p.message, cancel: _cancel);
-          onStatus(TeammateStatus.idle);
+          onStatus(TeammateStatus.finished);
           p.completer.complete(TeamTurn(completed: true, reply: turn.reply));
         } on AgentCancelled {
           onStatus(TeammateStatus.idle);

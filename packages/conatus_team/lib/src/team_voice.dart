@@ -39,6 +39,7 @@ String progressMessage(AgentTeam team) {
     switch (m.status) {
       case TeammateStatus.done:
       case TeammateStatus.failed:
+      case TeammateStatus.finished:
         parts.add('${m.name} 已完成');
         break;
       case TeammateStatus.working:

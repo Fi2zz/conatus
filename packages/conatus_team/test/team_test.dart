@@ -84,13 +84,24 @@ void main() {
       expect(resumed.status, TeammateStatus.working);
     });
 
-    test('TeammateStatus 五个值齐全', () {
-      expect(TeammateStatus.values, hasLength(5));
+    test('TeammateStatus 六个值齐全', () {
+      expect(TeammateStatus.values, hasLength(6));
       expect(TeammateStatus.values, contains(TeammateStatus.idle));
       expect(TeammateStatus.values, contains(TeammateStatus.working));
       expect(TeammateStatus.values, contains(TeammateStatus.waiting));
+      expect(TeammateStatus.values, contains(TeammateStatus.finished));
       expect(TeammateStatus.values, contains(TeammateStatus.done));
       expect(TeammateStatus.values, contains(TeammateStatus.failed));
+    });
+
+    test('finished 非终态，可再接新任务', () {
+      final Teammate finished =
+          base.copyWith(status: TeammateStatus.finished);
+      expect(finished.isTerminal, isFalse);
+      expect(
+        finished.copyWith(status: TeammateStatus.working).status,
+        TeammateStatus.working,
+      );
     });
   });
 

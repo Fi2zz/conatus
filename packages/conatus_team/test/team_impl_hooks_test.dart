@@ -64,6 +64,24 @@ class _CountingTracker implements TeamTaskTracker {
   }
 }
 
+class _ThrowingTracker implements TeamTaskTracker {
+  @override
+  Future<String?> beginMember({
+    required String teammateId,
+    required String name,
+    required String leadId,
+  }) async =>
+      throw StateError('tracker down');
+
+  @override
+  Future<void> completeMember(String teammateId, {Object? result}) async =>
+      throw StateError('tracker down');
+
+  @override
+  Future<void> failMember(String teammateId, {Object? error}) async =>
+      throw StateError('tracker down');
+}
+
 LlmResult _text(String content) =>
     LlmResult(content: content, provider: 'scripted', model: 'm');
 
@@ -160,6 +178,17 @@ void main() {
     final Teammate m = await team.spawn(name: 'a');
     await expectLater(
         team.interrupt(m.id), _throwsTeamError('approval-denied'));
+    team.dispose();
+  });
+
+  test('tracker 抛错时 spawn / remove 仍成功且不半注册', () async {
+    final TeamHooks hooks = TeamHooks(taskTracker: _ThrowingTracker());
+    final AgentTeamImpl team =
+        _newTeamWithHooks(hooks, _ScriptedProvider(<LlmResult>[_text('ok')]));
+    final Teammate m = await team.spawn(name: 'a');
+    expect(team.members.length, 1);
+    await team.remove(m.id);
+    expect(team.members, isEmpty);
     team.dispose();
   });
 }

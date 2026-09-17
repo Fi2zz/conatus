@@ -54,6 +54,7 @@ class MakerCheckerPattern implements TeamPattern {
   bool _approved(String verdict) {
     final String lower = verdict.toLowerCase();
     if (lower.contains('reject') ||
+        lower.contains('disapprove') ||
         lower.contains('not approve') ||
         verdict.contains('不通过') ||
         verdict.contains('未通过') ||

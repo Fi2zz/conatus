@@ -127,4 +127,39 @@ void main() {
     expect(result, '提案V2');
     team.dispose();
   });
+
+  test('MakerCheckerPattern：disapprove 算驳回，继续迭代', () async {
+    final AgentTeamImpl team = _newTeam(_ScriptedProvider(<LlmResult>[
+      _text('提案V1'),
+      _text('disapprove: 缺数据支撑'),
+      _text('提案V2'),
+      _text('通过：认可。'),
+    ]));
+    const MakerCheckerPattern p = MakerCheckerPattern();
+    final Object? result = await p.execute(
+      team: team,
+      input: '需求',
+      options: <String, Object?>{'maker': 'm', 'checker': 'c'},
+    );
+    expect(result, '提案V2');
+    team.dispose();
+  });
+
+  test('GroupChatPattern：「还没结论」不算收敛，继续轮询', () async {
+    final AgentTeamImpl team = _newTeam(_ScriptedProvider(<LlmResult>[
+      _text('还没结论，继续讨论'),
+      _text('完成'),
+    ]));
+    const GroupChatPattern p = GroupChatPattern();
+    final Object? result = await p.execute(
+      team: team,
+      input: '话题',
+      options: <String, Object?>{
+        'members': <String>['a', 'b'],
+        'maxRounds': 5,
+      },
+    );
+    expect('$result', contains('完成'));
+    team.dispose();
+  });
 }

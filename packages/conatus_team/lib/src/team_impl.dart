@@ -80,6 +80,12 @@ class AgentTeamImpl implements AgentTeam {
     }
     _seq++;
     final String id = 'teammate-$_seq';
+    final String? trackerId = await hooks?.onSpawn(
+      teammateId: id,
+      name: name,
+      leadId: leadId,
+      tools: toolList,
+    );
     final Teammate mate = Teammate(
       id: id,
       name: name,
@@ -104,12 +110,7 @@ class AgentTeamImpl implements AgentTeam {
     host.onDispose(runtime.dispose);
     _teammates[id] = mate;
     _runtimes[id] = runtime;
-    _trackerIds[id] = await hooks?.onSpawn(
-      teammateId: id,
-      name: name,
-      leadId: leadId,
-      tools: toolList,
-    );
+    _trackerIds[id] = trackerId;
     _changes.add(TeammateSpawned(mate));
     return mate;
   }

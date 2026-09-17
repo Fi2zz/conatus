@@ -43,11 +43,19 @@ class TeamHooks {
     required String leadId,
     required List<String> tools,
   }) async {
-    final String? taskId = await taskTracker?.beginMember(
-      teammateId: teammateId,
-      name: name,
-      leadId: leadId,
-    );
+    String? taskId;
+    try {
+      taskId = await taskTracker?.beginMember(
+        teammateId: teammateId,
+        name: name,
+        leadId: leadId,
+      );
+    } catch (error) {
+      _emit('team.tracker.error', <String, Object?>{
+        'operation': 'beginMember',
+        'error': '$error',
+      });
+    }
     _emit('team.spawn', <String, Object?>{
       'teammateId': teammateId,
       'name': name,
@@ -93,11 +101,25 @@ class TeamHooks {
     Object? error,
   }) async {
     if (completed) {
-      await taskTracker?.completeMember(teammateId, result: result);
+      try {
+        await taskTracker?.completeMember(teammateId, result: result);
+      } catch (trackerError) {
+        _emit('team.tracker.error', <String, Object?>{
+          'operation': 'completeMember',
+          'error': '$trackerError',
+        });
+      }
       _emit('team.remove',
           <String, Object?>{'teammateId': teammateId, 'outcome': 'completed'});
     } else {
-      await taskTracker?.failMember(teammateId, error: error);
+      try {
+        await taskTracker?.failMember(teammateId, error: error);
+      } catch (trackerError) {
+        _emit('team.tracker.error', <String, Object?>{
+          'operation': 'failMember',
+          'error': '$trackerError',
+        });
+      }
       _emit('team.remove',
           <String, Object?>{'teammateId': teammateId, 'outcome': 'failed'});
     }

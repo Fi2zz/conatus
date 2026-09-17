@@ -49,14 +49,25 @@ class GroupChatPattern implements TeamPattern {
     return history.last;
   }
 
-  /// 收敛判定：reply 含收敛关键词。
+  /// 收敛判定：否定优先——显式否定短语或否定词修饰的收敛词不算收敛。
   bool _converged(String reply) {
     final String lower = reply.toLowerCase();
+    if (lower.contains('not done') ||
+        lower.contains('not yet done') ||
+        lower.contains('cannot agree')) {
+      return false;
+    }
+    if (_negatedBeforeKeyword(reply)) return false;
     return lower.contains('done') ||
         reply.contains('完成') ||
         reply.contains('结论') ||
         reply.contains('同意');
   }
+
+  /// 否定词紧邻收敛词（如「还没结论」「未完成」「不同意」）时不收敛。
+  bool _negatedBeforeKeyword(String text) => RegExp(
+          r'(没|未|无|不)[^，。！？,.;!?]{0,4}(结论|完成|同意)')
+      .hasMatch(text);
 
   List<String> _asNames(Object? raw) {
     if (raw is! List) return const <String>[];

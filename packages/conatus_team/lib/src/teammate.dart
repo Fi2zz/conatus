@@ -1,7 +1,8 @@
 /// 团队成员的词汇：角色与状态机入口。
 ///
-/// [Teammate] 是任务板上「谁在做」的记录：状态机 idle → working → done /
-/// failed（见 [TeammateStatus]）。成员的生命周期绑定队长——队长释放时，
+/// [Teammate] 是任务板上「谁在做」的记录：状态机 idle → working →
+/// finished（干完本轮，可再接活）→ done / failed（终态），见
+/// [TeammateStatus]。成员的生命周期绑定队长——队长释放时，
 /// 所有成员自动终止。成员不共享消息历史，只通过任务板与直达消息交换
 /// 结论，不交换过程。
 library;
@@ -25,6 +26,9 @@ enum TeammateStatus {
 
   /// 等待中（等待依赖任务完成）。
   waiting,
+
+  /// 干完本轮（非终态，可再接新任务）。
+  finished,
 
   /// 完成（终态）。
   done,

@@ -1,7 +1,8 @@
 /// 任务板任务的词汇：状态机与 CAS 乐观锁。
 ///
 /// [TeamTask] 是任务板上「做什么」的记录。状态 pending → claimed →
-/// done / failed / released（released 回到 pending）。任务有 DAG 依赖
+/// done / failed；claimed 可 release 回到 pending（released 是行为，
+/// 不是独立状态）。任务有 DAG 依赖
 /// （[dependsOn]），只有依赖全 done 才能领取。每次更新用 [version] 做
 /// 乐观锁，防止成员之间互相覆盖——调用方传期望版本号，实现层校验通过
 /// 后递增。
@@ -95,7 +96,9 @@ class TeamTask {
   }
 
   /// 从 JSON 反序列化。未知状态降级为 pending。
-  factory TeamTask.fromJson(Map<String, Object?> json) => TeamTask(
+  factory TeamTask.fromJson(Map<String, Object?> json) {
+    final DateTime fallbackCreatedAt = DateTime.fromMillisecondsSinceEpoch(0);
+    return TeamTask(
         id: '${json['id'] ?? ''}',
         description: '${json['description'] ?? ''}',
         status: TeamTaskStatus.values.asNameMap()['${json['status']}'] ??
@@ -107,10 +110,11 @@ class TeamTask {
             '$item',
         ],
         version: (json['version'] as num?)?.toInt() ?? 0,
-        createdAt: DateTime.parse('${json['createdAt']}'),
+        createdAt: DateTime.tryParse('${json['createdAt']}') ??
+            fallbackCreatedAt,
         result: json['result'],
-        error: json['error'],
-      );
+        error: json['error']);
+  }
 
   /// 序列化为 JSON。
   Map<String, Object?> toJson() => <String, Object?>{
