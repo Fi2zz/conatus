@@ -15,6 +15,7 @@ workspace:
   - packages/conatus_asr
   - packages/conatus_browser_use
   - packages/conatus_compaction
+  - packages/conatus_computer_use
   - packages/conatus_core
   - packages/conatus_credentials
   - packages/conatus_cron
