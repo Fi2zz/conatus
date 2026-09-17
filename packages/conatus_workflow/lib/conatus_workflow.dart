@@ -17,3 +17,4 @@ export 'src/node.dart' show AgentNode, SubWorkflowNode, ToolNode, WorkflowNode;
 export 'src/run.dart' show WorkflowRun;
 export 'src/run_node.dart' show RunNode;
 export 'src/status.dart' show RunNodeStatus, RunStatus;
+export 'src/store.dart' show InMemoryWorkflowStore, WorkflowStore;
