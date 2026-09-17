@@ -13,6 +13,7 @@ environment:
 workspace:
   - packages/conatus_agent
   - packages/conatus_asr
+  - packages/conatus_browser_use
   - packages/conatus_compaction
   - packages/conatus_core
   - packages/conatus_credentials
