@@ -214,6 +214,128 @@ void main() {
     app.dispose();
   });
 
+  test('/goal 无目标时提示创建，set 后 status 显示状态与轮次', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+    );
+
+    await controller.handleLine('/goal');
+    expect(controller.transcript.messages.last.text, contains('当前没有目标'));
+
+    await controller.handleLine('/goal set 盯机票');
+    expect(controller.transcript.messages.last.text, contains('已创建目标'));
+
+    await controller.handleLine('/goal');
+    final String status = controller.transcript.messages.last.text;
+    expect(status, contains('盯机票'));
+    expect(status, contains('active'));
+    expect(status, contains('0 / 256'));
+    app.dispose();
+  });
+
+  test('/goal set 缺文本或子命令未知时给出用法', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+    );
+
+    await controller.handleLine('/goal set');
+    expect(controller.transcript.messages.last.text, contains('用法：/goal'));
+
+    await controller.handleLine('/goal nope');
+    expect(controller.transcript.messages.last.text, contains('用法：/goal'));
+    app.dispose();
+  });
+
+  test('/goal 已存在非终态目标时 set 失败提示', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+    );
+
+    await controller.handleLine('/goal set A');
+    await controller.handleLine('/goal set B');
+
+    expect(
+      controller.transcript.messages.last.text,
+      contains('目标操作失败'),
+    );
+    app.dispose();
+  });
+
+  test('/goal pause / resume / done / clear 全流程', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+    );
+
+    await controller.handleLine('/goal set 盯机票');
+    await controller.handleLine('/goal pause');
+    expect(controller.transcript.messages.last.text, contains('已暂停'));
+
+    await controller.handleLine('/goal resume');
+    expect(controller.transcript.messages.last.text, contains('已恢复'));
+
+    await controller.handleLine('/goal edit 盯明天机票');
+    expect(controller.transcript.messages.last.text, contains('目标已更新'));
+
+    await controller.handleLine('/goal done');
+    expect(controller.transcript.messages.last.text, contains('目标已完成'));
+
+    await controller.handleLine('/goal clear');
+    expect(controller.transcript.messages.last.text, contains('目标已清除'));
+
+    await controller.handleLine('/goal');
+    expect(controller.transcript.messages.last.text, contains('当前没有目标'));
+    app.dispose();
+  });
+
+  test('goal 随会话绑定：切换会话后互不继承，四工具保持注册', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+    );
+    expect(app.tools.get(kCreateGoalToolName), isNotNull);
+
+    await controller.handleLine('/goal set 会话一的目标');
+    await controller.handleLine('/session work');
+
+    expect(app.tools.get(kCreateGoalToolName), isNotNull);
+    await controller.handleLine('/goal');
+    expect(controller.transcript.messages.last.text, contains('当前没有目标'));
+
+    await controller.handleLine('/session s1');
+    await controller.handleLine('/goal');
+    expect(controller.transcript.messages.last.text, contains('会话一的目标'));
+    app.dispose();
+  });
+
+  test('目标 active 时对话自动续行直到 complete_goal', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      <LlmResult>[
+        const LlmResult(content: '收到', provider: 'scripted', model: 'm'),
+        const LlmResult(
+          content: '',
+          provider: 'scripted',
+          model: 'm',
+          toolCalls: <LlmToolCall>[
+            LlmToolCall(id: '1', name: kCompleteGoalToolName),
+          ],
+        ),
+        const LlmResult(content: '目标完成', provider: 'scripted', model: 'm'),
+      ],
+    );
+
+    await controller.handleLine('/goal set 盯机票');
+    await controller.handleLine('开始');
+
+    final List<TuiMessage> assistants = controller.transcript.messages
+        .where((TuiMessage m) => m.role == TuiRole.assistant)
+        .toList();
+    expect(assistants, hasLength(2));
+    expect(assistants.last.text, '目标完成');
+
+    await controller.handleLine('/goal');
+    expect(controller.transcript.messages.last.text, contains('completed'));
+    app.dispose();
+  });
+
   test('exit_plan_mode 随会话绑定注册，切换会话后保持可用', () async {
     final (ConatusTuiController controller, Context app) = await _build(
       const <LlmResult>[],

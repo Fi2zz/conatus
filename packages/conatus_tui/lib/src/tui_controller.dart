@@ -24,6 +24,10 @@ import 'tui_session_picker.dart';
 bool isValidSessionId(String id) =>
     RegExp(r'^[A-Za-z0-9_\-\u4e00-\u9fff]{1,64}$').hasMatch(id);
 
+/// `/goal` 用法提示。
+const String kGoalUsage =
+    '用法：/goal [status|set <文本>|edit <文本>|pause|resume|done|clear]';
+
 /// TUI 会话控制器。
 class ConatusTuiController {
   ConatusTuiController({
@@ -65,6 +69,7 @@ class ConatusTuiController {
   Context? _sessionCtx;
   AgentLoop? _agent;
   PlanMode? _planMode;
+  GoalService? _goal;
   Disposer? _eventSub;
 
   /// 在飞轮次的取消句柄（Esc / 打断）；null = 无在飞轮次。
@@ -215,6 +220,8 @@ class ConatusTuiController {
         _showTools();
       case 'plan':
         _togglePlanMode();
+      case 'goal':
+        await _handleGoal(arg);
       case 'remember':
         await _remember(arg);
       case 'forget':
@@ -259,6 +266,74 @@ class ConatusTuiController {
         : '计划经 exit_plan_mode 提交后即获批执行（未配置审批端口）。';
     transcript.add(
         TuiRole.system, '已进入 Plan Mode：有副作用的工具被拦截，模型先规划再执行。$reviewNote');
+  }
+
+  /// `/goal [子命令]`：管理当前会话的长期目标（不经模型，直接调 Goal 服务）。
+  Future<void> _handleGoal(String arg) async {
+    final GoalService? goal = _goal;
+    if (goal == null) {
+      transcript.add(TuiRole.system, 'Goal 不可用：会话尚未绑定。');
+      return;
+    }
+    final int space = arg.indexOf(' ');
+    final String sub = space < 0 ? arg.trim() : arg.substring(0, space).trim();
+    final String rest = space < 0 ? '' : arg.substring(space + 1).trim();
+    try {
+      await _runGoalSub(goal, sub, rest);
+    } on GoalException catch (e) {
+      transcript.add(TuiRole.system, '目标操作失败：${e.message}');
+    }
+  }
+
+  Future<void> _runGoalSub(GoalService goal, String sub, String rest) async {
+    switch (sub) {
+      case '' || 'status':
+        final Goal? current = goal.current;
+        transcript.add(
+          TuiRole.system,
+          current == null
+              ? '当前没有目标。用 /goal set <文本> 创建。'
+              : _goalStatusText(current),
+        );
+      case 'set':
+        if (rest.isEmpty) {
+          transcript.add(TuiRole.system, kGoalUsage);
+          return;
+        }
+        final Goal created = await goal.create(rest);
+        transcript.add(TuiRole.system, '已创建目标：${created.text}');
+      case 'edit':
+        if (rest.isEmpty) {
+          transcript.add(TuiRole.system, kGoalUsage);
+          return;
+        }
+        final Goal edited = await goal.edit(rest);
+        transcript.add(TuiRole.system, '目标已更新：${edited.text}');
+      case 'pause':
+        await goal.pause();
+        transcript.add(TuiRole.system, '目标已暂停。');
+      case 'resume':
+        await goal.resume();
+        transcript.add(TuiRole.system, '目标已恢复推进。');
+      case 'done':
+        await goal.complete();
+        transcript.add(TuiRole.system, '目标已完成。');
+      case 'clear':
+        await goal.clear();
+        transcript.add(TuiRole.system, '目标已清除。');
+      default:
+        transcript.add(TuiRole.system, kGoalUsage);
+    }
+  }
+
+  String _goalStatusText(Goal goal) {
+    final StringBuffer buffer = StringBuffer()
+      ..write('当前目标：${goal.text}\n状态：${goal.status.name}')
+      ..write('｜轮次：${goal.round} / ${goal.maxRounds}');
+    if (goal.blockReason != null) {
+      buffer.write('\n阻塞原因：${goal.blockReason}');
+    }
+    return buffer.toString();
   }
 
   /// `/remember <内容>`：直接调用记忆能力，绕过模型。
@@ -324,6 +399,7 @@ class ConatusTuiController {
     final Context ctx = _app.plugin('tui-session:$id', (Context child) {
       provideAgentLoop(child, session: session);
       providePlanMode(child, session: session);
+      provideGoal(child, session: session);
       provideSessionSchedule(child, session: session, sessions: _sessions);
       provideScheduleTools(child);
       provideScheduleRuntime(child, deliver: _deliverReminder);
@@ -331,6 +407,7 @@ class ConatusTuiController {
     _sessionCtx = ctx;
     _agent = ctx.agentLoop;
     _planMode = ctx.planMode;
+    _goal = ctx.goal;
     transcript.rebuildFrom(session);
     _eventSub = session.onEvent((SessionEvent event) {
       transcript.apply(event);
@@ -346,6 +423,7 @@ class ConatusTuiController {
     _sessionCtx = null;
     _agent = null;
     _planMode = null;
+    _goal = null;
     _session = null;
     ready = false;
   }

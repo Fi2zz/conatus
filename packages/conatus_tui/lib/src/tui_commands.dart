@@ -44,6 +44,11 @@ const List<TuiCommand> tuiCommands = <TuiCommand>[
     description: '进入 / 退出 Plan Mode（先规划，经 exit_plan_mode 提交后执行）',
   ),
   TuiCommand(
+    name: 'goal',
+    description: '管理长期目标（status / set / edit / pause / resume / done / clear）',
+    argHint: '<子命令>',
+  ),
+  TuiCommand(
     name: 'remember',
     description: '直接记住一段信息（不经模型）',
     argHint: '<内容>',
