@@ -14,6 +14,9 @@ class SystemPrompt {
   final List<PromptSection> _sections = <PromptSection>[];
   final List<PromptContext> _contexts = <PromptContext>[];
 
+  /// 自动生成段名的序号（只增不减，remove 后不复用）。
+  int _addSeq = 0;
+
   /// 已注册的 prompt 段（注册顺序）。
   List<PromptSection> get sections =>
       List<PromptSection>.unmodifiable(_sections);
@@ -31,6 +34,15 @@ class SystemPrompt {
     return () => _sections.remove(section);
   }
 
+  /// 用一段纯文本创建并注册 prompt 段；[name] 缺省时自动生成唯一名。
+  /// [name] 与已注册段重复时抛 [StateError]。返回该段句柄供 [remove] 使用。
+  PromptSection add(String prompt, {String? name}) {
+    final PromptSection created =
+        PromptSection(name: name ?? _nextAddName(), text: () => prompt);
+    section(created); // 注册；重复名抛 StateError
+    return created;
+  }
+
   /// 注册一份动态上下文。同名重复注册抛 [StateError]；返回撤销函数（幂等）。
   Disposer context(PromptContext context) {
     if (_contexts.any((PromptContext c) => c.name == context.name)) {
@@ -39,6 +51,9 @@ class SystemPrompt {
     _contexts.add(context);
     return () => _contexts.remove(context);
   }
+
+  /// 移除一段已注册的 prompt 段；未注册时返回 false（幂等）。
+  bool remove(PromptSection section) => _sections.remove(section);
 
   /// 装配：[variables] 供渲染阶段插值。
   PromptAssembly assemble(
@@ -87,6 +102,15 @@ class SystemPrompt {
   static int _compare(int orderA, String nameA, int orderB, String nameB) {
     final int byOrder = orderA.compareTo(orderB);
     return byOrder != 0 ? byOrder : nameA.compareTo(nameB);
+  }
+
+  /// 生成未占用的 `add-N` 名：单调递增、remove 后不复用。
+  String _nextAddName() {
+    String candidate;
+    do {
+      candidate = 'add-${_addSeq++}';
+    } while (_sections.any((PromptSection s) => s.name == candidate));
+    return candidate;
   }
 }
 

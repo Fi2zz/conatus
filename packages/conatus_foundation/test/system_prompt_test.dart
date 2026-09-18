@@ -93,6 +93,61 @@ void main() {
     });
   });
 
+  group('SystemPrompt — add / remove', () {
+    test('add 缺省名注册文本段，remove 移除', () {
+      final SystemPrompt prompt = SystemPrompt();
+
+      final PromptSection section = prompt.add('你好，世界');
+
+      expect(prompt.sections, hasLength(1));
+      expect(prompt.sections.single.name, startsWith('add-'));
+      expect(prompt.render(prompt.assemble()), '你好，世界');
+
+      expect(prompt.remove(section), isTrue);
+      expect(prompt.sections, isEmpty);
+      expect(prompt.render(prompt.assemble()), '');
+    });
+
+    test('add 显式 name，重复名抛 StateError', () {
+      final SystemPrompt prompt = SystemPrompt();
+
+      final PromptSection first = prompt.add('A', name: 'custom');
+      expect(prompt.sections.single.name, 'custom');
+      expect(first.text(), 'A');
+
+      expect(() => prompt.add('B', name: 'custom'), throwsStateError);
+    });
+
+    test('add 缺省名不冲突且不复用', () {
+      final SystemPrompt prompt = SystemPrompt()
+        ..section(_section('add-1', '手动占用 add-1'));
+
+      final PromptSection a = prompt.add('A');
+      final PromptSection b = prompt.add('B');
+      expect(a.name, isNot(b.name));
+      // 手动注册占用了 add-1，自动生成应跳过它。
+      expect(a.name, isNot('add-1'));
+
+      prompt.remove(a);
+      final PromptSection c = prompt.add('C');
+      expect(c.name, isNot(a.name), reason: 'remove 后旧名不应被复用');
+      expect(
+        prompt.sections.map((PromptSection s) => s.name).toSet(),
+        hasLength(prompt.sections.length),
+        reason: '段名必须唯一',
+      );
+    });
+
+    test('remove 幂等', () {
+      final SystemPrompt prompt = SystemPrompt();
+      final PromptSection section = prompt.add('X');
+
+      expect(prompt.remove(section), isTrue);
+      expect(prompt.remove(section), isFalse);
+      expect(prompt.remove(_section('未注册', 'x')), isFalse);
+    });
+  });
+
   test('provideSystemPrompt 作为 systemPrompt 服务提供', () {
     final ctx = Context.root();
     final SystemPrompt prompt = provideSystemPrompt(ctx);
