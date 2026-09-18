@@ -20,7 +20,10 @@ final runtime = provideCronRuntime(ctx,
       // 把 framing 投递进目标会话；false 表示暂时无法投递，下个 tick 重试。
       return submitToSession(framing);
     },
-    options: CronRuntimeOptions(notifier: systemCronNotifier()));
+    // 系统通知为可选注入端口（缺省不通知）。桌面实现由 conatus_tui 提供
+    // （systemCronNotifier()：macOS osascript / Linux notify-send），移动端
+    // 宿主可注入 flutter_local_notifications 等任意 CronNotifier。
+    options: CronRuntimeOptions(notifier: systemNotifier));
 
 // 任务 turn 执行完后推进运行记录（装配方负责调用）：
 runtime.finishRun(recordId, ok: true, excerpt: '…');
@@ -55,13 +58,10 @@ cron 表达式支持 `*`、列表、范围与步进（`*/n`、`a-b/n`、`a/n` �
 - **交付形态**：dsh 用 `agent.followup()` + 会话事件流自动推进运行状态；本包是
   `CronDelivery` 注入端口 + 装配方显式调 `finishRun`（conatus 没有等价事件流，
   且这让投递策略完全由宿主决定）。
-- **通知**：系统通知为可选注入端口，默认关闭——macOS / Linux 用
-  `systemCronNotifier()`（`osascript` / `notify-send`）；iOS / Android 用
-  `mobileCronNotifier()`：条件导出让 Flutter 环境自动经 MethodChannel
-  `conatus/cron` 投递 `notify` 调用（参数 `{'title', 'body'}`），原生壳实现
-  UNUserNotificationCenter / NotificationManager 即可接入，纯 Dart 环境返回
-  null（自行注入 `CronNotifier` 或换 Flutter 构建）；Windows 请注入
-  `CronNotifier`。
+- **通知**：系统通知为可选注入端口，默认关闭。本包只定义抽象 `CronNotifier`
+  端口（标题 + 正文），不做平台实现；macOS / Linux 实现（`osascript` /
+  `notify-send`）由 conatus_tui 提供（`systemCronNotifier()`），iOS / Android /
+  Windows 由宿主注入任意 `CronNotifier`（如 flutter_local_notifications）。
 - 其余语义（四种规则、daily 补发、每 tick 任务隔离、重启不重发、历史 500 封顶、
   防注入 framing）逐条对齐，53 条测试锁定。
 

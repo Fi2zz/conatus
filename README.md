@@ -751,7 +751,8 @@ provideCronRuntime(ctx, deliver: (recordId, framing) async => submit(framing));
   `configTasks` 可声明静态任务（运行时不可增删改）；`conatus_tui` 已默认接上
   （任务与历史落在 `<baseDir>/cron-tasks.json` / `cron-history.jsonl`）
 - 运行历史 JSONL 封顶 500，`finishRun` 推进 `delivered` → `completed` / `failed`
-  并截断摘要到 300 字符；`systemCronNotifier()` 提供 macOS / Linux 系统通知
+  并截断摘要到 300 字符；conatus_tui 用 `systemCronNotifier()` 提供 macOS / Linux
+  系统通知（cron 包只定义抽象 `CronNotifier` 端口）
 - 模型工具：`cron_list` / `cron_add` / `cron_update` / `cron_remove` /
   `cron_history`
 

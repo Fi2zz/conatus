@@ -14,6 +14,7 @@ import 'package:conatus_llm/conatus_llm.dart';
 import 'package:conatus_search/conatus_search.dart';
 import 'package:conatus_skill/conatus_skill.dart';
 
+import 'system_notifier.dart';
 import 'tui_controller.dart';
 
 /// conatus TUI 运行时：持有根 [Context] 与已装配的服务。

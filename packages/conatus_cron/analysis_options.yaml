@@ -1,8 +1,1 @@
 include: ../../analysis_options.yaml
-
-analyzer:
-  exclude:
-    # REASON: 该文件仅在 Flutter 环境（dart.library.ui 存在）经条件导出编译，
-    # 依赖 Flutter SDK 的 package:flutter/services；纯 Dart 的 analyze 解析不了
-    # Flutter SDK 包，故排除（文件极小，由条件导出的 stub 分支守住类型契约）。
-    - lib/src/mobile_notifier_flutter.dart

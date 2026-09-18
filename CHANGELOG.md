@@ -200,6 +200,11 @@ RFC 3339（此前是无偏移的本地时间串，模型无法判断时区）。
   telemetry / eval / approval / skill / recovery）
 - `conatus` — 伞包，再导出以上全部，保持 `package:conatus/conatus.dart` 兼容
 
+`conatus_cron`：通知收敛为纯抽象端口 —— `cron_notify.dart` 只保留 `CronNotifier`
+类型，移除 `systemCronNotifier` / `mobileCronNotifier` 导出与条件导出实现
+（mobile_notifier_*）；macOS / Linux 桌面实现移交 conatus_tui
+（`systemCronNotifier()`，osascript / notify-send）
+
 ## [0.15.0] — 2026-09-15
 
 新增技能沉淀与持久化恢复（handoff2 第 12、17 步）：
