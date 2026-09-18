@@ -11,6 +11,7 @@ import '../desktop.dart';
 import '../image_routing.dart';
 import '../provider.dart';
 import '../screenshot.dart';
+import 'launch_app_activation.dart';
 
 /// 通过 `cua-driver mcp` 启动的桌面 Provider（stdio 传输）。
 ///
@@ -34,6 +35,7 @@ class CuaDriverMcpProvider implements ComputerUseProvider {
     this.timeout = const Duration(seconds: 30),
     this.attachmentStore,
     this.imageSupport = ImageSupport.diagnostic,
+    this.activateLaunchedApp = true,
     this.transportFactory,
   });
 
@@ -54,6 +56,11 @@ class CuaDriverMcpProvider implements ComputerUseProvider {
 
   /// 图像支持级别（模型路由结果；缺省诊断）。
   final ImageSupport imageSupport;
+
+  /// 打开应用后自动把应用带到前台（`launch_app` 成功后追加 `bring_to_front`）。
+  ///
+  /// CuaDriver 的 `launch_app` 刻意后台启动;置 false 关闭（后台驱动场景）。
+  final bool activateLaunchedApp;
 
   /// 传输工厂（测试注入 Mock Server 用）。缺省按参数造 [StdioTransport]。
   final McpTransport Function(
@@ -94,6 +101,7 @@ class CuaDriverMcpProvider implements ComputerUseProvider {
         tools: tools,
         attachmentStore: attachmentStore,
         imageSupport: imageSupport,
+        activateLaunchedApp: activateLaunchedApp,
       );
       _watchDisconnects(client);
       return _session!;
@@ -129,6 +137,7 @@ class _CuaDriverDesktopSession implements DesktopSession {
     required this.tools,
     this.attachmentStore,
     this.imageSupport = ImageSupport.diagnostic,
+    this.activateLaunchedApp = true,
   });
 
   /// 底层 MCP 客户端（生命周期由 Provider 管理）。
@@ -143,14 +152,47 @@ class _CuaDriverDesktopSession implements DesktopSession {
   /// 图像支持级别。
   final ImageSupport imageSupport;
 
+  /// 打开应用后自动把应用带到前台。
+  final bool activateLaunchedApp;
+
   @override
   Future<ToolResult> call(String toolName, Map<String, Object?> args) async {
     try {
-      return _resultOf(await client.callTool(toolName, args));
+      final McpToolResult raw = await client.callTool(toolName, args);
+      final ToolResult result = _resultOf(raw);
+      if (!activateLaunchedApp ||
+          toolName != launchAppToolName ||
+          result.isError) {
+        return result;
+      }
+      return _bringLaunchedToFront(result, launchedPid(raw));
     } on McpException catch (error) {
       return ToolResult.failure(
         error.message,
         error: ToolError('MCP_ERROR', error.message),
+      );
+    }
+  }
+
+  /// `launch_app` 成功后自动 `bring_to_front`,把应用带到前台。
+  ///
+  /// 前台化失败只合并进结果文本（launch_app 成功是主结果）,不判整个操作失败。
+  Future<ToolResult> _bringLaunchedToFront(
+    ToolResult launched,
+    int? pid,
+  ) async {
+    if (pid == null) return launched;
+    try {
+      final McpToolResult raw = await client
+          .callTool('bring_to_front', <String, Object?>{'pid': pid});
+      return mergeLaunchResult(launched, _resultOf(raw));
+    } on McpException catch (error) {
+      return mergeLaunchResult(
+        launched,
+        ToolResult.failure(
+          error.message,
+          error: ToolError('MCP_ERROR', error.message),
+        ),
       );
     }
   }

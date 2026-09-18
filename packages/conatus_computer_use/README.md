@@ -100,6 +100,11 @@ imageSupportFor('deepseek', 'deepseek-chat');        // ImageSupport.diagnostic
 MCP Provider 支持 `transportFactory` 注入 Mock Server（测试用），`timeout` 默认
 30s。
 
+**打开应用默认带到前台**：`launch_app` 在 CuaDriver 侧是刻意后台启动（目标不会
+来到前台）。本 Provider 默认在 `launch_app` 成功启动后自动追加一次
+`bring_to_front`，把应用带到前台；传 `activateLaunchedApp: false` 可关闭
+（后台驱动场景，如并发会话各自驱动同一个应用）。
+
 ## 运行时 seam（全部可选注入）
 
 | seam | 用途 | 缺省行为 |

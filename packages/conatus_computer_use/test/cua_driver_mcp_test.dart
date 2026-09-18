@@ -62,6 +62,57 @@ Map<String, Object?>? _reply(String method, Map<String, Object?>? params) {
           },
         };
       }
+      if (tool == 'launch_app') {
+        final Map<String, Object?>? arguments =
+            params?['arguments'] as Map<String, Object?>?;
+        if (arguments?['fail'] == true) {
+          return <String, Object?>{
+            'content': <Object?>[
+              <String, Object?>{'type': 'text', 'text': 'launch failed'},
+            ],
+            'isError': true,
+          };
+        }
+        if (arguments?['no_pid'] == true) {
+          return <String, Object?>{
+            'content': <Object?>[
+              <String, Object?>{'type': 'text', 'text': 'Launched agent app'},
+            ],
+            'structuredContent': <String, Object?>{
+              'bundle_id': 'com.example.agent',
+              'name': 'Agent',
+            },
+          };
+        }
+        return <String, Object?>{
+          'content': <Object?>[
+            <String, Object?>{'type': 'text', 'text': 'Launched Calculator'},
+          ],
+          'structuredContent': <String, Object?>{
+            'pid': arguments?['front_fail'] == true ? 9999 : 4242,
+            'bundle_id': 'com.apple.calculator',
+            'name': 'Calculator',
+            'windows': <Object?>[
+              <String, Object?>{'window_id': 303, 'title': 'Calculator'},
+            ],
+          },
+        };
+      }
+      if (tool == 'bring_to_front') {
+        final Map<String, Object?>? arguments =
+            params?['arguments'] as Map<String, Object?>?;
+        if (arguments?['pid'] == 9999) {
+          return <String, Object?>{
+            'content': <Object?>[
+              <String, Object?>{
+                'type': 'text',
+                'text': 'no running application for pid',
+              },
+            ],
+            'isError': true,
+          };
+        }
+      }
       return <String, Object?>{
         'content': <Object?>[
           <String, Object?>{'type': 'text', 'text': 'ok from cua'},
@@ -232,6 +283,74 @@ void main() {
       await provider.initialize();
       await provider.dispose();
       expect(transports.single.disconnected, isTrue);
+    });
+
+    group('launch_app 前台化', () {
+      List<Object?> toolCallNames(List<McpMessage> messages) => messages
+          .where((McpMessage m) => m.method == 'tools/call')
+          .map((McpMessage m) => m.params?['name'])
+          .toList();
+
+      test('launch_app 成功后自动 bring_to_front 把应用带到前台', () async {
+        final DesktopSession session = await provider.initialize();
+        final ToolResult result = await session.call('launch_app',
+            <String, Object?>{'bundle_id': 'com.apple.calculator'});
+
+        expect(result.isError, isFalse);
+        expect(result.content, contains('bring_to_front: ok'));
+        expect(toolCallNames(transports.single.sent),
+            <Object?>['launch_app', 'bring_to_front']);
+        final Map<String, Object?>? bringArgs = transports.single.sent
+            .lastWhere((McpMessage m) => m.method == 'tools/call')
+            .params?['arguments'] as Map<String, Object?>?;
+        expect(bringArgs, <String, Object?>{'pid': 4242});
+      });
+
+      test('launch_app 失败时不追加 bring_to_front', () async {
+        final DesktopSession session = await provider.initialize();
+        final ToolResult result = await session.call('launch_app',
+            <String, Object?>{'bundle_id': 'com.apple.calculator', 'fail': true});
+
+        expect(result.isError, isTrue);
+        expect(toolCallNames(transports.single.sent), <Object?>['launch_app']);
+      });
+
+      test('launch_app 无 pid 时不追加 bring_to_front', () async {
+        final DesktopSession session = await provider.initialize();
+        final ToolResult result = await session.call('launch_app',
+            <String, Object?>{'bundle_id': 'com.example.agent', 'no_pid': true});
+
+        expect(result.isError, isFalse);
+        expect(toolCallNames(transports.single.sent), <Object?>['launch_app']);
+      });
+
+      test('bring_to_front 失败时合并注明但不判整个操作失败', () async {
+        final DesktopSession session = await provider.initialize();
+        final ToolResult result = await session.call('launch_app', <String, Object?>{
+          'bundle_id': 'com.apple.calculator',
+          'front_fail': true,
+        });
+
+        expect(result.isError, isFalse);
+        expect(result.content, contains('bring_to_front: failed'));
+        expect(toolCallNames(transports.single.sent),
+            <Object?>['launch_app', 'bring_to_front']);
+      });
+
+      test('activateLaunchedApp: false 时不追加 bring_to_front', () async {
+        final CuaDriverMcpProvider background = CuaDriverMcpProvider(
+          activateLaunchedApp: false,
+          transportFactory: (String command, List<String> args,
+                  Map<String, String> env) =>
+              _transportOf(transports, _reply),
+        );
+        final DesktopSession session = await background.initialize();
+        final ToolResult result = await session.call('launch_app',
+            <String, Object?>{'bundle_id': 'com.apple.calculator'});
+
+        expect(result.isError, isFalse);
+        expect(toolCallNames(transports.last.sent), <Object?>['launch_app']);
+      });
     });
   });
 }
