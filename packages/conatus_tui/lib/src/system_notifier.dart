@@ -24,7 +24,7 @@ CronNotifier? systemCronNotifier({bool sound = true}) {
 }
 
 CronNotifier _macNotifier(bool sound) =>
-    (String title, String body, CronTask task) {
+    (String title, String body, CronTask? task) {
       final String text = _squash(body);
       final String script = 'display notification ${jsonEncode(text)} '
           'with title ${jsonEncode(title)}'
@@ -32,7 +32,7 @@ CronNotifier _macNotifier(bool sound) =>
       _dispatch('osascript', <String>['-e', script]);
     };
 
-void _linuxNotifier(String title, String body, CronTask task) =>
+void _linuxNotifier(String title, String body, CronTask? task) =>
     _dispatch('notify-send', <String>[title, _squash(body)]);
 
 /// 正文压成单行并截断到 200 字符（与 dsh-cron 一致）。

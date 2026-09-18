@@ -64,8 +64,8 @@ void main() {
       deliver: harness.accept,
       options: CronRuntimeOptions(
         clock: () => now,
-        notifier: (String title, String body, CronTask task) =>
-            notifications.add('$title|$body|${task.id}'),
+        notifier: (String title, String body, CronTask? task) =>
+            notifications.add('$title|$body|${task?.id}'),
         tickSeconds: 3600,
         firstTickDelay: const Duration(hours: 1),
       ),
@@ -88,6 +88,38 @@ void main() {
     runtime.finishRun(harness.records.last, ok: false);
     expect(notifications.last, '定时任务失败：原始 prompt|原始 prompt|demo',
         reason: '无摘要时回退到 prompt 快照');
+  });
+
+  test('任务删除后 finishRun 仍发通知，task 为 null', () async {
+    DateTime now = base;
+    final Harness harness = Harness(clock: () => now);
+    harness.service.addDynamicTask(
+        <String, Object?>{'id': 'demo', 'prompt': 'ping', 'every': 600});
+    final List<String> notifications = <String>[];
+    final CronRuntime runtime = CronRuntime(
+      service: harness.service,
+      deliver: harness.accept,
+      options: CronRuntimeOptions(
+        clock: () => now,
+        notifier: (String title, String body, CronTask? task) =>
+            notifications.add('$title|$body|${task?.id}'),
+        tickSeconds: 3600,
+        firstTickDelay: const Duration(hours: 1),
+      ),
+    );
+    addTearDown(runtime.dispose);
+
+    now = base.add(const Duration(seconds: 601));
+    await runtime.tick();
+    expect(harness.records, hasLength(1));
+    harness.service.removeDynamicTask('demo');
+    expect(harness.service.findTask('demo'), isNull);
+
+    runtime.finishRun(harness.records.single, ok: true, excerpt: '已完成');
+    expect(notifications, <String>['定时任务完成：ping|已完成|null'],
+        reason: '通知永远发，任务缺失由调用方决定后续处理');
+    expect(
+        harness.service.listHistory().single.status, CronRunStatus.completed);
   });
 
   test('dispose 停表：首 tick 前释放不再触发', () async {

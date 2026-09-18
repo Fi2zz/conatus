@@ -118,11 +118,10 @@ class CronRuntime {
         service.finishRun(recordId, ok: ok, excerpt: excerpt);
     final CronNotifier? notifier = _notifier;
     if (record == null || notifier == null) return;
-    final CronTask? task = service.findTask(record.taskId);
-    if (task == null) return;
     final String title =
         ok ? '定时任务完成：${record.prompt}' : '定时任务失败：${record.prompt}';
-    notifier(title, record.excerpt ?? record.prompt, task);
+    notifier(title, record.excerpt ?? record.prompt,
+        service.findTask(record.taskId));
   }
 
   /// 停止定时器；进行中的交付自然结束，不再触发新 tick。
