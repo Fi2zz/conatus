@@ -29,6 +29,8 @@ void main() {
     expect(harness.delivered.single,
         contains('[cron] Scheduled task "demo" fired.'));
     expect(harness.delivered.single, contains('<task>\nping\n</task>'));
+    expect(harness.tasks.single.id, 'demo',
+        reason: 'deliver 携带原始任务，调用方可自行渲染');
 
     final CronTask task = harness.service.findTask('demo')!;
     expect(task.lastRunAt!.millisecondsSinceEpoch, now.millisecondsSinceEpoch);
@@ -88,7 +90,7 @@ void main() {
         <String, Object?>{'id': 'demo', 'prompt': 'ping', 'every': 600});
     final CronRuntime runtime = CronRuntime(
       service: harness.service,
-      deliver: (String recordId, String framing) async =>
+      deliver: (String recordId, String framing, CronTask task) async =>
           throw StateError('session busy'),
       options: CronRuntimeOptions(
         clock: () => now,

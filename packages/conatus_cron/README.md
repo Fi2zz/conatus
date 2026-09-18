@@ -16,8 +16,9 @@ final service = provideCron(ctx,
     ));
 provideCronTools(ctx);
 final runtime = provideCronRuntime(ctx,
-    deliver: (recordId, framing) async {
+    deliver: (recordId, framing, task) async {
       // 把 framing 投递进目标会话；false 表示暂时无法投递，下个 tick 重试。
+      // task 为原始任务，调用方可自行决定如何渲染投递内容。
       return submitToSession(framing);
     },
     // 系统通知为可选注入端口（缺省不通知）。桌面实现由 conatus_tui 提供
@@ -59,7 +60,7 @@ cron 表达式支持 `*`、列表、范围与步进（`*/n`、`a-b/n`、`a/n` �
   `CronDelivery` 注入端口 + 装配方显式调 `finishRun`（conatus 没有等价事件流，
   且这让投递策略完全由宿主决定）。
 - **通知**：系统通知为可选注入端口，默认关闭。本包只定义抽象 `CronNotifier`
-  端口（标题 + 正文），不做平台实现；macOS / Linux 实现（`osascript` /
+  端口（标题 + 正文 + 原始任务），不做平台实现；macOS / Linux 实现（`osascript` /
   `notify-send`）由 conatus_tui 提供（`systemCronNotifier()`），iOS / Android /
   Windows 由宿主注入任意 `CronNotifier`（如 flutter_local_notifications）。
 - 其余语义（四种规则、daily 补发、每 tick 任务隔离、重启不重发、历史 500 封顶、

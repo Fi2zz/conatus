@@ -15,10 +15,13 @@ import 'cron_notify.dart';
 import 'cron_rules.dart';
 import 'cron_types.dart';
 
-/// 交付端口：把 [framing] 投递给 [recordId] 关联的运行，返回是否成功入队。
+/// 交付端口：把 [framing] 与原始 [task] 一起交给 [recordId] 关联的运行，
+/// 返回是否成功入队。framing 由本包按固定格式渲染，宿主可基于原始 [task]
+/// 自行决定如何渲染投递内容。
 ///
 /// 返回 false 表示当前无法投递，运行时不会写运行戳，下个 tick 重试。
-typedef CronDelivery = Future<bool> Function(String recordId, String framing);
+typedef CronDelivery =
+    Future<bool> Function(String recordId, String framing, CronTask task);
 
 /// 默认 tick 间隔（秒）。
 const int kDefaultCronTickSeconds = 15;
@@ -115,9 +118,11 @@ class CronRuntime {
         service.finishRun(recordId, ok: ok, excerpt: excerpt);
     final CronNotifier? notifier = _notifier;
     if (record == null || notifier == null) return;
+    final CronTask? task = service.findTask(record.taskId);
+    if (task == null) return;
     final String title =
         ok ? '定时任务完成：${record.prompt}' : '定时任务失败：${record.prompt}';
-    notifier(title, record.excerpt ?? record.prompt);
+    notifier(title, record.excerpt ?? record.prompt, task);
   }
 
   /// 停止定时器；进行中的交付自然结束，不再触发新 tick。
@@ -142,7 +147,7 @@ class CronRuntime {
     final CronRecordRef ref = service.allocateRecordRef(firedAt);
     final bool accepted;
     try {
-      accepted = await deliver(ref.id, framing);
+      accepted = await deliver(ref.id, framing, task);
     } on Object catch (error) {
       service.releaseRecordRef(ref);
       _warn('cron: deliver failed for task "${task.id}": $error');

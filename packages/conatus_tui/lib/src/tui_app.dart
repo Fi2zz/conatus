@@ -150,7 +150,7 @@ class ConatusTuiRuntime {
     provideCronTools(app);
     provideCronRuntime(
       app,
-      deliver: (String recordId, String framing) async {
+      deliver: (String recordId, String framing, CronTask task) async {
         final ConatusTuiController? controller =
             app.get<ConatusTuiController>('tuiController');
         if (controller == null) return false;

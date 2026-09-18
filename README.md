@@ -736,14 +736,15 @@ assertModelVisibleInvariant(await log.read(session.id).toList());
 服务键 `'cron'`（`ctx.cron`）与 `'cronRuntime'`（`ctx.cronRuntime`）。语义移植自
 dsh-cron（不含 web 部分）：任务规则四选一——`at` 一次性 / `every` 固定间隔（最小
 10s）/ `daily` 本地 `HH:MM`（错过补发）/ `cron` 5 段表达式（本地时间）；到点把任务
-提示以 `[cron]` framing 交付给宿主注入的 `CronDelivery` 端口，成功才消费时段，
-拒绝则下个 tick 重试。
+提示以 `[cron]` framing 连同原始任务交付给宿主注入的 `CronDelivery` 端口，成功
+才消费时段，拒绝则下个 tick 重试。
 
 ```dart
 final service = provideCron(ctx,
     storage: JsonCronStorage(tasksPath: tasksFile, historyPath: historyFile));
 provideCronTools(ctx);
-provideCronRuntime(ctx, deliver: (recordId, framing) async => submit(framing));
+provideCronRuntime(
+    ctx, deliver: (recordId, framing, task) async => submit(framing));
 // turn 结束后：ctx.cronRuntime.finishRun(recordId, ok: …, excerpt: …);
 ```
 

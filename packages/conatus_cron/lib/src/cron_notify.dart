@@ -7,5 +7,7 @@
 /// 通知是 best-effort：由实现保证不抛错、不阻塞调度器。
 library;
 
-/// 系统通知端口：收到标题与正文，投递方式由实现决定。
-typedef CronNotifier = void Function(String title, String body);
+import 'cron_types.dart';
+
+/// 系统通知端口：收到标题、正文与原始任务，投递方式与渲染方式由实现决定。
+typedef CronNotifier = void Function(String title, String body, CronTask task);

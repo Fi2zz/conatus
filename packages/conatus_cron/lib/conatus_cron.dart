@@ -1,8 +1,8 @@
 /// conatus 的定时任务插件：按 at / every / daily / cron 规则调度任务。
 ///
-/// 语义忠实移植 dsh-cron：到点把任务提示以固定 framing 交付给宿主注入的
-/// [CronDelivery] 端口执行，运行记录持久化（重启不重发已消费时段，daily 错过
-/// 当天时段补发一次），模型可用 `cron_list` / `cron_add` / `cron_update` /
+/// 语义忠实移植 dsh-cron：到点把任务提示以固定 framing 连同原始任务交付给宿主
+/// 注入的 [CronDelivery] 端口执行，运行记录持久化（重启不重发已消费时段，daily
+/// 错过当天时段补发一次），模型可用 `cron_list` / `cron_add` / `cron_update` /
 /// `cron_remove` / `cron_history` 管理任务。任务运行结束后由装配方调用
 /// [CronRuntime.finishRun] 推进记录并发系统通知。
 ///
@@ -10,7 +10,8 @@
 /// final service = provideCron(ctx,
 ///     storage: JsonCronStorage(tasksPath: tasksFile, historyPath: historyFile));
 /// provideCronTools(ctx);
-/// final runtime = provideCronRuntime(ctx, deliver: (recordId, framing) async {
+/// final runtime = provideCronRuntime(
+///     ctx, deliver: (recordId, framing, task) async {
 ///   // 把 framing 投递进目标会话；返回 false 表示暂时无法投递。
 ///   return true;
 /// });

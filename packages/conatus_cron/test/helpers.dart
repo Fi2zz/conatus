@@ -79,6 +79,7 @@ class Harness {
       : warnings = <String>[],
         delivered = <String>[],
         records = <String>[],
+        tasks = <CronTask>[],
         _deliver = deliver {
     final Directory dir =
         Directory.systemTemp.createTempSync('conatus-cron-runtime-');
@@ -99,11 +100,13 @@ class Harness {
   final List<String> warnings;
   final List<String> delivered;
   final List<String> records;
+  final List<CronTask> tasks;
   final bool Function(String framing)? _deliver;
 
-  Future<bool> accept(String recordId, String framing) async {
+  Future<bool> accept(String recordId, String framing, CronTask task) async {
     delivered.add(framing);
     records.add(recordId);
+    tasks.add(task);
     final bool Function(String framing)? custom = _deliver;
     return custom == null ? true : custom(framing);
   }

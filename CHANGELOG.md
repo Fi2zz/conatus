@@ -205,6 +205,10 @@ RFC 3339（此前是无偏移的本地时间串，模型无法判断时区）。
 （mobile_notifier_*）；macOS / Linux 桌面实现移交 conatus_tui
 （`systemCronNotifier()`，osascript / notify-send）
 
+`conatus_cron`：`CronDelivery` / `CronNotifier` 端口各增加第三个参数 `task`
+（原始任务），调用方可基于任务自行决定如何渲染投递 / 通知内容；`fire` /
+`finishRun` 分别携带对应任务（`finishRun` 在任务已被删除时不再发通知）
+
 ## [0.15.0] — 2026-09-15
 
 新增技能沉淀与持久化恢复（handoff2 第 12、17 步）：
