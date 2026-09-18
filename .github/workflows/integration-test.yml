@@ -1,0 +1,19 @@
+name: Integration Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+      - run: dart pub get
+      - name: Run unit tests
+        run: |
+          dart test
+          for d in packages/*/; do (cd "$d" && dart test); done
+      - name: Run integration tests
+        run: dart test test/integration/ --reporter=expanded
