@@ -37,10 +37,9 @@ void main() {
     final List<String> deliveredReplies = <String>[];
     final CronRuntime runtime = provideCronRuntime(
       h.app,
-      deliver: (String recordId, String framing) async {
+      deliver: (String recordId, String framing, CronTask task) async {
         deliveredFramings.add(framing);
-        final AgentTurn turn =
-            await h.agent.run(h.app.cron.tasks.single.prompt);
+        final AgentTurn turn = await h.agent.run(task.prompt);
         deliveredReplies.add(turn.reply);
         return true;
       },
