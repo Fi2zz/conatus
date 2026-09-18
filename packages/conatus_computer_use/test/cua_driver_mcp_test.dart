@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:conatus_computer_use/conatus_computer_use.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
+import 'package:conatus_mcp/conatus_mcp.dart';
 import 'package:test/test.dart';
 
 import 'support/fake_transport.dart';
@@ -32,6 +33,33 @@ Map<String, Object?>? _reply(String method, Map<String, Object?>? params) {
             },
           ],
           'structuredContent': <String, Object?>{'width': 10, 'height': 10},
+        };
+      }
+      if (tool == 'list_windows') {
+        return <String, Object?>{
+          'content': <Object?>[
+            <String, Object?>{'type': 'text', 'text': 'Found 1 window(s).'},
+          ],
+          'structuredContent': <String, Object?>{
+            'windows': <Object?>[
+              <String, Object?>{'window_id': 303, 'title': '微信'},
+            ],
+          },
+        };
+      }
+      if (tool == 'get_window_state') {
+        return <String, Object?>{
+          'content': <Object?>[
+            <String, Object?>{
+              'type': 'text',
+              'text': List<String>.filled(300, 'tree').join(' '),
+            },
+          ],
+          'structuredContent': <String, Object?>{
+            'windows': <Object?>[
+              <String, Object?>{'window_id': 1},
+            ],
+          },
         };
       }
       return <String, Object?>{
@@ -74,7 +102,7 @@ void main() {
     test('initialize 握手并发现工具', () async {
       final DesktopSession session = await provider.initialize();
 
-      expect(session.toolNames,
+      expect(session.tools.map((McpTool tool) => tool.name),
           containsAll(<String>['screen_capture', 'mouse_click']));
       expect(transports, hasLength(1));
       expect(transports.single.connected, isTrue);
@@ -98,6 +126,30 @@ void main() {
       final String? tool =
           transport.sent.lastWhere((m) => m.method == 'tools/call').params?['name'] as String?;
       expect(tool, 'mouse_click');
+    });
+
+    test('短摘要结果追加 structuredContent JSON（list_windows 可读窗口 id）', () async {
+      final DesktopSession session = await provider.initialize();
+
+      final ToolResult result =
+          await session.call('list_windows', <String, Object?>{'pid': 1});
+
+      expect(result.isError, isFalse);
+      expect(result.content, contains('Found 1 window(s).'));
+      expect(result.content, contains('window_id'));
+      expect(result.content, contains('微信'));
+    });
+
+    test('长内容结果不追加 structuredContent（避免树 JSON 冗余）', () async {
+      final DesktopSession session = await provider.initialize();
+
+      final ToolResult result = await session.call('get_window_state', <String, Object?>{
+        'pid': 1,
+      });
+
+      expect(result.isError, isFalse);
+      expect(result.content, startsWith('tree'));
+      expect(result.content, isNot(contains('"windows"')));
     });
 
     test('capture 提取图像字节与尺寸', () async {

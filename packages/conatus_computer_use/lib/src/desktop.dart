@@ -2,6 +2,7 @@
 library;
 
 import 'package:conatus_foundation/conatus_foundation.dart';
+import 'package:conatus_mcp/conatus_mcp.dart';
 
 import 'screenshot.dart';
 
@@ -10,8 +11,8 @@ import 'screenshot.dart';
 /// 调用方负责协调跨 Session 和独立 conatus 进程的完整观察、
 /// 操作和验证流程。
 abstract class DesktopSession {
-  /// Provider 提供的工具列表。
-  List<String> get toolNames;
+  /// Provider 提供的工具声明（含参数 schema，注册时透传给模型）。
+  List<McpTool> get tools;
 
   /// 调用 Provider 工具。
   ///

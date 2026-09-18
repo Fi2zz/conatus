@@ -48,8 +48,9 @@ provideComputerUse(
   只注册 Provider **名字**，拒绝第二个注册（包括同名实例）；释放后可重新注册。
 - `ComputerUseProvider`：`initialize()`（返回**不绑定任何 Session** 的
   `DesktopSession`）/ `dispose()`。
-- `DesktopSession`：`toolNames` / `call(tool, args)` / `capture({region})` /
-  `close()`。工具 schema、结果渲染、图像支持由 Provider 拥有。
+- `DesktopSession`：`tools`（带参数 schema 的工具声明，注册时透传给模型）/
+  `call(tool, args)` / `capture({region})` / `close()`。工具 schema、结果渲染、
+  图像支持由 Provider 拥有。
 - `ScreenRegion` / `Screenshot`：屏幕区域与截图值类型（`isEmpty`、`copyWith`、
   JSON 往返）。
 - `AttachmentStore` / `InMemoryAttachmentStore`：持久化截图（`save` / `load` /

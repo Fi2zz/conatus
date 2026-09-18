@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:conatus_agent/conatus_agent.dart';
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
+import 'package:conatus_mcp/conatus_mcp.dart';
 import 'package:conatus_tasks/conatus_tasks.dart';
 
 import 'desktop.dart';
@@ -83,10 +84,10 @@ void registerDesktopTools(
   Telemetry? telemetry,
 }) {
   final ToolRegistry registry = tools ?? ctx.tools;
-  for (final String name in desktop.toolNames) {
+  for (final McpTool tool in desktop.tools) {
     ctx.effect(() => registry.register(DesktopActionTool(
           desktop,
-          name,
+          tool,
           sessionId: sessionId,
           sessionLog: sessionLog,
           taskCenter: taskCenter,

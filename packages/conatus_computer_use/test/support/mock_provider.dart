@@ -3,6 +3,7 @@ library;
 
 import 'package:conatus_computer_use/conatus_computer_use.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
+import 'package:conatus_mcp/conatus_mcp.dart';
 
 /// 可脚本化行为的桌面 Provider。
 class MockComputerUseProvider implements ComputerUseProvider {
@@ -28,8 +29,21 @@ class MockComputerUseProvider implements ComputerUseProvider {
     final Object? error = initializeError;
     if (error != null) throw error;
     initialized = true;
-    return session ??=
-        MockDesktopSession(toolNames: const <String>['screen_capture', 'mouse_click']);
+    return session ??= MockDesktopSession(tools: const <McpTool>[
+      McpTool(name: 'screen_capture'),
+      McpTool(
+        name: 'mouse_click',
+        description: '点击（x/y 像素坐标）',
+        inputSchema: <String, Object?>{
+          'type': 'object',
+          'properties': <String, Object?>{
+            'x': <String, Object?>{'type': 'integer'},
+            'y': <String, Object?>{'type': 'integer'},
+          },
+          'required': <String>['x', 'y'],
+        },
+      ),
+    ]);
   }
 
   @override
@@ -40,10 +54,10 @@ class MockComputerUseProvider implements ComputerUseProvider {
 
 /// 假桌面会话（不绑定任何 Session）。
 class MockDesktopSession implements DesktopSession {
-  MockDesktopSession({this.toolNames = const <String>[]});
+  MockDesktopSession({this.tools = const <McpTool>[]});
 
   @override
-  final List<String> toolNames;
+  final List<McpTool> tools;
 
   /// 收到的调用（toolName, args）。
   final List<(String, Map<String, Object?>)> calls =

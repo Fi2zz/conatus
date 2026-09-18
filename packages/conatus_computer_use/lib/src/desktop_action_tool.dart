@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:conatus_agent/conatus_agent.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
+import 'package:conatus_mcp/conatus_mcp.dart';
 import 'package:conatus_tasks/conatus_tasks.dart';
 
 import 'desktop.dart';
@@ -31,6 +32,8 @@ const Set<String> _readOnly = <String>{
 /// 桌面操作工具：调用转发到 [DesktopSession]。
 ///
 /// 风险等级由 [desktopToolRisk] 声明（所有输入操作 high，走审批门控）。
+/// 参数 schema 直接透传 Provider 的 [McpTool.inputSchema]（对齐
+/// `McpToolAdapter`），模型可见合法参数，无需猜测。
 /// 可选 seam（全为 null 时降级）：
 ///
 /// - [taskCenter]：每次操作追踪为 `Task(kind: custom)`；
@@ -41,7 +44,7 @@ const Set<String> _readOnly = <String>{
 class DesktopActionTool extends Tool {
   DesktopActionTool(
     this.desktop,
-    this.toolName, {
+    this.tool, {
     this.sessionLog,
     this.sessionId,
     this.taskCenter,
@@ -51,8 +54,8 @@ class DesktopActionTool extends Tool {
   /// 桌面会话。
   final DesktopSession desktop;
 
-  /// 工具名（Provider 拥有的名字）。
-  final String toolName;
+  /// 工具声明（Provider 拥有的名字与参数 schema）。
+  final McpTool tool;
 
   /// 触发本操作的 Session 日志（可选）。
   final SessionLog? sessionLog;
@@ -67,13 +70,25 @@ class DesktopActionTool extends Tool {
   final Telemetry? telemetry;
 
   @override
-  String get name => toolName;
+  String get name => tool.name;
 
   @override
-  String get description => '桌面操作：$toolName';
+  String get description => tool.description ?? tool.title ?? tool.name;
 
   @override
-  ToolRisk get riskLevel => desktopToolRisk(toolName);
+  ToolRisk get riskLevel => desktopToolRisk(tool.name);
+
+  @override
+  Map<String, Object?> toSchema() => <String, Object?>{
+        'name': name,
+        'description': description,
+        'parameters': tool.inputSchema.isEmpty
+            ? const <String, Object?>{
+                'type': 'object',
+                'properties': <String, Object?>{},
+              }
+            : tool.inputSchema,
+      };
 
   @override
   Future<ToolResult> call(ToolContext context) async {
@@ -81,19 +96,19 @@ class DesktopActionTool extends Tool {
     final String? parentEventId =
         context.callId.isEmpty ? null : context.callId;
     telemetry?.emit(TelemetryEvent('computer.action.called',
-        data: <String, Object?>{'tool': toolName, 'args': args}));
+        data: <String, Object?>{'tool': tool.name, 'args': args}));
     final Task? task = await _trackStart(args);
     try {
-      final ToolResult result = await desktop.call(toolName, args);
+      final ToolResult result = await desktop.call(tool.name, args);
       await _trackEnd(task, result);
       telemetry?.emit(TelemetryEvent('computer.action.completed',
-          data: <String, Object?>{'tool': toolName}));
+          data: <String, Object?>{'tool': tool.name}));
       unawaited(_logAction(args, result, null, parentEventId));
       return result;
     } catch (error) {
       await _trackError(task, error);
       telemetry?.emit(TelemetryEvent('computer.action.failed',
-          data: <String, Object?>{'tool': toolName, 'error': '$error'}));
+          data: <String, Object?>{'tool': tool.name, 'error': '$error'}));
       unawaited(_logAction(args, null, error, parentEventId));
       rethrow;
     }
@@ -104,8 +119,8 @@ class DesktopActionTool extends Tool {
     if (center == null) return null;
     return center.create(
       kind: TaskKind.custom,
-      description: '桌面操作: $toolName',
-      metadata: <String, Object?>{'tool': toolName},
+      description: '桌面操作: ${tool.name}',
+      metadata: <String, Object?>{'tool': tool.name},
     );
   }
 
@@ -141,7 +156,7 @@ class DesktopActionTool extends Tool {
       type: 'computer/action',
       seq: 0,
       data: <String, Object?>{
-        'tool': toolName,
+        'tool': tool.name,
         'args': args,
         'result': result == null ? null : resultToJson(result),
         'error': '$error',

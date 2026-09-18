@@ -2,6 +2,7 @@
 library;
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_mcp/conatus_mcp.dart';
@@ -86,12 +87,11 @@ class CuaDriverMcpProvider implements ComputerUseProvider {
     );
     try {
       await client.initialize();
-      final List<String> toolNames =
-          (await client.listTools()).map((McpTool tool) => tool.name).toList();
+      final List<McpTool> tools = await client.listTools();
       _client = client;
       _session = _CuaDriverDesktopSession(
         client: client,
-        toolNames: toolNames,
+        tools: tools,
         attachmentStore: attachmentStore,
         imageSupport: imageSupport,
       );
@@ -126,7 +126,7 @@ class CuaDriverMcpProvider implements ComputerUseProvider {
 class _CuaDriverDesktopSession implements DesktopSession {
   _CuaDriverDesktopSession({
     required this.client,
-    required this.toolNames,
+    required this.tools,
     this.attachmentStore,
     this.imageSupport = ImageSupport.diagnostic,
   });
@@ -135,7 +135,7 @@ class _CuaDriverDesktopSession implements DesktopSession {
   final McpClient client;
 
   @override
-  final List<String> toolNames;
+  final List<McpTool> tools;
 
   /// 附件存储（持久化截图；可选）。
   final AttachmentStore? attachmentStore;
@@ -146,13 +146,30 @@ class _CuaDriverDesktopSession implements DesktopSession {
   @override
   Future<ToolResult> call(String toolName, Map<String, Object?> args) async {
     try {
-      return toolResultFromMcp(await client.callTool(toolName, args));
+      return _resultOf(await client.callTool(toolName, args));
     } on McpException catch (error) {
       return ToolResult.failure(
         error.message,
         error: ToolError('MCP_ERROR', error.message),
       );
     }
+  }
+
+  /// 把 MCP 结果映射为 [ToolResult]；短摘要（如 `list_windows` 的纯计数）时
+  /// 追加 `structuredContent` 的 JSON，否则模型看不到窗口/坐标等结构化数据。
+  ToolResult _resultOf(McpToolResult raw) {
+    final ToolResult result = toolResultFromMcp(raw);
+    final Map<String, Object?>? structured = raw.structuredContent;
+    if (!result.isError &&
+        structured != null &&
+        structured.isNotEmpty &&
+        result.content.length < _structuredAppendMaxContent) {
+      return ToolResult.success(
+        '${result.content}\n\n${jsonEncode(structured)}',
+        value: result.value,
+      );
+    }
+    return result;
   }
 
   @override
@@ -180,6 +197,9 @@ class _CuaDriverDesktopSession implements DesktopSession {
   @override
   Future<void> close() async {}
 }
+
+/// content 短于此长度且 `structuredContent` 非空时，追加结构化 JSON 到返回文本。
+const int _structuredAppendMaxContent = 200;
 
 List<int> _extractBytes(McpToolResult raw) {
   for (final McpContent block in raw.content) {

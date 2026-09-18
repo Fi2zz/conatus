@@ -2,6 +2,7 @@ import 'package:conatus_agent/conatus_agent.dart';
 import 'package:conatus_computer_use/conatus_computer_use.dart';
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
+import 'package:conatus_mcp/conatus_mcp.dart';
 import 'package:conatus_tasks/conatus_tasks.dart';
 import 'package:test/test.dart';
 
@@ -140,13 +141,33 @@ void main() {
       final Context ctx = Context.root();
       provideTools(ctx);
       final InMemorySessionLog log = InMemorySessionLog();
-      final DesktopSession desktop = MockDesktopSession(
-          toolNames: const <String>['mouse_click']);
+      final DesktopSession desktop = MockDesktopSession(tools: const <McpTool>[
+        McpTool(
+          name: 'mouse_click',
+          inputSchema: <String, Object?>{
+            'type': 'object',
+            'properties': <String, Object?>{
+              'x': <String, Object?>{'type': 'integer'},
+              'y': <String, Object?>{'type': 'integer'},
+            },
+            'required': <String>['x', 'y'],
+          },
+        ),
+      ]);
       registerDesktopTools(
         ctx,
         desktop,
         sessionId: 'trigger-session',
         sessionLog: log,
+      );
+
+      // 参数 schema 透传给模型（本次修复的核心行为）。
+      final Map<String, Object?>? schema =
+          ctx.tools.describeOne('mouse_click');
+      expect(schema?['parameters'], isA<Map<String, Object?>>());
+      expect(
+        (schema?['parameters'] as Map<String, Object?>)['required'],
+        containsAll(<String>['x', 'y']),
       );
 
       final ToolResult result = await ctx.tools
