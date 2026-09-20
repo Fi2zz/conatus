@@ -72,11 +72,11 @@ void main() {
     await engine.register(_sampleDef('backup'));
     await engine.register(_sampleDef('next'));
     final scheduler = _newScheduler(engine);
-    scheduler.register(Automation(
+    scheduler.register(const Automation(
       name: 'daily',
-      trigger: const ManualTrigger(),
+      trigger: ManualTrigger(),
       workflowName: 'backup',
-      onComplete: const ChainAction(workflowName: 'next'),
+      onComplete: ChainAction(workflowName: 'next'),
     ));
 
     final run = await scheduler.trigger('daily');
@@ -124,13 +124,13 @@ void main() {
     final scheduler = _newScheduler(engine);
     scheduler.register(const Automation(
       name: 'a',
-      trigger: const ManualTrigger(),
+      trigger: ManualTrigger(),
       workflowName: 'slow',
       constraints: <Constraint>[MutexConstraint('m')],
     ));
     scheduler.register(const Automation(
       name: 'b',
-      trigger: const ManualTrigger(),
+      trigger: ManualTrigger(),
       workflowName: 'fast',
       constraints: <Constraint>[MutexConstraint('m')],
     ));
