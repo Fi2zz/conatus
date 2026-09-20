@@ -62,6 +62,16 @@ export 'src/refs.dart'
     show evaluateCondition, resolveArguments, resolveReference, resolveValue;
 export 'src/run.dart' show WorkflowRun;
 export 'src/run_node.dart' show RunNode;
+export 'src/scheduler.dart'
+    show
+        AutomationBlocked,
+        AutomationRegistered,
+        AutomationTriggered,
+        SchedulerContext,
+        SchedulerEvent,
+        WorkflowScheduler,
+        provideWorkflowScheduler;
+export 'src/scheduler_impl.dart' show WorkflowSchedulerImpl;
 export 'src/status.dart' show RunNodeStatus, RunStatus;
 export 'src/store.dart' show InMemoryWorkflowStore, WorkflowStore;
 export 'src/tools/workflow_control_tools.dart'
