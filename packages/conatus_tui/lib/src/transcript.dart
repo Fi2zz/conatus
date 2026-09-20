@@ -17,15 +17,40 @@ class Transcript {
   /// 屏上消息（按发生顺序）。
   final List<TuiMessage> messages = <TuiMessage>[];
 
+  /// `/help` 弹出的帮助消息（Esc 可关闭）；null = 未打开。
+  TuiMessage? help;
+
   /// 清空屏上记录（不改动会话数据）。
-  void clear() => messages.clear();
+  void clear() {
+    messages.clear();
+    help = null;
+  }
 
   /// 追加一条消息。
   void add(TuiRole role, String text) => messages.add(TuiMessage(role, text));
 
+  /// 打开帮助弹出并记录引用，供 [closeHelp] 移除；已打开时先关闭旧的。
+  void openHelp(String text) {
+    closeHelp();
+    help = TuiMessage(TuiRole.system, text);
+    messages.add(help!);
+  }
+
+  /// 关闭帮助弹出；未打开返回 false。
+  bool closeHelp() {
+    final TuiMessage? message = help;
+    if (message == null) {
+      return false;
+    }
+    messages.remove(message);
+    help = null;
+    return true;
+  }
+
   /// 绑定会话：按持久化事件回放整段历史。
   void rebuildFrom(Session session) {
     messages.clear();
+    help = null;
     for (final SessionEvent event in session.events) {
       apply(event);
     }

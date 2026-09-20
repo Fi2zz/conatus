@@ -317,7 +317,7 @@ class ConatusTuiController implements TuiUserPromptHost {
       case 'quit' || 'exit':
         onExit?.call();
       case 'help':
-        transcript.add(TuiRole.system, buildTuiHelpText(extra: _skillCommands));
+        transcript.openHelp(buildTuiHelpText(extra: _skillCommands));
       case 'new':
         await newSession();
       case 'sessions':

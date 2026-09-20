@@ -226,11 +226,16 @@ class _AgentTuiState extends State<AgentTui> {
       }
       return true; // 面板打开时吞掉按键，避免误输入。
     }
-    // Esc 兜底（choice/picker 的 Esc 已在上方处理）：关闭菜单、团队视图返回，
-    // 无面板时打断在飞轮次（busy 时输入框 readOnly 不经 _onInputKey，靠这里兜底）。
+    // Esc 兜底（choice/picker 的 Esc 已在上方处理）：关闭菜单、关闭帮助弹出、
+    // 团队视图返回，无面板时打断在飞轮次（busy 时输入框 readOnly 不经
+    // _onInputKey，靠这里兜底）。
     if (event.logicalKey == LogicalKey.escape) {
       if (_menu.open) {
         _menu.close();
+        _refresh();
+        return true;
+      }
+      if (_controller.transcript.closeHelp()) {
         _refresh();
         return true;
       }

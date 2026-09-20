@@ -138,6 +138,28 @@ void main() {
       app.dispose();
     }
   });
+
+  test('/help 弹出可用 Esc 关闭', () async {
+    final (ConatusTuiController controller, NoctermTester tester, Context app) =
+        await _launchAgentTui();
+    try {
+      // 输入 /help 并提交，帮助文本弹出（自动滚动到可见区域，断言底部按键行）。
+      await tester.enterText('/help');
+      await tester.sendEnter();
+      await tester.pump();
+      expect(tester.terminalState, containsText('按键：Esc 关闭面板/视图'));
+
+      // Esc 关闭帮助弹出。
+      await tester.sendEscape();
+      await tester.pump();
+      expect(tester.terminalState, isNot(containsText('按键：Esc 关闭面板/视图')));
+      expect(tester.terminalState, containsText('输入文字开始对话'));
+    } finally {
+      tester.dispose();
+      controller.dispose();
+      app.dispose();
+    }
+  });
 }
 
 /// 装配一个最小 TUI 并挂载，返回（控制器, 测试器, 应用上下文）。
