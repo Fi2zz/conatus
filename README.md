@@ -9,7 +9,7 @@
 **根包 `conatus` 是伞包（umbrella）**：自身不含实现，统一再导出 `packages/` 下的
 14 个模块包，因此 `import 'package:conatus/conatus.dart';` 是完整公开 API；也可以
 只依赖某个模块包（如 `conatus_core`、`conatus_agent`），以获得更小的依赖面。
-仓库另有 6 个**实验性包**（`publish_to: none`，不导出到伞包，API 可能随时变更），
+仓库另有 7 个**实验性包**（`publish_to: none`，不导出到伞包，API 可能随时变更），
 需显式依赖，见下方「实验性包」小节。
 
 | 包 | 说明 | 依赖 |
@@ -38,6 +38,7 @@
 | `conatus_alerting` | 告警：订阅遥测事件流，声明式规则判定后主动通知 | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_tts`、`http` | [README](packages/conatus_alerting/README.md) |
 | `conatus_browser_use` | 浏览器操作：经 MCP 接 Playwright / Chrome DevTools，检查与交互网页 | `conatus_agent`、`conatus_core`、`conatus_credentials`、`conatus_foundation`、`conatus_mcp`、`conatus_tasks` | [README](packages/conatus_browser_use/README.md) |
 | `conatus_computer_use` | 桌面操作：经 MCP 接 Cua Driver，截屏 / 鼠标 / 键盘 | `conatus_agent`、`conatus_core`、`conatus_credentials`、`conatus_foundation`、`conatus_mcp`、`conatus_tasks` | [README](packages/conatus_computer_use/README.md) |
+| `conatus_intent` | 意图路由：正则 + 向量本地匹配，命中走确定性动作，未命中落回 Agent Loop | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_intent/README.md) |
 | `conatus_observability` | 可观测性导出器：span 语义 + 从 Session Log 派生 trace | `conatus_agent`、`conatus_foundation` | [README](packages/conatus_observability/README.md) |
 | `conatus_team` | 多智能体协作：任务板（DAG + CAS）+ 成员运行时 + 协作模式 | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_team/README.md) |
 | `conatus_workflow` | 编排引擎：声明式流程（数据，非代码）+ 运行状态机 | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_tasks`、`conatus_team` | [README](packages/conatus_workflow/README.md) |
@@ -63,10 +64,11 @@ conatus_alerting ────▶ conatus_agent、conatus_tts、conatus_foundatio
 conatus_browser_use ─▶ conatus_mcp、conatus_tasks、conatus_credentials、conatus_foundation
 conatus_computer_use ▶ conatus_mcp、conatus_tasks、conatus_credentials、conatus_foundation
 conatus_team ────────▶ conatus_agent、conatus_llm、conatus_foundation
+conatus_intent ──────▶ conatus_agent、conatus_foundation
 conatus_workflow ────▶ conatus_team、conatus_tasks、conatus_foundation
 ```
 
-（`conatus_core` 为所有包的公共底座，各行从略。）后 6 行是实验性包：只被上层装配
+（`conatus_core` 为所有包的公共底座，各行从略。）后 7 行是实验性包：只被上层装配
 依赖，稳定包不反向依赖它们（`conatus_agent` / `conatus_mcp` / `conatus_tasks` 都
 不知道它们的存在）。
 
@@ -145,11 +147,13 @@ dependency_overrides:
 ```
 
 实验性包（`conatus_alerting` / `conatus_browser_use` / `conatus_computer_use` /
-`conatus_observability` / `conatus_team` / `conatus_workflow`）不在伞包依赖内，
+`conatus_intent` / `conatus_observability` / `conatus_team` / `conatus_workflow`）
+不在伞包依赖内，
 要用就单独声明，并同样把它们依赖的兄弟包放进 `dependency_overrides`：依赖
 `conatus_workflow` 时要额外补 `conatus_team`（workflow → team），依赖
 `conatus_browser_use` / `conatus_computer_use` 时要补 `conatus_mcp` 与
-`conatus_tasks`（上面的列表已含）。
+`conatus_tasks`（上面的列表已含）；`conatus_intent` 只依赖 `conatus_agent` 与
+`conatus_foundation`，无需额外补装。
 
 ```yaml
 dependencies:
@@ -1181,6 +1185,33 @@ final spans = await TraceBuilder(sessionLog: log).buildTrace('session-1');
 详见 [`packages/conatus_observability/README.md`](packages/conatus_observability/README.md)
 与 [`doc/usage.md`](packages/conatus_observability/doc/usage.md)。
 
+### `intent` — 意图路由（`conatus_intent`）
+
+**先用正则和向量做本地意图匹配，命中就直接执行动作，不命中才走完整 Agent Loop。**
+高频请求（「开灯」「关灯」「设个闹钟」）是固定模板，完全不需要模型；正则处理固定
+命令（微秒级），向量处理正则覆盖不到的同义表达（毫秒级），模型只处理真正复杂的请求。
+
+```dart
+final IntentRouter router = provideIntentRouter(app);   // 必须早于 provideAgentLoop
+router.register(Intent(
+  name: 'light_on',
+  description: '开灯',
+  patterns: <Pattern>[RegExp(r'^(开灯|把灯打开)')],
+  action: const ToolAction(
+    tool: 'device_control',
+    argsTemplate: <String, Object?>{'device': 'light', 'op': 'on'},
+  ),
+));
+```
+
+接线走 `conatus_agent` 已有的确定性路由 seam（`Router` / `RouteReply` / `RouteTools` /
+`RoutePass`），**不改 Agent Loop**：直接动作直接收口（零模型调用），工具动作与委托动作
+预置工具调用后由模型收口，未命中落回完整 Agent Loop。意图可从 JSON 配置加载，可由
+`SkillIntentBridge` / `ToolIntentGenerator` / `IntentLearner` 产出候选（都需人工确认）。
+
+离线示例：`cd packages/conatus_intent && dart run example/demo.dart`（无需 API Key）。
+详见 [`packages/conatus_intent/README.md`](packages/conatus_intent/README.md)。
+
 ---
 
 ## 核心概念
@@ -1648,6 +1679,12 @@ root.provide('x', 1);
 | `provideComputerUse(ctx, {provider, tools, taskCenter, approval, telemetry})` / `registerDesktopTools(ctx, desktop, {sessionId, sessionLog})` | 提供 `'computerUse'`：注册桌面工具 / 把操作记录到触发它的 Session 日志（`conatus_computer_use`） |
 | `ComputerUseProvider` / `CuaDriverMcpProvider` / `CuaDriverNativeProvider` / `DesktopSession` / `Screenshot` / `ScreenRegion` | 桌面 Provider 与值类型（Native 为未接入骨架） |
 | `imageSupportFor(provider, model)` / `AttachmentStore` / `InMemoryAttachmentStore` | 图像路由（持久化截图 / MCP 图像诊断）与截图存储 |
+| `provideIntentRouter(ctx, {router, embedder, intents, vectorThreshold, telemetry, session, fastPath})` / `ctx.intentRouter` / `IntentRouterAdapter` | 提供 `'intentRouter'`，并（缺省）接到 Agent Loop 的 `'router'` 快路径（`conatus_intent`） |
+| `Intent` / `RoutedAction`：`DirectAction` / `ToolAction` / `DelegateAction` / `RouteResult` / `RouteSource` / `RouteContext` / `IntentEvent` / `IntentException` | 意图与三种动作、路由结果、上下文、变更事件与错误 |
+| `RegexMatcher` / `VectorMatcher` / `orderByPriority` | 正则匹配 / 向量匹配 / priority 降序稳定排序 |
+| `EmbeddingProvider` / `LocalEmbeddingProvider` / `LlmEmbeddingProvider` / `EmbeddingLlm` / `cosineSimilarity` | 嵌入 seam 与本地（字符 n-gram）/ 模型端点两种实现、余弦相似度 |
+| `IntentLoader({required router, handlers})` / `IntentHandler` | 从 JSON 加载意图（`tool` / `builtin` / `delegate` / `respond` 四种动作） |
+| `SkillIntentBridge` / `ToolIntentGenerator` / `IntentLearner` / `IntentCandidate` / `IntentSpec` | Skill 沉淀与工具描述生成候选意图、未命中学习器（均只产候选，不自动注册） |
 | `provideAgentTeam(ctx, {leadId, llm, tools, defaultTools, maxMembers, taskTracker, session, approval, telemetry})` / `ctx.team` / `provideTeamTools(ctx, {team, tools})` | 提供 `'team'` 与 10 个团队工具（`conatus_team`） |
 | `AgentTeam` / `TeamBoard` / `MemberRuntime` / `TeamRole` / `TeamPattern` / `TeamHooks` | 团队运行时 / 任务板（DAG + CAS）/ 成员运行时 / 角色 / 协作模式 / 运行时 seam |
 | `provideWorkflow(ctx, {engine, store, team, tools, taskCenter, session, approval, telemetry, maxDepth})` / `ctx.workflow` / `provideWorkflowTools(ctx)` | 提供 `'workflow'` 与 8 个流程工具（`conatus_workflow`） |
@@ -1734,16 +1771,16 @@ for d in packages/*/; do (cd "$d" && dart test); done
 必须一起改）：
 
 ```bash
-bash tool/version.sh            # 检查：22 个包版本号一致，且 91 条包间约束都指向它
+bash tool/version.sh            # 检查：23 个包版本号一致，且包间约束都指向它
 bash tool/version.sh 0.16.0     # 统一升版：改 version 行 + 同步所有包间约束
 ```
 
 漏改任何一处，`dart pub get` 会在 workspace 内解析阶段直接失败（不会悄悄发出去）。
 
-发布按依赖顺序进行（依赖在前）；15 个可发布包如下，6 个实验性包
+发布按依赖顺序进行（依赖在前）；15 个可发布包如下，7 个实验性包
 （`conatus_alerting` / `conatus_browser_use` / `conatus_computer_use` /
-`conatus_observability` / `conatus_team` / `conatus_workflow`）是
-`publish_to: none`，不在发布之列：
+`conatus_intent` / `conatus_observability` / `conatus_team` / `conatus_workflow`）
+是 `publish_to: none`，不在发布之列：
 
 ```bash
 for p in conatus_core conatus_foundation conatus_compaction conatus_cron \

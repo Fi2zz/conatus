@@ -2,7 +2,35 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [未发布]
+## [0.16.0] — 2026-09-20
+
+新增实验性包 `conatus_intent`（意图路由，`publish_to: none`，不进伞包）：
+
+- 定位：Agent Loop **之前**的前置路由器。先用正则和向量做本地意图匹配，命中就直接
+  执行动作，不命中才走完整 Agent Loop。正则确定性高、零延迟，永远先跑；向量兜底同义
+  表达；模型只处理真正复杂的请求
+- 三种路由动作：`DirectAction`（直接收口，零模型调用）/ `ToolAction`（预置工具调用后
+  由模型收口）/ `DelegateAction`（经 `skill` 工具取回技能正文后交模型）；声明式动作
+  支持 JSON 往返，闭包构造的动作序列化时显式抛 `IntentException('not-serializable')`
+- 接线复用 `conatus_agent` 已有的确定性路由 seam（`Router` / `RouteReply` /
+  `RouteTools` / `RoutePass`），**不改 Agent Loop**：session 记录、取消传递、遥测全部
+  沿用既有机制。`provideIntentRouter(..., fastPath: true)` 必须早于 `provideAgentLoop`
+- 匹配层：`RegexMatcher` 按 `priority` 降序、同 priority 保注册顺序（用原始下标做
+  tiebreaker，不依赖不稳定的 `List.sort`）；`VectorMatcher` 取相似度最高且达阈值的
+  意图，同分高优先级胜出
+- 嵌入 seam：`EmbeddingProvider` + 纯 Dart 的 `LocalEmbeddingProvider`（字符 n-gram
+  哈希 + 余弦，离线确定）+ `LlmEmbeddingProvider(EmbeddingLlm)`；也支持
+  `Intent.embedding` 预计算嵌入。嵌入生成或向量匹配失败只降级 + 埋点，不阻塞路由
+- `IntentLoader`：意图是数据，从 JSON 加载（`tool` / `builtin` / `delegate` /
+  `respond` 四种动作，`{{input}}` / `{{state.<key>}}` 参数插值）
+- 候选生成（均**只产候选，不自动注册**）：`SkillIntentBridge`（技能沉淀 → 意图）、
+  `ToolIntentGenerator`（部署时扫工具表批量生成）、`IntentLearner`（未命中积累 →
+  `IntentCandidate`，动作由人绑定）
+- 埋点：`intent.registered` / `intent.unregistered` / `intent.matched` /
+  `intent.missed` / `intent.vector.failed` / `intent.embedding.failed`；命中写
+  `intent/routed` 会话事件
+- 依赖方向：`conatus_intent → conatus_agent → conatus_llm → conatus_core`，反向不
+  成立；`conatus_agent` 不依赖它
 
 `conatus_tui` 新增选项浮层与权限模式：
 
