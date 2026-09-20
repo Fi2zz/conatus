@@ -30,6 +30,7 @@ class TestHarness {
   static Future<TestHarness> create({
     List<LlmResult>? llmScript,
     int reflectionMaxRetries = 0,
+    void Function(Context app, Session session)? configure,
   }) async {
     final Context app = Context.root();
     final InMemoryTelemetry telemetry = InMemoryTelemetry();
@@ -49,6 +50,8 @@ class TestHarness {
       app.provide(
           'reflection', Reflector(llm: llm, maxRetries: reflectionMaxRetries));
     }
+    // 同样是 AgentLoop 的构造依赖（如 `router`）在此补装。
+    configure?.call(app, session);
     final AgentLoop agent = provideAgentLoop(app, session: session);
 
     return TestHarness._(app, llm, output, askUser, telemetry, session, agent);
@@ -116,7 +119,8 @@ class TestHarness {
   ///
   /// 同一 prompt 可能被问多次（如两次相同的审批），[waitForOutput] 无法区分，
   /// 用本方法按提问计数等待。
-  Future<void> waitForAsk({Duration timeout = const Duration(seconds: 5)}) async {
+  Future<void> waitForAsk(
+      {Duration timeout = const Duration(seconds: 5)}) async {
     final int baseline = output.lines.length;
     final Stopwatch watch = Stopwatch()..start();
     while (output.lines.length <= baseline) {
@@ -129,15 +133,14 @@ class TestHarness {
 
   /// 断言 telemetry 出现过指定事件（可选校验 data 子集）。
   void expectEvent(String name, {Map<String, Object?>? data}) {
-    final Iterable<TelemetryEvent> matches = telemetry.recent
-        .where((TelemetryEvent event) => event.name == name);
+    final Iterable<TelemetryEvent> matches =
+        telemetry.recent.where((TelemetryEvent event) => event.name == name);
     expect(matches, isNotEmpty,
         reason: '未找到事件: $name\n实际事件序列:\n${_eventNames().join('\n')}');
     if (data != null) {
       expect(
-        matches.any((TelemetryEvent event) =>
-            data.entries.every((MapEntry<String, Object?> kv) =>
-                event.data[kv.key] == kv.value)),
+        matches.any((TelemetryEvent event) => data.entries.every(
+            (MapEntry<String, Object?> kv) => event.data[kv.key] == kv.value)),
         isTrue,
         reason: '事件 $name 的 data 不匹配: $data',
       );
@@ -157,7 +160,8 @@ class TestHarness {
 
   /// 断言从未出现指定事件。
   void expectNoEvent(String name) {
-    expect(telemetry.recent.where((TelemetryEvent e) => e.name == name), isEmpty,
+    expect(
+        telemetry.recent.where((TelemetryEvent e) => e.name == name), isEmpty,
         reason: '不应出现事件: $name');
   }
 
