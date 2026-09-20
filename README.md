@@ -7,8 +7,10 @@
 
 本仓库是一个 [pub workspace](https://dart.dev/tools/pub/workspaces) monorepo。
 **根包 `conatus` 是伞包（umbrella）**：自身不含实现，统一再导出 `packages/` 下的
-13 个模块包，因此 `import 'package:conatus/conatus.dart';` 是完整公开 API；也可以
+14 个模块包，因此 `import 'package:conatus/conatus.dart';` 是完整公开 API；也可以
 只依赖某个模块包（如 `conatus_core`、`conatus_agent`），以获得更小的依赖面。
+仓库另有 6 个**实验性包**（`publish_to: none`，不导出到伞包，API 可能随时变更），
+需显式依赖，见下方「实验性包」小节。
 
 | 包 | 说明 | 依赖 |
 |----|------|------|
@@ -29,6 +31,17 @@
 | [`conatus_tasks`](packages/conatus_tasks) | 任务中心（Task Center）：Agent Loop / sub-agent / shell / schedule 运行时任务追踪（任务树 + `task/changed` 持久化 + `list_tasks` / `cancel_task` 工具） | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_schedule` |
 | [`conatus_tui`](packages/conatus_tui) | 基于 [nocterm](https://pub.dev/packages/nocterm) 的文本 TUI：对话 + 工具闭环、斜杠命令、会话选择面板、选项浮层与权限模式 | `conatus_agent`、`conatus_compaction`、`conatus_cron`、`conatus_llm`、`conatus_schedule`、`conatus_search`、`conatus_skill`、`nocterm` |
 
+### 实验性包（不进伞包，`publish_to: none`）
+
+| 包 | 说明 | 依赖 | 文档 |
+|----|------|------|------|
+| `conatus_alerting` | 告警：订阅遥测事件流，声明式规则判定后主动通知 | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_tts`、`http` | [README](packages/conatus_alerting/README.md) |
+| `conatus_browser_use` | 浏览器操作：经 MCP 接 Playwright / Chrome DevTools，检查与交互网页 | `conatus_agent`、`conatus_core`、`conatus_credentials`、`conatus_foundation`、`conatus_mcp`、`conatus_tasks` | [README](packages/conatus_browser_use/README.md) |
+| `conatus_computer_use` | 桌面操作：经 MCP 接 Cua Driver，截屏 / 鼠标 / 键盘 | `conatus_agent`、`conatus_core`、`conatus_credentials`、`conatus_foundation`、`conatus_mcp`、`conatus_tasks` | [README](packages/conatus_computer_use/README.md) |
+| `conatus_observability` | 可观测性导出器：span 语义 + 从 Session Log 派生 trace | `conatus_agent`、`conatus_foundation` | [README](packages/conatus_observability/README.md) |
+| `conatus_team` | 多智能体协作：任务板（DAG + CAS）+ 成员运行时 + 协作模式 | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_team/README.md) |
+| `conatus_workflow` | 编排引擎：声明式流程（数据，非代码）+ 运行状态机 | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_tasks`、`conatus_team` | [README](packages/conatus_workflow/README.md) |
+
 依赖方向自上而下，无环：
 
 ```
@@ -45,7 +58,17 @@ conatus_asr ────▶ conatus_foundation
 conatus_tts ────▶ conatus_core
 conatus_tasks ──▶ conatus_agent
 conatus_tui ────▶ conatus_agent、conatus_compaction、conatus_cron、conatus_schedule、conatus_search、conatus_skill
+conatus_observability ▶ conatus_agent
+conatus_alerting ────▶ conatus_agent、conatus_tts、conatus_foundation
+conatus_browser_use ─▶ conatus_mcp、conatus_tasks、conatus_credentials、conatus_foundation
+conatus_computer_use ▶ conatus_mcp、conatus_tasks、conatus_credentials、conatus_foundation
+conatus_team ────────▶ conatus_agent、conatus_llm、conatus_foundation
+conatus_workflow ────▶ conatus_team、conatus_tasks、conatus_foundation
 ```
+
+（`conatus_core` 为所有包的公共底座，各行从略。）后 6 行是实验性包：只被上层装配
+依赖，稳定包不反向依赖它们（`conatus_agent` / `conatus_mcp` / `conatus_tasks` 都
+不知道它们的存在）。
 
 用于构建**可动态加载、卸载、热替换**的插件化系统。核心解决两个正交维度的问题：
 
@@ -72,7 +95,8 @@ conatus_tui ────▶ conatus_agent、conatus_compaction、conatus_cron、
 - 🔌 **MCP 生态**：`mcp`（MCP 客户端：stdio / HTTP / SSE 传输 + 握手与工具发现），外部 server 的工具以 `server__tool` 接入同一张工具表，风险缺省 `medium` 走审批
 - 🗜️ **分层压缩与缓存度量**：`content-classifier`（内容分类器能力缝）、`layered-compaction`（按类别分层折叠：工具结果压成指针、用户偏好留原文）、`context-cache`（可缓存前缀指纹 + 命中遥测）
 - 🔭 **产品化**：`telemetry`（事件导出 + 埋点）、`evaluation`（用例评估 + 基线对比）、`approval`（高危工具审批）、`skill`（技能沉淀）、`skill-catalog`（技能加载：发现 `SKILL.md` 指令集 + 目录注入 + `skill` 工具）、`recovery`（会话快照恢复）
-- ✅ **完整测试覆盖**：798 个单元测试
+- 🕹️ **实验性能力包**（`publish_to: none`，不进伞包）：`alerting`（订阅遥测按规则主动告警）、`browser_use` / `computer_use`（经 MCP 驱动浏览器与本地桌面）、`team`（多智能体协作：任务板 + 成员运行时）、`workflow`（把协作沉淀为声明式流程资产）、`observability`（span 语义 + 从 Session Log 派生 trace）
+- ✅ **完整测试覆盖**：1350 个测试（21 个模块包 + 根包，CI 全量执行）
 
 ---
 
@@ -100,6 +124,8 @@ dependency_overrides:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_compaction}
   conatus_credentials:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_credentials}
+  conatus_cron:
+    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_cron}
   conatus_foundation:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_foundation}
   conatus_llm:
@@ -112,8 +138,28 @@ dependency_overrides:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_search}
   conatus_skill:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_skill}
+  conatus_tasks:
+    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_tasks}
   conatus_tts:
     git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_tts}
+```
+
+实验性包（`conatus_alerting` / `conatus_browser_use` / `conatus_computer_use` /
+`conatus_observability` / `conatus_team` / `conatus_workflow`）不在伞包依赖内，
+要用就单独声明，并同样把它们依赖的兄弟包放进 `dependency_overrides`：依赖
+`conatus_workflow` 时要额外补 `conatus_team`（workflow → team），依赖
+`conatus_browser_use` / `conatus_computer_use` 时要补 `conatus_mcp` 与
+`conatus_tasks`（上面的列表已含）。
+
+```yaml
+dependencies:
+  conatus_workflow:
+    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_workflow}
+
+dependency_overrides:
+  # ...上面的兄弟包列表...
+  conatus_team:
+    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_team}
 ```
 
 各包发布到 pub.dev 后即可简化为 `conatus: ^0.15.0`。
@@ -1027,6 +1073,116 @@ for (final step in turn.steps) print('${step.call.name}: ${step.result.content}'
 
 ---
 
+## 实验性能力包
+
+以下 6 个包是 `publish_to: none` 的实验性包，不进伞包，需显式依赖
+（`import 'package:conatus_alerting/conatus_alerting.dart';` 等）。API 可能在没有
+major 版本号变更的情况下发生破坏性改动，请勿在生产环境依赖。
+
+### `alerting` — 主动告警（`conatus_alerting`）
+
+`conatus_observability` 负责**收集和导出**（被动管道），本包负责**检测和通知**：
+订阅 `telemetry` 事件流，用声明式规则判断「什么不对劲」，再经控制台 / Webhook /
+语音主动告诉用户。智能音箱场景下用户不在屏幕前，异常需要 Agent 主动播报。
+
+```dart
+provideTelemetry(app);
+provideAlerting(app);              // 默认 8 条规则 + ConsoleNotifier
+
+// 或：自定义规则与通知渠道（与上一行二选一）
+provideAlerting(app,
+    notifier: WebhookNotifier(url: Uri.parse('https://hooks.example.com/xxx')),
+    rules: RuleParser.parse(jsonDecode(File('alerts.json').readAsStringSync())));
+```
+
+默认规则覆盖 LLM 慢 / 工具慢 / 工具连续失败 / Session 与当日预算 / Agent 轮次超限 /
+子 Agent 卡住；规则可从 JSON 加载，冷却期防告警风暴，通知失败不阻塞主流程。
+详见 [`packages/conatus_alerting/README.md`](packages/conatus_alerting/README.md)。
+
+### `browser_use` — 浏览器操作（`conatus_browser_use`）
+
+`web_search` 只返回搜索摘要、`fetch_url` 只返回文本，都是**只读的**；本包补上
+**交互能力**（填表单、点按钮、翻页、等待异步加载）。工具由 Provider 拥有，注册进
+`ctx.tools`，模型可直接调用。
+
+```dart
+provideTools(app);
+provideBrowserUse(app,
+    provider: PlaywrightMcpProvider(
+        command: 'npx', args: <String>['-y', '@playwright/mcp@latest']),
+    session: session);             // 浏览器绑定 Session，跨轮次复用
+```
+
+浏览器绑定使用它的**确切实时 Session**：Session 释放时关闭其启动的资源；fork 后用
+`initializeBrowserFor` 创建全新浏览器状态（profile 与登录状态不恢复）。工具按
+`browserToolRisk` 分 low / medium / high，高危操作走 `approval`。
+详见 [`packages/conatus_browser_use/README.md`](packages/conatus_browser_use/README.md)。
+
+### `computer_use` — 桌面操作（`conatus_computer_use`）
+
+让模型观察并操作**本地桌面**（截屏、移动鼠标、点击、输入）。与 browser-use 的关键
+区别：桌面是共享资源，**没有 Session 级别的所有权**，取消调用也无法撤销已送达的
+输入；因此所有输入操作一律 `high` 风险，走审批。
+
+```dart
+provideTools(app);
+provideComputerUse(app,
+    provider: CuaDriverMcpProvider(command: 'cua-driver', args: <String>['mcp']));
+```
+
+支持图像的模型路由接收**持久化截图**（挂 `attachmentStore`），不支持的接收 MCP
+图像诊断文本（`imageSupportFor`）。要把操作记进触发它的 Session 日志，用
+`registerDesktopTools`。
+详见 [`packages/conatus_computer_use/README.md`](packages/conatus_computer_use/README.md)。
+
+### `team` — 多智能体协作（`conatus_team`）
+
+回答「谁创建谁、谁跟谁说话、怎么同步进度、什么时候停」。成员有**独立的上下文窗口**，
+只经任务板与直达消息交换**结论**、不交换**过程**；成员生命周期绑定队长，队长释放时
+成员自动终止。
+
+```dart
+provideAgentTeam(app, session: session, telemetry: telemetry);
+provideTeamTools(app, team: app.team, tools: app.tools);   // 10 个团队工具
+```
+
+协作模式：`sequential` / `concurrent` / `group_chat` / `maker_checker`。端到端示例：
+`cd packages/conatus_team && dart run example/demo.dart`（无需 API Key）。
+详见 [`packages/conatus_team/README.md`](packages/conatus_team/README.md)。
+
+### `workflow` — 流程编排（`conatus_workflow`）
+
+把多 Agent 协作**沉淀为可复用的流程资产**：流程是**数据**（声明式 JSON），不是代码，
+可被模型生成、被用户编辑、被版本管理。节点分 tool / agent / sub-workflow 三类，
+支持 DAG 依赖、条件 guard，以及暂停 / 恢复 / 重跑 / 取消。
+
+```dart
+provideWorkflow(app, team: app.team, tools: app.tools);
+provideWorkflowTools(app);         // 8 个流程工具
+await engine.register(definition);
+final run = await engine.start('code-review', inputs: {...});
+```
+
+流程只能引用**已注册的能力**（工具、成员、子流程），未注册的引用在注册或执行时报
+`WorkflowException`。详见 [`packages/conatus_workflow/README.md`](packages/conatus_workflow/README.md)。
+
+### `observability` — 可观测性导出（`conatus_observability`）
+
+把 `telemetry` 埋点与 `session_log` 事件流导出到真实可观测性后端，并提供分布式追踪
+与成本追踪语义。当前已落地 **span 语义 + 从 Session Log 派生 trace**，OTLP /
+Prometheus / JSONL 导出器按实现方案陆续补齐。
+
+```dart
+final spans = await TraceBuilder(sessionLog: log).buildTrace('session-1');
+// 根 span 是 agent.turn，其下挂 llm / tool / subagent 子 span
+```
+
+离线示例：`cd packages/conatus_observability && dart run example/observability_demo.dart`。
+详见 [`packages/conatus_observability/README.md`](packages/conatus_observability/README.md)
+与 [`doc/usage.md`](packages/conatus_observability/doc/usage.md)。
+
+---
+
 ## 核心概念
 
 ### 效应（Effect）与时间可组合性
@@ -1477,6 +1633,27 @@ root.provide('x', 1);
 | `RecoveryService`：`snapshot(session)` / `restore(id)` / `load(id)` / `list()` / `delete(id)` | 快照与恢复 |
 | `SessionSnapshot` / `SnapshotStore` / `MemorySnapshotStore` / `DatabaseSnapshotStore` / `RecoveryException` | 快照类型与存储 |
 
+### 实验性包
+
+以下包均为 `publish_to: none`，不进伞包，需显式依赖（详见各包 README）。
+
+| 成员 | 说明 |
+|------|------|
+| `provideAlerting(ctx, {alerting, rules, notifier, telemetry})` / `ctx.alerting` | 提供 `'alerting'`：订阅 `telemetry` 事件流，按规则判定并通知（`conatus_alerting`） |
+| `Alert` / `AlertRule` / `AlertContext` / `RuleParser` / `defaultAlertRules` | 告警模型 / 声明式规则 / 窗口统计与冷却 / JSON 规则解析 / 默认 8 条规则 |
+| `AlertNotifier`：`ConsoleNotifier` / `WebhookNotifier` / `AskUserNotifier` / `CompositeNotifier` / `QuietHoursNotifier` | 通知渠道：控制台 / Slack 兼容 Webhook / TTS 播报 / 复合 / 静默期（critical 例外） |
+| `provideBrowserUse(ctx, {provider, config, session, tools, taskCenter, approval, telemetry})` | 提供 `'browserUse'`：注册浏览器操作工具，`provider` 缺省 `PlaywrightMcpProvider`（`conatus_browser_use`） |
+| `initializeBrowserFor(ctx, session)` / `BrowserUseProvider` / `SessionBrowser` / `BrowserConfig` / `browserToolRisk` | fork 后初始化新浏览器 / Provider 端口 / 绑定 Session 的浏览器 / 启动配置 / 工具风险分级 |
+| `PlaywrightMcpProvider` / `ChromeDevToolsMcpProvider` / `StagehandProvider` | 浏览器 Provider（前两个走 MCP，Stagehand 为未接入骨架） |
+| `provideComputerUse(ctx, {provider, tools, taskCenter, approval, telemetry})` / `registerDesktopTools(ctx, desktop, {sessionId, sessionLog})` | 提供 `'computerUse'`：注册桌面工具 / 把操作记录到触发它的 Session 日志（`conatus_computer_use`） |
+| `ComputerUseProvider` / `CuaDriverMcpProvider` / `CuaDriverNativeProvider` / `DesktopSession` / `Screenshot` / `ScreenRegion` | 桌面 Provider 与值类型（Native 为未接入骨架） |
+| `imageSupportFor(provider, model)` / `AttachmentStore` / `InMemoryAttachmentStore` | 图像路由（持久化截图 / MCP 图像诊断）与截图存储 |
+| `provideAgentTeam(ctx, {leadId, llm, tools, defaultTools, maxMembers, taskTracker, session, approval, telemetry})` / `ctx.team` / `provideTeamTools(ctx, {team, tools})` | 提供 `'team'` 与 10 个团队工具（`conatus_team`） |
+| `AgentTeam` / `TeamBoard` / `MemberRuntime` / `TeamRole` / `TeamPattern` / `TeamHooks` | 团队运行时 / 任务板（DAG + CAS）/ 成员运行时 / 角色 / 协作模式 / 运行时 seam |
+| `provideWorkflow(ctx, {engine, store, team, tools, taskCenter, session, approval, telemetry, maxDepth})` / `ctx.workflow` / `provideWorkflowTools(ctx)` | 提供 `'workflow'` 与 8 个流程工具（`conatus_workflow`） |
+| `WorkflowEngine` / `WorkflowDefinition` / `WorkflowNode` / `WorkflowRun` / `RunStatus` / `RunNodeStatus` | 引擎 / 声明式流程定义 / 三种节点（tool / agent / sub-workflow）/ 运行记录与状态机 |
+| `TraceBuilder(sessionLog:)` / `Span` / `SpanStatus` | 从 Session Log 派生 trace 与 span 语义（`conatus_observability`） |
+
 ---
 
 ## 设计说明
@@ -1553,21 +1730,26 @@ for d in packages/*/; do (cd "$d" && dart test); done
 ## 发版
 
 所有包共用同一个版本号，包间依赖也用同一约束（`^0.15.0` 在 0.x 下等价于
-`>=0.15.0 <0.16.0`，所以每升一次版本，16 个 `pubspec.yaml` 必须一起改）：
+`>=0.15.0 <0.16.0`，所以每升一次版本，22 个 `pubspec.yaml`（21 个模块包 + 根伞包）
+必须一起改）：
 
 ```bash
-bash tool/version.sh            # 检查：16 个包版本号一致，且 54 条包间约束都指向它
+bash tool/version.sh            # 检查：22 个包版本号一致，且 91 条包间约束都指向它
 bash tool/version.sh 0.16.0     # 统一升版：改 version 行 + 同步所有包间约束
 ```
 
 漏改任何一处，`dart pub get` 会在 workspace 内解析阶段直接失败（不会悄悄发出去）。
 
-发布按依赖顺序进行（依赖在前）：
+发布按依赖顺序进行（依赖在前）；15 个可发布包如下，6 个实验性包
+（`conatus_alerting` / `conatus_browser_use` / `conatus_computer_use` /
+`conatus_observability` / `conatus_team` / `conatus_workflow`）是
+`publish_to: none`，不在发布之列：
 
 ```bash
-for p in conatus_core conatus_foundation conatus_compaction conatus_credentials \
-         conatus_llm conatus_mcp conatus_schedule conatus_search conatus_skill \
-         conatus_asr conatus_tts conatus_agent conatus_tasks conatus_tui; do
+for p in conatus_core conatus_foundation conatus_compaction conatus_cron \
+         conatus_credentials conatus_llm conatus_mcp conatus_schedule \
+         conatus_search conatus_skill conatus_asr conatus_tts conatus_agent \
+         conatus_tasks conatus_tui; do
   dart pub publish -C "packages/$p"
 done
 dart pub publish            # 最后发布伞包 conatus
