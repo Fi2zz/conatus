@@ -1,8 +1,10 @@
 name: Integration Tests
 
-on:
-  push:
-  pull_request:
+# 已禁用：不再触发任何 CI 运行（保留文件备查）。
+# 重新启用：取消注释下面的 on 块并提交即可。
+# on:
+#   push:
+#   pull_request:
 
 jobs:
   integration-test:
