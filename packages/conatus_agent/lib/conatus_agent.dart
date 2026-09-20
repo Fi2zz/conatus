@@ -34,6 +34,17 @@ export 'src/approval.dart'
         RuleBasedApproval;
 export 'src/approval_gate.dart'
     show instrumentApproval, pathArguments, provideApproval;
+export 'src/autonomous_policy.dart'
+    show AutonomousPolicy, CostTracker, DefaultAutonomousPolicy, TimeWindow;
+export 'src/autonomous_runner.dart'
+    show
+        AutonomousResult,
+        AutonomousRunner,
+        AutonomousRunnerContext,
+        StopReason,
+        kAutonomousContinuationPrompt,
+        provideAutonomousRunner;
+export 'src/autonomous_runner_default.dart' show DefaultAutonomousRunner;
 export 'src/caching.dart'
     show
         CachePlan,
@@ -114,6 +125,7 @@ export 'src/plan_mode.dart'
         kPlanModePolicy,
         restorePlanModeState;
 export 'src/plan_mode_default.dart' show DefaultPlanMode, providePlanMode;
+export 'src/priority_engine.dart' show GoalPriority, PriorityEngine;
 export 'src/prompt_evolver.dart'
     show
         EvolutionDecision,
