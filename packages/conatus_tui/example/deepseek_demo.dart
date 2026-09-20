@@ -20,15 +20,20 @@ import 'package:conatus_llm/conatus_llm.dart';
 import 'package:conatus_tui/conatus_tui.dart';
 
 Future<void> main(List<String> args) async {
-  final _Options options = _Options.parse(args, stdout);
+  final TuiOptions options = TuiOptions.parse(args);
+  if (options.helpRequested) {
+    stdout.write(kDemoUsage);
+    return;
+  }
+  final String? model = parseModelFlag(args);
   final String key = Platform.environment['DEEPSEEK_API_KEY'] ?? '';
   final bool configured = key.trim().isNotEmpty;
 
   final FallbackLlm llm = configured
-      ? FallbackLlm(<LlmProvider>[DeepSeekProvider(model: options.model)])
+      ? FallbackLlm(<LlmProvider>[DeepSeekProvider(model: model)])
       : FallbackLlm(<LlmProvider>[_OfflineProvider()]);
   final String label = configured
-      ? (options.model ?? 'deepseek-flash')
+      ? (model ?? 'deepseek-flash')
       : '离线 Demo（未设置 DEEPSEEK_API_KEY）';
 
   if (!configured) {
@@ -49,44 +54,22 @@ Future<void> main(List<String> args) async {
   await runtime.dispose();
 }
 
-/// 命令行选项。
-class _Options {
-  const _Options({required this.session, this.model, this.first});
+/// 本 Demo 的用法文案。
+const String kDemoUsage = '用法：dart run example/deepseek_demo.dart '
+    '[--session <id>] [--model <name>] [--first <文本>]\n'
+    '  --session <id>   启动会话 id（默认 $kTuiDefaultSession）\n'
+    '  --model <name>   DeepSeek 模型名（默认 deepseek-flash）\n'
+    '  --first <文本>   挂载后自动发一轮\n';
 
-  /// 启动会话 id。
-  final String session;
-
-  /// DeepSeek 模型名（缺省用 provider 默认值）。
-  final String? model;
-
-  /// 挂载后自动发送的首轮输入。
-  final String? first;
-
-  static const String _usage = '用法：dart run example/deepseek_demo.dart '
-      '[--session <id>] [--model <name>] [--first <文本>]\n'
-      '  --session <id>   启动会话 id（默认 deepseek）\n'
-      '  --model <name>   DeepSeek 模型名（默认 deepseek-flash）\n'
-      '  --first <文本>   挂载后自动发一轮\n';
-
-  static _Options parse(List<String> args, IOSink out) {
-    String session = 'deepseek';
-    String? model;
-    String? first;
-    for (int i = 0; i < args.length; i++) {
-      final String arg = args[i];
-      if (arg == '--help' || arg == '-h') {
-        out.write(_usage);
-        exit(0);
-      } else if (arg == '--session' && i + 1 < args.length) {
-        session = args[++i];
-      } else if (arg == '--model' && i + 1 < args.length) {
-        model = args[++i];
-      } else if (arg == '--first' && i + 1 < args.length) {
-        first = args[++i];
-      }
-    }
-    return _Options(session: session, model: model, first: first);
+/// 从参数里取 `--model` 的值；未出现或缺尾值时返回 `null`。
+///
+/// `--session` / `--first` / `--help` 交给 [TuiOptions.parse]，这里只补 Demo
+/// 专属的模型开关。
+String? parseModelFlag(List<String> args) {
+  for (int index = 0; index + 1 < args.length; index++) {
+    if (args[index] == '--model') return args[index + 1];
   }
+  return null;
 }
 
 /// 无 Key 时的离线脚本模型：时间类问题回一次 `get_time` 工具调用，其余直接回显。

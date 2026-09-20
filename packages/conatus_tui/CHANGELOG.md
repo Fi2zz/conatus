@@ -32,6 +32,9 @@
 - 入口的命令行解析提为公开 API：新增 `TuiOptions.parse(args)`、`TuiOptions.usage`
   与 `kTuiDefaultSession`，调用方自己的入口可直接复用；`--help` 只置
   `helpRequested`，不再在解析里打印用法并退出。
+- `example/deepseek_demo.dart` 改用 `TuiOptions`：`--session` / `--first` /
+  `--help` 走公开解析，Demo 专属的 `--model` 由 `parseModelFlag` 补取；默认会话
+  随之统一为 `kTuiDefaultSession`（tui）。
 
 ## [0.15.0] — 2026-09-15
 
