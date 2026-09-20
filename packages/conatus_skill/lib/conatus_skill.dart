@@ -24,6 +24,11 @@
 /// 技能来自磁盘时是「Markdown + frontmatter」，来自 [SkillRegistration] 时是
 /// 「名字 + 描述 + 正文」；两条来源进同一份目录、同一个 `skill` 工具。
 ///
+/// 注册表支持分层：`SkillRegistry(parent:, visible:)` 的子作用域继承父级技能、
+/// 同名覆盖，父级变化级联。挂载点要跟着作用域化——目录段用
+/// `SkillCatalogSection.attach(name:)` 换段名，工具用 `SkillLoadTool(name:)` 或
+/// `provideSkillTool(..., name:)` 换名，否则装配处抛 `StateError`。
+///
 /// 服务键 `'skillRegistry'`（`ctx.skillRegistry`）。名称与 `conatus_agent` 的
 /// `SkillLibrary`（`'skill'`，把重复工具序列沉淀成新工具）刻意区分。
 library;
@@ -64,7 +69,8 @@ export 'src/skill_provider.dart' show SkillProvider, SkillProviderException;
 export 'src/skill_ranking.dart' show SkillCandidateBatch, rankSkillCandidates;
 export 'src/skill_refresh.dart' show SkillCollector;
 export 'src/skill_registry.dart' show SkillRegistry;
-export 'src/skill_tool.dart' show SkillLoadTool;
+export 'src/skill_scope.dart' show SkillVisibility, mergeScopedSummaries;
+export 'src/skill_tool.dart' show SkillLoadTool, kSkillToolName;
 export 'src/skill_types.dart'
     show
         SkillCandidate,

@@ -19,3 +19,9 @@
 - `SkillLoadTool` / `provideSkillTool`：`skill` 工具按名字返回 `<skill_content>`
   正文块，结果走 `tool/result` 事件
 - `SkillRootWatcher`：为已存在的发现根起目录监听，变更合并成一次失效
+- `SkillRegistry` 分层：`parent` + `visible` 组成子作用域，父级快照经谓词过滤后
+  并入子级 `available`，同名由子级赢下并告警；父级变化级联到子级且不重跑子级
+  provider；`load` 只认可见集合，被过滤的技能取不到
+- 挂载点作用域化：`SkillCatalogSection.attach({name})` 换段名、
+  `SkillLoadTool({name})` / `provideSkillTool({tools, name})` 换工具名与目标表，
+  多个作用域得以共用一份 system prompt 与一张工具表

@@ -39,9 +39,14 @@ class SkillCatalogSection {
   final int descriptionMaxLength;
 
   Disposer? _section;
+  String _name = kSkillCatalogSectionName;
 
   /// 开始跟随注册表；返回撤销函数（幂等）。
-  Disposer attach() {
+  ///
+  /// [name] 是挂到 prompt 上的段名：同一份 [prompt] 上挂多个作用域的目录段时，
+  /// 各作用域要用不同的段名。缺省 [kSkillCatalogSectionName]。
+  Disposer attach({String name = kSkillCatalogSectionName}) {
+    _name = name;
     final Disposer listener = registry.onChange(sync);
     sync();
     return () {
@@ -57,7 +62,7 @@ class SkillCatalogSection {
       return;
     }
     _section ??= prompt.section(PromptSection(
-      name: kSkillCatalogSectionName,
+      name: _name,
       order: order,
       text: _renderCurrent,
     ));

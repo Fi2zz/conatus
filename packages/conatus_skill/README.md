@@ -97,6 +97,35 @@ provideSkillTool(ctx);
 - `SkillCatalogSection`：目录为空时**不注册** `skills` 段——没有技能时 system
   prompt 与本插件不存在时逐字相同。
 
+## 分层（作用域）
+
+`SkillRegistry` 支持父子链：传了 `parent` 的注册表成为子作用域，它的 `available`
+是父级快照与自己快照的合并结果——同名由子级赢下并告警，其余全部继承。
+
+```dart
+final Context child = ctx.plugin('scoped', (Context c) {});
+final SkillRegistry scoped = SkillRegistry(
+  parent: ctx.skillRegistry,
+  visible: (SkillSummary s) => s.source == kSkillSourceProjectConatus,
+);
+await provideSkillRegistry(child, registry: scoped); // 遮蔽父级的 'skillRegistry'
+```
+
+- `visible` 谓词决定从父级继承哪些技能，`null` 表示全部继承。它**只约束继承来的
+  条目**：本注册表自己注册的技能始终可见。
+- 可见性是硬边界：被过滤掉的技能不出现在 `available` / `modelInvocable`，
+  `load(name)` 也返回 `null`——模型无法绕过目录调用一个看不见的技能。
+- 父级快照变化级联到子级：子级只重新合并已有的自身快照，不重跑自己的 provider。
+- 这套分层与层内 rank 排序是两回事：rank（100–500 与 250）在**一个注册表内部**
+  决定同名遮蔽，`parent` 决定**注册表之间**的合并。
+
+挂载点必须跟着作用域化，否则会在同名检查处抛 `StateError`：
+
+| 挂载点 | 隔离方式 |
+|---|---|
+| 目录段 | 换段名：`section.attach(name: 'skills-scoped')`；或用独立的 `SystemPrompt` |
+| `skill` 工具 | 换工具名：`provideSkillTool(child, tools: scopedTools, name: 'skill-scoped')` |
+
 ## 模型可见
 
 - 目录段是运行时现场装配的 system prompt 的一部分（与 `persona` 段同构），
@@ -110,10 +139,16 @@ provideSkillTool(ctx);
 
 ## 限制
 
-- 只有一层全局注册表，没有 per-scope 分层；同名遮蔽发生在整个可见范围内。
+- 分层是链式的：一个子注册表只认一个 `parent`，没有多父合并；同名覆盖是整条替换，
+  没有字段级合并。
+- 父级释放不会通知子级：父级 `dispose()` 不广播变更，还活着的子级会停在最后一次
+  合并的快照上（正常用法里子级随同一个上下文树一起释放，不会走到这里）。
+- 挂载点不自动作用域化：多个作用域共用一份 `SystemPrompt` / `ToolRegistry` 时，
+  段名与工具名要显式换名，否则装配处抛 `StateError`。
 - provider 没有取消信号：一次慢的 `list()` 会拖住这一轮收集（收集天然串行）。
 - 只扫发现根一层，不递归 `**/SKILL.md`；发现根在装配时确定，之后不跟随工作目录。
-- 只做模型侧调用，没有斜杠 `/name` 直接调用；`disable-model-invocation` 的技能
-  因此对模型完全不可见。
+- 本包只有模型侧入口：斜杠 `/<技能名>` 由 `conatus_tui` 提供（它把技能投影成用户
+  命令，`disable-model-invocation` 的技能由此手动触发）；直接用本包时，那类技能
+  对模型完全不可见，也没有别的调用路径。
 - 单个条目非法即整条丢弃，模型只能看到「不存在」。
 - `metadata` 只做保留，不参与寻址或渲染。

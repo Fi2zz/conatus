@@ -186,5 +186,39 @@ void main() {
         throwsArgumentError,
       );
     });
+
+    test('provideSkillTool 可注册到独立工具表并换名', () async {
+      final Context ctx = Context.root();
+      addTearDown(ctx.dispose);
+      provideTools(ctx);
+      provideSystemPrompt(ctx);
+      final SkillRegistry registry = await provideSkillRegistry(
+        ctx,
+        inlineSkills: const <SkillRegistration>[
+          SkillRegistration(
+            name: 'release-notes',
+            description: '把合并记录改写成发布说明',
+            content: '先读 git log。',
+          ),
+        ],
+      );
+      final ToolRegistry scopedTools = ToolRegistry();
+
+      final SkillLoadTool tool =
+          provideSkillTool(ctx, tools: scopedTools, name: 'skill-scoped');
+
+      expect(tool.name, 'skill-scoped');
+      expect(scopedTools.names, <String>['skill-scoped']);
+      expect(ctx.tools.names, isEmpty);
+      expect(registry.available.single.name, 'release-notes');
+
+      final ToolResult result = await scopedTools.call(const ToolCall(
+        name: 'skill-scoped',
+        arguments: <String, Object?>{'name': 'release-notes'},
+      ));
+
+      expect(result.isError, isFalse);
+      expect(result.content, contains('先读 git log。'));
+    });
   });
 }

@@ -9,19 +9,22 @@ import 'skill_content.dart';
 import 'skill_registry.dart';
 import 'skill_types.dart';
 
+/// `skill` 工具的默认名；作用域化装配时用 [SkillLoadTool.name] 换名。
+const String kSkillToolName = 'skill';
+
 /// 加载技能正文的工具。
 ///
 /// 只读、无副作用：结果就是一段 `<skill_content>` 文本，由 Agent Loop 正常写进
 /// `tool/result` 事件，因此「模型可见即已记录」无需额外机制。
 class SkillLoadTool extends Tool {
-  /// 构造工具。
-  const SkillLoadTool({required this.registry});
+  /// 构造工具；[name] 是注册到工具表的名字，同一张表上挂多个作用域时需换名。
+  const SkillLoadTool({required this.registry, this.name = kSkillToolName});
 
   /// 技能来源。
   final SkillRegistry registry;
 
   @override
-  String get name => 'skill';
+  final String name;
 
   @override
   String get description =>

@@ -35,6 +35,9 @@ extension SkillRegistryContext on Context {
 /// frontmatter，只要求 kebab-case 名字与非空描述。需要自定义合并窗口或告警出口
 /// 时，传一个自己构造的 [registry]。
 ///
+/// 子作用域同样走 [registry]：传一个 `SkillRegistry(parent: ..., visible: ...)`
+/// 进来，本函数会把它提供为当前上下文的 `'skillRegistry'`，遮蔽父级的注册表。
+///
 /// 注册表的生命周期随 [ctx]：上下文释放时取消待执行的收集并清空监听。
 Future<SkillRegistry> provideSkillRegistry(
   Context ctx, {
@@ -100,10 +103,19 @@ SkillCatalogSection provideSkillCatalog(
 }
 
 /// 注册 `skill` 工具。
-SkillLoadTool provideSkillTool(Context ctx) {
+///
+/// [tools] 缺省用 `ctx.tools`；[name] 是注册到工具表的名字，同一张表上挂多个
+/// 作用域时需换名。
+SkillLoadTool provideSkillTool(
+  Context ctx, {
+  ToolRegistry? tools,
+  String name = kSkillToolName,
+}) {
   final SkillLoadTool tool = SkillLoadTool(
     registry: ctx.require<SkillRegistry>('skillRegistry'),
+    name: name,
   );
-  ctx.effect(() => ctx.tools.register(tool));
+  final ToolRegistry registry = tools ?? ctx.tools;
+  ctx.effect(() => registry.register(tool));
   return tool;
 }
