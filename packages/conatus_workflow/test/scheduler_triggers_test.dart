@@ -51,7 +51,7 @@ void main() {
       final telemetry = InMemoryTelemetry();
       final scheduler = _newScheduler(engine, telemetry: telemetry);
       scheduler.start();
-      scheduler.register(Automation(
+      scheduler.register(const Automation(
         name: 'on-ok',
         trigger: EventTrigger('tool.called', filter: _wantsOk),
         workflowName: 'backup',
