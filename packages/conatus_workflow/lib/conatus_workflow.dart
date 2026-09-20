@@ -13,6 +13,22 @@
 /// 流程工具（[provideWorkflowTools]）与语音播报 seam（[WorkflowVoice]）。
 library;
 
+export 'src/automation.dart'
+    show
+        Automation,
+        ConditionTrigger,
+        CronTrigger,
+        EventTrigger,
+        ManualTrigger,
+        Trigger;
+export 'src/constraint.dart'
+    show
+        BudgetConstraint,
+        Constraint,
+        ConstraintContext,
+        MutexConstraint,
+        PermissionConstraint,
+        TimeWindowConstraint;
 export 'src/definition.dart' show WorkflowDefinition, WorkflowInput;
 export 'src/engine.dart'
     show
@@ -33,6 +49,14 @@ export 'src/executor.dart' show buildNodeExecutor;
 export 'src/hooks.dart'
     show WorkflowHooks, kWorkflowRunEvent, restoreWorkflowRun;
 export 'src/node.dart' show AgentNode, SubWorkflowNode, ToolNode, WorkflowNode;
+export 'src/post_action.dart'
+    show
+        ChainAction,
+        CompositeAction,
+        NotifyAction,
+        PostAction,
+        PostContext,
+        RecordAction;
 export 'src/provider.dart' show WorkflowContext, provideWorkflow;
 export 'src/refs.dart'
     show evaluateCondition, resolveArguments, resolveReference, resolveValue;
