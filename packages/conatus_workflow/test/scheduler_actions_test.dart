@@ -12,7 +12,7 @@ void main() {
     final scheduler = _newScheduler(engine);
     scheduler.register(Automation(
       name: 'daily',
-      trigger: ManualTrigger(),
+      trigger: const ManualTrigger(),
       workflowName: 'backup',
       onComplete: NotifyAction(askUser: askUser, template: '{name}:{status}'),
     ));
@@ -34,7 +34,7 @@ void main() {
     final scheduler = _newScheduler(engine);
     scheduler.register(Automation(
       name: 'daily',
-      trigger: ManualTrigger(),
+      trigger: const ManualTrigger(),
       workflowName: 'backup',
       onComplete: NotifyAction(askUser: askUser, template: '{name}:{status}'),
     ));
@@ -54,7 +54,7 @@ void main() {
     final scheduler = _newScheduler(engine);
     scheduler.register(Automation(
       name: 'daily',
-      trigger: ManualTrigger(),
+      trigger: const ManualTrigger(),
       workflowName: 'backup',
       onComplete: RecordAction(session: session),
     ));
@@ -74,7 +74,7 @@ void main() {
     final scheduler = _newScheduler(engine);
     scheduler.register(Automation(
       name: 'daily',
-      trigger: ManualTrigger(),
+      trigger: const ManualTrigger(),
       workflowName: 'backup',
       onComplete: const ChainAction(workflowName: 'next'),
     ));
@@ -95,7 +95,7 @@ void main() {
     final scheduler = _newScheduler(engine);
     scheduler.register(Automation(
       name: 'daily',
-      trigger: ManualTrigger(),
+      trigger: const ManualTrigger(),
       workflowName: 'backup',
       onComplete: CompositeAction(<PostAction>[
         NotifyAction(askUser: askUser, template: 'a'),
@@ -124,13 +124,13 @@ void main() {
     final scheduler = _newScheduler(engine);
     scheduler.register(const Automation(
       name: 'a',
-      trigger: ManualTrigger(),
+      trigger: const ManualTrigger(),
       workflowName: 'slow',
       constraints: <Constraint>[MutexConstraint('m')],
     ));
     scheduler.register(const Automation(
       name: 'b',
-      trigger: ManualTrigger(),
+      trigger: const ManualTrigger(),
       workflowName: 'fast',
       constraints: <Constraint>[MutexConstraint('m')],
     ));
