@@ -20,7 +20,7 @@ dart run conatus_tui --session tui --first "现在几点？"
 ```
 
 `--session <id>` 指定启动会话（对应 `.conatus/sessions/<id>.jsonl`）；
-`--first <文本>` 挂载后自动发一轮，便于冒烟验证。
+`--first <文本>` 挂载后自动发一轮，便于冒烟验证；`--help` / `-h` 打印用法。
 
 ## DeepSeek Demo
 
@@ -105,6 +105,26 @@ await runtime.dispose();
 唯一例外是 nocterm 自带的两个终端 matcher（`isEmpty` / `isNotEmpty`）：它们与
 `package:test` 的同名 matcher 冲突，已从再导出里屏蔽，需要时直接依赖 nocterm
 用前缀引入。
+
+## 复用命令行解析
+
+`TuiOptions` 就是可执行入口用的那套解析，自己的入口可以直接复用，不必再抄一遍
+`--session` / `--first` 的处理：
+
+```dart
+final TuiOptions options = TuiOptions.parse(args);
+if (options.helpRequested) {
+  stdout.write(TuiOptions.usage);   // 解析本身不打印也不退出
+  return;
+}
+final ConatusTuiController controller = runtime.createController(
+  initialSession: options.session,
+  onExit: shutdownApp,
+);
+await runApp(AgentTui(controller: controller, firstInput: options.first));
+```
+
+缺省会话 id 是 `kTuiDefaultSession`（`tui`）。
 
 ## 自定义命令表
 

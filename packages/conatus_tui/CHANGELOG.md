@@ -29,6 +29,9 @@
 - 再导出 `nocterm`：调用方只需依赖 `conatus_tui` 即可使用 `runApp` /
   `shutdownApp` / `Component` 等类型。仅屏蔽 nocterm 自带的 `isEmpty` /
   `isNotEmpty`（与 `package:test` 同名冲突）。
+- 入口的命令行解析提为公开 API：新增 `TuiOptions.parse(args)`、`TuiOptions.usage`
+  与 `kTuiDefaultSession`，调用方自己的入口可直接复用；`--help` 只置
+  `helpRequested`，不再在解析里打印用法并退出。
 
 ## [0.15.0] — 2026-09-15
 

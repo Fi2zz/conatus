@@ -34,6 +34,7 @@ export 'src/tui_commands.dart';
 export 'src/tui_controller.dart' show ConatusTuiController, isValidSessionId;
 export 'src/tui_help.dart';
 export 'src/tui_message.dart';
+export 'src/tui_options.dart';
 export 'src/tui_permission.dart';
 export 'src/tui_permission_gate.dart'
     show
