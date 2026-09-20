@@ -31,13 +31,8 @@ class WorkflowSchedulerImpl implements WorkflowScheduler {
     _runSub = workflow.changes.listen(_handleRunEvent);
   }
 
-  /// 编排引擎。
   final WorkflowEngine workflow;
-
-  /// 定时服务；null 时定时触发不生效。
   final CronService? cron;
-
-  /// 遥测服务；null 时事件/条件触发与埋点不生效。
   final Telemetry? telemetry;
 
   final Set<String> Function()? _permissionsOf;
@@ -103,10 +98,9 @@ class WorkflowSchedulerImpl implements WorkflowScheduler {
 
   Future<WorkflowRun?> _runAutomation(String name,
       {required bool manual}) async {
-    if (!manual && !_running) return null;
     final automation = _automations[name];
     if (automation == null) return null;
-    if (_coolingDown(name, automation.cooldown)) return null;
+    if (!_mayRun(manual, automation)) return null;
     _dropFinishedRuns();
     final blocked = await _checkConstraints(automation);
     if (blocked != null) return null;
@@ -116,15 +110,19 @@ class WorkflowSchedulerImpl implements WorkflowScheduler {
       run = await workflow.start(automation.workflowName,
           inputs: automation.inputs);
     } catch (error) {
-      _emit('automation.failed',
-          <String, Object?>{'name': name, 'error': '$error'});
+      _emit('automation.failed', {'name': name, 'error': '$error'});
       rethrow;
     }
     _claimRun(automation, run);
     _changes.add(AutomationTriggered(name, run));
-    _emit('automation.triggered',
-        <String, Object?>{'name': name, 'runId': run.id});
+    _emit('automation.triggered', {'name': name, 'runId': run.id});
     return run;
+  }
+
+  bool _mayRun(bool manual, Automation automation) {
+    if (!manual && !_running) return false;
+    if (_coolingDown(automation.name, automation.cooldown)) return false;
+    return true;
   }
 
   Future<String?> _checkConstraints(Automation automation) async {
@@ -137,8 +135,7 @@ class WorkflowSchedulerImpl implements WorkflowScheduler {
       final reason = await constraint.check(ctx);
       if (reason == null) continue;
       _changes.add(AutomationBlocked(automation.name, reason));
-      _emit('automation.blocked',
-          <String, Object?>{'name': automation.name, 'reason': reason});
+      _emit('automation.blocked', {'name': automation.name, 'reason': reason});
       return reason;
     }
     return null;
@@ -160,7 +157,6 @@ class WorkflowSchedulerImpl implements WorkflowScheduler {
     return _now().difference(last) < cooldown;
   }
 
-  /// 惰性清理已终态的运行（含 cancelled——引擎不发终态事件）。
   void _dropFinishedRuns() {
     for (final entry in _mutexRuns.entries.toList()) {
       final run = workflow.run(entry.value);
@@ -171,20 +167,11 @@ class WorkflowSchedulerImpl implements WorkflowScheduler {
   }
 
   void _handleRunEvent(WorkflowEvent event) {
-    final WorkflowRun? finished;
-    if (event is RunCompleted) {
-      finished = event.run;
-    } else if (event is RunFailed) {
-      finished = workflow.run(event.runId);
-    } else {
-      finished = null;
-    }
+    final finished = _finishedRunOf(event);
     if (finished == null) return;
     final automation = _runOwners.remove(finished.id);
     if (automation == null) return;
-    for (final entry in _mutexRuns.entries.toList()) {
-      if (entry.value == finished.id) _mutexRuns.remove(entry.key);
-    }
+    _releaseMutexesOf(finished.id);
     final onComplete = automation.onComplete;
     if (onComplete == null) return;
     unawaited(onComplete.execute(PostContext(
@@ -192,6 +179,18 @@ class WorkflowSchedulerImpl implements WorkflowScheduler {
       result: finished,
       workflow: workflow,
     )));
+  }
+
+  WorkflowRun? _finishedRunOf(WorkflowEvent event) {
+    if (event is RunCompleted) return event.run;
+    if (event is RunFailed) return workflow.run(event.runId);
+    return null;
+  }
+
+  void _releaseMutexesOf(String runId) {
+    for (final entry in _mutexRuns.entries.toList()) {
+      if (entry.value == runId) _mutexRuns.remove(entry.key);
+    }
   }
 
   void _emit(String name, Map<String, Object?> data) {

@@ -79,7 +79,7 @@ void main() {
       const rule = AlertRule(
         name: 'spike',
         severity: AlertSeverity.warning,
-        condition: _isSpike,
+        condition: _spikeCondition,
         cooldown: Duration(minutes: 30),
       );
       scheduler.register(const Automation(
@@ -105,7 +105,7 @@ void main() {
       const rule = AlertRule(
         name: 'spike',
         severity: AlertSeverity.warning,
-        condition: _isSpike,
+        condition: _spikeCondition,
         cooldown: Duration(minutes: 30),
       );
       scheduler.register(const Automation(
@@ -198,7 +198,7 @@ void main() {
 
 bool _wantsOk(TelemetryEvent event) => (event.data['ok'] as bool?) ?? false;
 
-bool _isSpike(TelemetryEvent event, AlertContext ctx) =>
+bool _spikeCondition(TelemetryEvent event, AlertContext ctx) =>
     event.name == 'metric.spike';
 
 class _MemoryCronStorage implements CronStorage {
