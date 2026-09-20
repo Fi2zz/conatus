@@ -45,6 +45,11 @@ export 'src/autonomous_runner.dart'
         kAutonomousContinuationPrompt,
         provideAutonomousRunner;
 export 'src/autonomous_runner_default.dart' show DefaultAutonomousRunner;
+export 'src/autonomous_schedule.dart'
+    show
+        AutonomousScheduleContext,
+        autonomousDelivery,
+        provideAutonomousSchedule;
 export 'src/caching.dart'
     show
         CachePlan,

@@ -23,6 +23,7 @@ class AutonomousSeams {
   AutonomousSeams({
     required this.session,
     this.costTracker,
+    this.costOfTurn,
     this.approval,
     this.telemetry,
     this.sessionLog,
@@ -33,6 +34,9 @@ class AutonomousSeams {
 
   /// 预算能力缝；null 表示无预算限制。
   final CostTracker? costTracker;
+
+  /// 每轮成本折算钩子（美元）；null 时回退 [costTracker] 今日增量近似。
+  final double Function(AgentTurn turn)? costOfTurn;
 
   /// 审批能力缝；null 表示自动批准。
   final Approval? approval;
@@ -50,6 +54,15 @@ class AutonomousSeams {
 
   /// [before] 之后的正成本增量。
   double costDelta(double before) => max(0, cost - before);
+
+  /// 一轮成本：有 [costOfTurn] 钩子用精确折算（负值截 0），否则用
+  /// [before] 之后的今日增量近似。
+  double turnCost(AgentTurn turn, double before) {
+    final double Function(AgentTurn)? hook = costOfTurn;
+    if (hook == null) return costDelta(before);
+    final double exact = hook(turn);
+    return exact < 0 ? 0 : exact;
+  }
 
   /// 经审批确认一次操作；approval 缺省视为自动批准。
   Future<bool> askApproval(String toolName, String description) async {

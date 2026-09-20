@@ -116,6 +116,61 @@ class _BlockingProvider implements LlmProvider {
   void close() {}
 }
 
+/// 永不返回的假模型（测轮超时真取消）。
+class _HangingProvider implements LlmProvider {
+  @override
+  String get name => 'hanging';
+
+  @override
+  Future<LlmResult> chat(
+    List<LlmMessage> messages, {
+    Map<String, dynamic>? options,
+    List<Map<String, dynamic>>? tools,
+  }) =>
+      Completer<LlmResult>().future;
+
+  @override
+  Stream<LlmStreamEvent> chatStream(
+    List<LlmMessage> messages, {
+    Map<String, dynamic>? options,
+    List<Map<String, dynamic>>? tools,
+  }) =>
+      const Stream<LlmStreamEvent>.empty();
+
+  @override
+  void close() {}
+}
+
+/// 带固定用量（7 tokens/次）的假模型。
+class _UsageProvider implements LlmProvider {
+  @override
+  String get name => 'usagey';
+
+  @override
+  Future<LlmResult> chat(
+    List<LlmMessage> messages, {
+    Map<String, dynamic>? options,
+    List<Map<String, dynamic>>? tools,
+  }) async =>
+      LlmResult(
+        content: 'ok',
+        provider: name,
+        model: 'm',
+        usage: <String, dynamic>{'total_tokens': 7},
+      );
+
+  @override
+  Stream<LlmStreamEvent> chatStream(
+    List<LlmMessage> messages, {
+    Map<String, dynamic>? options,
+    List<Map<String, dynamic>>? tools,
+  }) =>
+      const Stream<LlmStreamEvent>.empty();
+
+  @override
+  void close() {}
+}
+
 void main() {
   DefaultGoalService goals(Session session) =>
       DefaultGoalService(session: session);
@@ -466,6 +521,66 @@ void main() {
           telemetry.recent.map((TelemetryEvent e) => e.name).toList();
       expect(names, contains('autonomous.round'));
       expect(names, contains('autonomous.finished'));
+    });
+  });
+
+  group('轮超时与成本', () {
+    test('轮超时真取消：不再写 assistant 事件，计空轮并继续', () async {
+      final Session session = Session(id: 's1');
+      final DefaultGoalService goal = goals(session);
+      await goal.create('盯机票');
+      final InMemorySessionLog log = InMemorySessionLog();
+      final DefaultAutonomousRunner runner = DefaultAutonomousRunner(
+        agent: AgentLoop(
+            llm: _HangingProvider(), tools: ToolRegistry(), session: session),
+        goal: goal,
+        session: session,
+        policy: const DefaultAutonomousPolicy(
+          maxContinuousRounds: 2,
+          maxTurnDuration: Duration(milliseconds: 30),
+        ),
+        sessionLog: log,
+      );
+
+      final AutonomousResult result = await runner.run();
+
+      expect(result.stoppedReason, StopReason.maxRoundsReached);
+      expect(result.turns, hasLength(2));
+      expect(
+        session.ownEvents
+            .where((SessionEvent e) => e.type == kAssistantMessageEvent),
+        isEmpty,
+        reason: '取消后 agent.run 不应再写 assistant 事件',
+      );
+      final List<SessionEvent> events = await log.read(session.id).toList();
+      expect(
+        events.where((SessionEvent e) => e.type == 'autonomous/turn_timeout'),
+        hasLength(2),
+      );
+    });
+
+    test('costOfTurn 钩子按 usage 精确记账', () async {
+      final Session session = Session(id: 's1');
+      final DefaultGoalService goal = goals(session);
+      await goal.create('盯机票');
+      final DefaultAutonomousRunner runner = DefaultAutonomousRunner(
+        agent: AgentLoop(
+            llm: _UsageProvider(), tools: ToolRegistry(), session: session),
+        goal: goal,
+        session: session,
+        policy: const DefaultAutonomousPolicy(maxContinuousRounds: 2),
+        costOfTurn: (AgentTurn turn) => turn.usage
+            .fold<int>(
+                0,
+                (int sum, Map<String, dynamic> usage) =>
+                    sum + (usage['total_tokens'] as int? ?? 0))
+            .toDouble(),
+      );
+
+      final AutonomousResult result = await runner.run();
+
+      expect(result.stoppedReason, StopReason.maxRoundsReached);
+      expect(result.totalCost, 14, reason: '2 轮 × 7 tokens');
     });
   });
 

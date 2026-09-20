@@ -163,6 +163,7 @@ class AgentLoop {
       );
     }
     final List<AgentStep> steps = <AgentStep>[];
+    final List<Map<String, dynamic>> usages = <Map<String, dynamic>>[];
     // 确定性快路径：命中本地直答直接收口；命中预置工具先执行再交模型收口；
     // 未命中（或未装配 router）行为与无路由完全一致。
     final Router? router = this.router;
@@ -170,7 +171,7 @@ class AgentLoop {
       final RouteDecision routed = await _race(router.route(userInput), cancel);
       switch (routed) {
         case RouteReply(:final String text):
-          return _finish(session, messages, steps, text, userInput);
+          return _finish(session, messages, steps, usages, text, userInput);
         case RouteTools(:final List<LlmToolCall> calls):
           await _runPrepared(session, messages, steps, calls, invoke);
         case RoutePass():
@@ -193,6 +194,7 @@ class AgentLoop {
         llm.chat(messages, tools: tools.describe()),
         cancel,
       );
+      usages.add(result.usage);
       onEvent?.call('agent.round', <String, Object?>{
         'step': step,
         'toolCalls': result.toolCalls.length,
@@ -200,7 +202,7 @@ class AgentLoop {
       });
       if (result.toolCalls.isEmpty) {
         return _finish(
-            session, messages, steps, result.content.trim(), userInput);
+            session, messages, steps, usages, result.content.trim(), userInput);
       }
       messages.add(
         LlmMessage('assistant', result.content, toolCalls: result.toolCalls),
@@ -235,7 +237,7 @@ class AgentLoop {
       }
     }
     return _finish(
-        session, messages, steps, '（已达到最大步数 $maxSteps，未收口）', userInput);
+        session, messages, steps, usages, '（已达到最大步数 $maxSteps，未收口）', userInput);
   }
 
   /// 把 [work] 与取消信号竞速：取消后立即以 [AgentCancelled] 结束，其迟到结果
@@ -295,6 +297,7 @@ class AgentLoop {
     Session? session,
     List<LlmMessage> messages,
     List<AgentStep> steps,
+    List<Map<String, dynamic>> usage,
     String reply,
     String userInput,
   ) async {
@@ -312,7 +315,8 @@ class AgentLoop {
         tags: <String>{'conversation'},
       );
     }
-    return AgentTurn(reply: reply, steps: steps, messages: messages);
+    return AgentTurn(
+        reply: reply, steps: steps, messages: messages, usage: usage);
   }
 
   String _systemText(String userInput) => buildSystemText(

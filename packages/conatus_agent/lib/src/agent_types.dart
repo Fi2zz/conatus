@@ -43,6 +43,7 @@ class AgentTurn {
     required this.reply,
     required this.steps,
     required this.messages,
+    this.usage = const <Map<String, dynamic>>[],
   });
 
   /// 最终文本回复。
@@ -53,4 +54,9 @@ class AgentTurn {
 
   /// 本轮结束时的完整消息序列。
   final List<LlmMessage> messages;
+
+  /// 本轮每次模型调用的用量（[LlmResult.usage] 原样收集，按调用顺序）。
+  ///
+  /// 供成本折算与可观测性使用；无模型调用（如确定性路由直答）时为空。
+  final List<Map<String, dynamic>> usage;
 }

@@ -29,6 +29,7 @@ class DefaultAutonomousRunner implements AutonomousRunner {
     required this.session,
     required AutonomousPolicy policy,
     CostTracker? costTracker,
+    double Function(AgentTurn turn)? costOfTurn,
     Approval? approval,
     Telemetry? telemetry,
     SessionLog? sessionLog,
@@ -38,6 +39,7 @@ class DefaultAutonomousRunner implements AutonomousRunner {
         _seams = AutonomousSeams(
           session: session,
           costTracker: costTracker,
+          costOfTurn: costOfTurn,
           approval: approval,
           telemetry: telemetry,
           sessionLog: sessionLog,

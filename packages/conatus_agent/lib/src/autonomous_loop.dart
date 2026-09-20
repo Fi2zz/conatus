@@ -10,6 +10,7 @@ import 'dart:async';
 
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
+import 'agent_cancel.dart';
 import 'agent_loop.dart';
 import 'agent_types.dart';
 import 'autonomous_policy.dart';
@@ -101,21 +102,27 @@ class AutonomousLoop {
     final DateTime now = _clock();
     final DateTime next = window.nextStart(now);
     if (!_isSameDay(now, next)) return StopReason.windowEnded;
-    final bool interrupted = await _sleepUntil(next);
+    final bool interrupted =
+        await _sleepUntil(next, _clock, _sleeper, _stopSignal);
     return interrupted ? StopReason.manualStop : null;
   }
 
-  /// 跑一轮：带单轮时长上限与成本增量统计。超时按空轮记录（迟到写入是
-  /// 已知限制：底层 `agent.run` 仍在后台继续，其结果被丢弃）。
+  /// 跑一轮：带单轮时长上限与成本统计。
+  ///
+  /// 超时经 [AgentCancel] **真取消**：`agent.run` 内所有在途操作与取消信号
+  /// 竞速，立即以 [AgentCancelled] 上抛，不再写 assistant / tool 事件，迟到
+  /// 的模型结果被丢弃。已实际执行的工具副作用无法回滚（取消机制的固有边界）。
+  /// 超时轮按空轮记录。
   Future<(AgentTurn, double)> _runTurn() async {
     final double before = _seams.cost;
     final Stopwatch watch = Stopwatch()..start();
+    final AgentCancel cancel = AgentCancel();
+    final Timer timer = Timer(_policy().maxTurnDuration, cancel.cancel);
     try {
-      final AgentTurn turn = await agent
-          .run(kAutonomousContinuationPrompt)
-          .timeout(_policy().maxTurnDuration);
-      return (turn, _seams.costDelta(before));
-    } on TimeoutException {
+      final AgentTurn turn =
+          await agent.run(kAutonomousContinuationPrompt, cancel: cancel);
+      return (turn, _seams.turnCost(turn, before));
+    } on AgentCancelled {
       await _seams.audit('autonomous/turn_timeout', <String, Object?>{
         'durationMs': watch.elapsedMilliseconds,
       });
@@ -127,6 +134,8 @@ class AutonomousLoop {
         ),
         0.0
       );
+    } finally {
+      timer.cancel();
     }
   }
 
@@ -154,19 +163,24 @@ class AutonomousLoop {
     return null;
   }
 
-  /// 睡到 [until]；被 [stop] 中断时返回 true。
-  Future<bool> _sleepUntil(DateTime until) async {
-    final Duration wait = until.difference(_clock());
-    if (wait <= Duration.zero) return false;
-    await Future.any<void>(<Future<void>>[
-      _sleeper(wait),
-      _stopSignal().future,
-    ]);
-    return _stopSignal().isCompleted;
-  }
-
   static bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
+}
+
+/// 睡到 [until]；被 [stop] 中断时返回 true。
+Future<bool> _sleepUntil(
+  DateTime until,
+  DateTime Function() clock,
+  Future<void> Function(Duration) sleeper,
+  Completer<void> Function() stopSignal,
+) async {
+  final Duration wait = until.difference(clock());
+  if (wait <= Duration.zero) return false;
+  await Future.any<void>(<Future<void>>[
+    sleeper(wait),
+    stopSignal().future,
+  ]);
+  return stopSignal().isCompleted;
 }
 
 /// 目标状态检查：无目标/终态 → completed；阻塞/暂停 → humanRequired。
