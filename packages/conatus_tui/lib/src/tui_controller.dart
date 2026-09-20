@@ -222,8 +222,20 @@ class ConatusTuiController implements TuiUserPromptHost {
     await submit(line);
   }
 
-  /// 打断在飞轮次（Esc / barge-in）：取消模型与工具等待，盘上记录保留。
-  void interrupt() => _cancel?.cancel();
+  /// 打断在飞轮次（Esc / barge-in）：立即提示，盘上记录保留。
+  ///
+  /// 空闲时（无在飞轮次）也给出提示，打断按键始终有反馈。
+  void interrupt() {
+    final AgentCancel? cancel = _cancel;
+    if (cancel == null) {
+      transcript.add(TuiRole.system, '当前没有进行中的对话。');
+      _refresh();
+      return;
+    }
+    cancel.cancel();
+    transcript.add(TuiRole.system, '正在打断…');
+    _refresh();
+  }
 
   /// 提交一轮对话。
   Future<void> submit(String text) async {
