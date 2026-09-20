@@ -129,6 +129,29 @@ void main() {
     }
   });
 
+  test('输入框非空时 Ctrl+C 清空输入框', () async {
+    final (ConatusTuiController controller, NoctermTester tester, Context app) =
+        await _launchAgentTui();
+    try {
+      await tester.enterText('hello');
+      await tester.pump();
+      expect(tester.terminalState, containsText('hello'));
+
+      // Ctrl+C：清空输入框，不触发退出确认。
+      await tester.sendKeyEvent(const KeyboardEvent(
+        logicalKey: LogicalKey.keyC,
+        modifiers: ModifierKeys(ctrl: true),
+      ));
+      await tester.pump();
+      expect(tester.terminalState, isNot(containsText('hello')));
+      expect(tester.terminalState, isNot(containsText('再按一次 Ctrl+C 退出')));
+    } finally {
+      tester.dispose();
+      controller.dispose();
+      app.dispose();
+    }
+  });
+
   test('选中消息文本后复制并清除选区（macOS Alt+C，其他平台 Ctrl+C）', () async {
     final (ConatusTuiController controller, NoctermTester tester, Context app) =
         await _launchAgentTui();

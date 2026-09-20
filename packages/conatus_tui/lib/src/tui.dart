@@ -201,11 +201,16 @@ class _AgentTuiState extends State<AgentTui> {
 
   /// Ctrl+C / Alt+C：平台差异化按键语义。
   ///
+  /// 输入框有内容时 Ctrl+C 恒为清空输入（shell 习惯）。
   /// macOS：Ctrl+C 忙时打断在飞轮次、空闲连按两次退出；复制走 Alt+C
   /// （Option+C）。其他平台：Ctrl+C 有选中文本时复制，否则连按两次退出。
   /// Alt+C 无选区也吞掉，避免 Option+C 被当作字符输入。
   bool _onCopyKey(KeyboardEvent event) {
     if (event.logicalKey == LogicalKey.keyC && event.isControlPressed) {
+      if (_input.text.isNotEmpty) {
+        _input.clear();
+        return true;
+      }
       if (!Platform.isMacOS &&
           !_controller.choice.open &&
           !_controller.picker.open &&
