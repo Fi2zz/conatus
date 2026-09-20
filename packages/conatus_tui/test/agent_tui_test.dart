@@ -62,4 +62,100 @@ void main() {
       app.dispose();
     }
   });
+
+  test('Esc 关闭团队视图返回对话', () async {
+    final (ConatusTuiController controller, NoctermTester tester, Context app) =
+        await _launchAgentTui();
+    try {
+      // Ctrl+T 进入团队视图。
+      await tester.sendKeyEvent(const KeyboardEvent(
+        logicalKey: LogicalKey.keyT,
+        modifiers: ModifierKeys(ctrl: true),
+      ));
+      expect(tester.terminalState, containsText('团队视图'));
+
+      // Esc 返回对话视图。
+      await tester.sendEscape();
+      expect(tester.terminalState, isNot(containsText('团队视图')));
+      expect(tester.terminalState, containsText('输入文字开始对话'));
+    } finally {
+      tester.dispose();
+      controller.dispose();
+      app.dispose();
+    }
+  });
+
+  test('Ctrl+C 无选区时仍走退出确认', () async {
+    final (ConatusTuiController controller, NoctermTester tester, Context app) =
+        await _launchAgentTui();
+    try {
+      await tester.sendKeyEvent(const KeyboardEvent(
+        logicalKey: LogicalKey.keyC,
+        modifiers: ModifierKeys(ctrl: true),
+      ));
+      expect(tester.terminalState, containsText('再按一次 Ctrl+C 退出'));
+    } finally {
+      tester.dispose();
+      controller.dispose();
+      app.dispose();
+    }
+  });
+
+  test('选中消息文本后 Ctrl+C 复制并清除选区', () async {
+    final (ConatusTuiController controller, NoctermTester tester, Context app) =
+        await _launchAgentTui();
+    try {
+      ClipboardManager.clear();
+
+      // 注入一条消息并刷新（system 角色无全角 label，避免 buffer 与渲染列偏移）。
+      controller.transcript.add(TuiRole.system, 'copy me');
+      controller.onChanged?.call();
+      await tester.pump();
+      expect(tester.terminalState, containsText('copy me'));
+
+      // 鼠标拖选该消息文本。
+      final TextMatch match = tester.terminalState.findText('copy me').first;
+      await tester.mouseMove(match.x, match.y, match.x + 7, match.y);
+      await tester.release(match.x + 7, match.y);
+
+      // Ctrl+C：复制到剪贴板，不触发退出确认。
+      await tester.sendKeyEvent(const KeyboardEvent(
+        logicalKey: LogicalKey.keyC,
+        modifiers: ModifierKeys(ctrl: true),
+      ));
+      expect(ClipboardManager.paste(), 'copy me');
+      expect(tester.terminalState, isNot(containsText('再按一次 Ctrl+C 退出')));
+
+      // 选区已清除：再按 Ctrl+C 恢复退出确认。
+      await tester.sendKeyEvent(const KeyboardEvent(
+        logicalKey: LogicalKey.keyC,
+        modifiers: ModifierKeys(ctrl: true),
+      ));
+      expect(tester.terminalState, containsText('再按一次 Ctrl+C 退出'));
+    } finally {
+      tester.dispose();
+      controller.dispose();
+      app.dispose();
+    }
+  });
+}
+
+/// 装配一个最小 TUI 并挂载，返回（控制器, 测试器, 应用上下文）。
+Future<(ConatusTuiController, NoctermTester, Context)> _launchAgentTui() async {
+  final Context app = Context.root();
+  provideTools(app);
+  provideLlm(app, llm: FallbackLlm(<LlmProvider>[_NoopProvider()]));
+  final SessionStore sessions = provideSessions(app);
+  final ConatusTuiController controller = ConatusTuiController(
+    app: app,
+    sessions: sessions,
+    name: '测试',
+    initialSession: 'smoke',
+    modelLabel: 'mock',
+    onExit: () {},
+  );
+  final NoctermTester tester = await NoctermTester.create();
+  await tester.pumpComponent(AgentTui(controller: controller));
+  await tester.pump();
+  return (controller, tester, app);
 }

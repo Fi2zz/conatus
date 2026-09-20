@@ -49,6 +49,8 @@ class _AgentTuiState extends State<AgentTui> {
   bool _exiting = false;
   bool _confirmExit = false;
   ViewMode _view = ViewMode.chat;
+  String _selectedText = '';
+  int _selectionEpoch = 0;
 
   @override
   void initState() {
@@ -112,8 +114,9 @@ class _AgentTuiState extends State<AgentTui> {
     setState(() {});
   }
 
-  /// 输入框按键拦截：`/` 菜单打开时用 ↑↓ 选择、Enter 运行、Tab 补全、Esc 关闭；
-  /// 菜单未打开时 Esc 打断在飞轮次。Ctrl+T 恒为视图切换，先于文本域消费。
+  /// 输入框按键拦截：`/` 菜单打开时用 ↑↓ 选择、Enter 运行、Tab 补全；
+  /// Esc 一律返回 false 冒泡，由根组件 `_onKey` 统一处理（关闭面板/视图、打断轮次）。
+  /// Ctrl+T 恒为视图切换，先于文本域消费。
   bool _onInputKey(KeyboardEvent event) {
     if (event.matches(LogicalKey.keyT, ctrl: true)) {
       _toggleView();
@@ -123,10 +126,6 @@ class _AgentTuiState extends State<AgentTui> {
       return true;
     }
     if (!_menu.open) {
-      if (event.logicalKey == LogicalKey.escape) {
-        _controller.interrupt();
-        return true;
-      }
       return false;
     }
     if (event.logicalKey == LogicalKey.arrowUp) {
@@ -136,11 +135,6 @@ class _AgentTuiState extends State<AgentTui> {
     }
     if (event.logicalKey == LogicalKey.arrowDown) {
       _menu.move(1);
-      _refresh();
-      return true;
-    }
-    if (event.logicalKey == LogicalKey.escape) {
-      _menu.close();
       _refresh();
       return true;
     }
@@ -207,8 +201,13 @@ class _AgentTuiState extends State<AgentTui> {
       _toggleView();
       return true;
     }
-    // Ctrl+C 恒可用：首次提示确认，窗口内再按一次才退出。
+    // Ctrl+C：浮层打开时保持退出语义；有选中文本时复制；否则连按两次退出。
     if (event.logicalKey == LogicalKey.keyC && event.isControlPressed) {
+      if (!_controller.choice.open &&
+          !_controller.picker.open &&
+          _copySelection()) {
+        return true;
+      }
       _confirmExitChord();
       return true;
     }
@@ -227,7 +226,54 @@ class _AgentTuiState extends State<AgentTui> {
       }
       return true; // 面板打开时吞掉按键，避免误输入。
     }
+    // Esc 兜底（choice/picker 的 Esc 已在上方处理）：关闭菜单、团队视图返回，
+    // 无面板时打断在飞轮次（busy 时输入框 readOnly 不经 _onInputKey，靠这里兜底）。
+    if (event.logicalKey == LogicalKey.escape) {
+      if (_menu.open) {
+        _menu.close();
+        _refresh();
+        return true;
+      }
+      if (_view == ViewMode.team) {
+        _toggleView();
+        return true;
+      }
+      _controller.interrupt();
+      return true;
+    }
     return false;
+  }
+
+  /// 复制当前选中文本：消息区选区优先，其次输入框选区；无选区返回 false。
+  bool _copySelection() {
+    final String text = _selectedText.isNotEmpty
+        ? _selectedText
+        : _selectedInputText();
+    if (text.isEmpty) {
+      return false;
+    }
+    ClipboardManager.copy(text);
+    _clearSelection();
+    return true;
+  }
+
+  /// 输入框内选中文本；无选区返回空串。
+  String _selectedInputText() {
+    final TextSelection selection = _input.selection;
+    if (selection.isCollapsed) {
+      return '';
+    }
+    return _input.text.substring(selection.start, selection.end);
+  }
+
+  /// 复制后清除消息区与输入框选区：重建 SelectionArea 以撤销消息区高亮。
+  void _clearSelection() {
+    _selectedText = '';
+    if (!_input.selection.isCollapsed) {
+      _input.selection =
+          TextSelection.collapsed(offset: _input.selection.extentOffset);
+    }
+    setState(() => _selectionEpoch++);
   }
 
   /// Ctrl+C：首次挂起退出确认并计时复位，窗口内再按一次才真正退出。
@@ -344,6 +390,11 @@ class _AgentTuiState extends State<AgentTui> {
         },
       ),
     );
-    return SelectionArea(child: child);
+    // key 变化时重建，用于复制后撤销鼠标选区（nocterm 无公开清除 API）。
+    return SelectionArea(
+      key: ValueKey<int>(_selectionEpoch),
+      onSelectionChanged: (String text) => _selectedText = text,
+      child: child,
+    );
   }
 }

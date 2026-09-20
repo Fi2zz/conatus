@@ -167,7 +167,7 @@ class TeamView extends StatelessComponent {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Component>[
           const Text(
-            '团队视图（按 Ctrl+T 返回对话）',
+            '团队视图（按 Ctrl+T 或 Esc 返回对话）',
             style: TextStyle(color: Colors.cyan),
           ),
           const SizedBox(height: 1),
