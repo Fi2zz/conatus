@@ -101,8 +101,8 @@ class WorkflowSchedulerImpl implements WorkflowScheduler {
     unawaited(_runAutomation(name, manual: false));
   }
 
-  Future<WorkflowRun?> _runAutomation(
-      String name, {required bool manual}) async {
+  Future<WorkflowRun?> _runAutomation(String name,
+      {required bool manual}) async {
     if (!manual && !_running) return null;
     final automation = _automations[name];
     if (automation == null) return null;
