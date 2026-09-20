@@ -114,6 +114,18 @@ export 'src/plan_mode.dart'
         kPlanModePolicy,
         restorePlanModeState;
 export 'src/plan_mode_default.dart' show DefaultPlanMode, providePlanMode;
+export 'src/prompt_evolver.dart'
+    show
+        EvolutionDecision,
+        EvolutionResult,
+        PromptEvolver,
+        PromptEvolverContext,
+        providePromptEvolver;
+export 'src/prompt_evolver_default.dart' show DefaultPromptEvolver;
+export 'src/prompt_evolver_prompts.dart'
+    show analyzeFailurePatterns, generateVariant, sectionText;
+export 'src/prompt_store.dart' show PromptStore;
+export 'src/prompt_variant.dart' show PromptVariant;
 export 'src/recovery.dart'
     show RecoveryContext, RecoveryService, provideRecovery;
 export 'src/reflection.dart'
