@@ -20,7 +20,7 @@ void main() {
     expect(scheduler.automations.single.name, 'daily');
     expect(events.whereType<AutomationRegistered>().single.automation,
         same(automation));
-    sub.cancel();
+    await sub.cancel();
     scheduler.dispose();
     engine.dispose();
   });
@@ -61,7 +61,7 @@ void main() {
     expect(triggered.name, 'daily');
     expect(triggered.run?.id, run.id);
     await _drain(engine);
-    sub.cancel();
+    await sub.cancel();
     scheduler.dispose();
     engine.dispose();
   });
@@ -128,7 +128,7 @@ void main() {
       telemetry.recent.any((e) => e.name == 'automation.blocked'),
       isTrue,
     );
-    sub.cancel();
+    await sub.cancel();
     scheduler.dispose();
     engine.dispose();
   });
