@@ -14,7 +14,9 @@ resolution: workspace
 
 dependencies:
   conatus_agent: ^0.16.0
+  conatus_alerting: ^0.16.0
   conatus_core: ^0.16.0
+  conatus_cron: ^0.16.0
   conatus_foundation: ^0.16.0
   conatus_tasks: ^0.16.0
   conatus_team: ^0.16.0
