@@ -29,7 +29,7 @@
 | [`conatus_compaction`](packages/conatus_compaction) | 压缩能力缝：滚动摘要契约 + `compaction/*` 日志事件 + 工具配对平衡切点 | `conatus_core`、`conatus_foundation` |
 | [`conatus_agent`](packages/conatus_agent) | Agent Loop 与产品化：plan / sub-agent / reflection / telemetry / eval / approval / skill / recovery | `conatus_compaction`、`conatus_core`、`conatus_foundation`、`conatus_llm` |
 | [`conatus_tasks`](packages/conatus_tasks) | 任务中心（Task Center）：Agent Loop / sub-agent / shell / schedule 运行时任务追踪（任务树 + `task/changed` 持久化 + `list_tasks` / `cancel_task` 工具） | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_schedule` |
-| [`conatus_tui`](packages/conatus_tui) | 基于 [nocterm](https://pub.dev/packages/nocterm) 的文本 TUI：对话 + 工具闭环、斜杠命令、会话选择面板、选项浮层与权限模式 | `conatus_agent`、`conatus_compaction`、`conatus_cron`、`conatus_llm`、`conatus_schedule`、`conatus_search`、`conatus_skill`、`nocterm` |
+| [`conatus_tui`](packages/conatus_tui) | 基于 [nocterm](https://pub.dev/packages/nocterm) 的文本 TUI：对话 + 工具闭环、斜杠命令（含 `/<技能名>` 直接调用技能）、会话选择面板、选项浮层与权限模式（再导出 nocterm，调用方无需另装） | `conatus_agent`、`conatus_compaction`、`conatus_cron`、`conatus_llm`、`conatus_schedule`、`conatus_search`、`conatus_skill`、`nocterm` |
 
 ### 实验性包（不进伞包，`publish_to: none`）
 
@@ -697,9 +697,18 @@ await provideSkillFilesystem(app);   // 发现 .conatus/skills 等目录并监�
 把内联技能（[`SkillRegistration`]，不解析 frontmatter）注册进同一份目录与同一个
 `skill` 工具。
 
-限制：只有一层全局注册表（无 per-scope 分层）；只扫发现根一层，不递归
-`**/SKILL.md`；发现根在装配时确定，之后不会跟随工作目录变化；只做模型侧调用
-（不做斜杠 `/name` 直接调用）；改正文不会改变目录，模型不会被通知。
+注册表支持分层：`SkillRegistry(parent:, visible:)` 的子作用域继承父级技能、同名
+覆盖，父级变化级联到子级；`load` 只认可见集合，被过滤的技能取不到。分层是链式的
+（单 `parent`、整条覆盖），且挂载点要显式作用域化——多个作用域共用一份
+`SystemPrompt` / `ToolRegistry` 时，段名与工具名不换会在装配处抛 `StateError`。
+
+斜杠调用在 TUI 侧：`conatus_tui` 把每个技能投影成 `/<技能名> [补充要求]` 命令，
+`disable-model-invocation` 的技能也能由此手动触发（见其 README 的「技能直接调用」）。
+本包本身只有模型侧入口。
+
+限制：只扫发现根一层，不递归
+`**/SKILL.md`；发现根在装配时确定，之后不会跟随工作目录变化；改正文不会改变目录，
+模型不会被通知。
 
 ### `recovery` — 持久化与恢复
 
@@ -1505,8 +1514,10 @@ root.provide('x', 1);
 | `provideSkillRegistry(ctx, {providers, inlineSkills, registry})` | 提供 `'skillRegistry'` 并完成首次收集；`inlineSkills` 直接把提示词当技能（不落盘） |
 | `provideSkillFilesystem(ctx, {roots, watch, debounce})` | 注册目录发现 provider（缺省 `defaultSkillRoots()`）并为已存在的根起监听 |
 | `provideSkillCatalog(ctx, {order, descriptionMaxLength})` | 把目录挂成 `skills` 段（空目录不注册） |
-| `provideSkillTool(ctx)` | 注册 `skill` 工具（参数 `name`，结果是一段 `<skill_content>`） |
+| `provideSkillTool(ctx, {tools, name})` | 注册 `skill` 工具（参数 `name`，结果是一段 `<skill_content>`）；可换目标工具表与工具名 |
 | `SkillRegistry`：`available` / `modelInvocable` / `load(name)` / `register(SkillRegistration)` / `registerProvider(SkillProvider)` / `refresh()` / `invalidate()` / `onChange(fn)` | 同步快照 / 可调用技能 / 加载正文 / 运行时技能 / 来源注册 / 立即收集 / 标脏 / 变更监听 |
+| `SkillRegistry({parent, visible})` | 子作用域：父级快照经 `visible` 过滤后并入 `available`，同名由子级赢下；父级变化级联 |
+| `SkillCatalogSection.attach({name})` / `SkillLoadTool({registry, name})` | 段名与工具名可换，多个作用域能共用一份 system prompt 与一张工具表 |
 | `SkillProvider`：`name` / `list()` / `load(summary)` | 来源契约（单 provider 失败只降级它自己） |
 | `SkillRoot(path, source, rank)` / `defaultSkillRoots({projectRoot, includeUserRoots})` / `findProjectRoot()` | 发现根与项目根定位（最近含 `.git` 的祖先） |
 | `SkillCatalogSection` / `renderSkillCatalog(...)` / `renderSkillContent(...)` | 目录段控制器与目录 / `<skill_content>` 渲染 |

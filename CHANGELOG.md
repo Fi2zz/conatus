@@ -2,6 +2,27 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [未发布]
+
+`conatus_tui` 支持技能斜杠命令，并再导出 `nocterm`：
+
+- 每个已发现的技能投影成 `/<技能名> [补充要求]` 命令，进 `/` 菜单过滤与补全；
+  执行时把技能正文展开成一轮用户输入交给模型（照常进 `user/message` 事件），
+  屏上折回一行 `/<技能名> …`；`disable-model-invocation` 的技能不进模型目录，
+  但用户能这样手动触发。新增 `skillTuiCommands` / `renderSkillPrompt` /
+  `collapseSkillPrompt`，`TuiCommandMenu` 支持注入命令来源
+- `conatus_tui` 再导出 `nocterm` 的 API（屏蔽与 `package:test` 冲突的 `isEmpty` /
+  `isNotEmpty`）：调用方只需依赖 `conatus_tui` 即可用 `runApp` / `Component` 等
+
+`conatus_skill` 支持按作用域分层：
+
+- `SkillRegistry({parent, visible})`：子作用域继承父级技能，父级快照经 `visible`
+  谓词过滤后并入子级 `available`，同名由子级赢下并告警；父级变化级联到子级且
+  不重跑子级的 provider；`load(name)` 只认可见集合，被过滤的技能取不到
+- 挂载点作用域化：`SkillCatalogSection.attach({name})` 换段名、
+  `SkillLoadTool({name})` 与 `provideSkillTool({tools, name})` 换工具名与目标表，
+  多个作用域得以共用一份 system prompt 与一张工具表
+
 ## [0.16.0] — 2026-09-20
 
 新增实验性包 `conatus_intent`（意图路由，`publish_to: none`，不进伞包）：
