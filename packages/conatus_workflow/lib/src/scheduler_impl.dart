@@ -14,7 +14,6 @@ import 'run.dart';
 import 'scheduler.dart';
 import 'scheduler_wiring.dart';
 
-/// 流程调度器默认实现。
 class WorkflowSchedulerImpl implements WorkflowScheduler {
   WorkflowSchedulerImpl({
     required this.workflow,
@@ -138,10 +137,8 @@ class WorkflowSchedulerImpl implements WorkflowScheduler {
       final reason = await constraint.check(ctx);
       if (reason == null) continue;
       _changes.add(AutomationBlocked(automation.name, reason));
-      _emit('automation.blocked', <String, Object?>{
-        'name': automation.name,
-        'reason': reason,
-      });
+      _emit('automation.blocked',
+          <String, Object?>{'name': automation.name, 'reason': reason});
       return reason;
     }
     return null;
