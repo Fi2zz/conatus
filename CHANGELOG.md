@@ -13,6 +13,8 @@
   `collapseSkillPrompt`，`TuiCommandMenu` 支持注入命令来源
 - `conatus_tui` 再导出 `nocterm` 的 API（屏蔽与 `package:test` 冲突的 `isEmpty` /
   `isNotEmpty`）：调用方只需依赖 `conatus_tui` 即可用 `runApp` / `Component` 等
+- `conatus_tui` 入口的命令行解析提为公开 API（`TuiOptions.parse` /
+  `TuiOptions.usage` / `kTuiDefaultSession`），调用方可直接复用
 
 `conatus_skill` 支持按作用域分层：
 
