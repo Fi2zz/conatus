@@ -4,6 +4,40 @@
 
 ## [未发布]
 
+`conatus_tui` 新增选项浮层与权限模式：
+
+- `TuiChoicePrompt` / `TuiChoiceView`：可 `↑↓` 选择、`Enter` 确认、`Esc` 取消的
+  浮层菜单，供模型提问与工具审批共用同一条通道
+- `ask_user` 工具：模型给出候选选项交用户选择，选中项作为工具结果回传；
+  `purpose: permission_mode` 时渲染内置的三档权限模式选项集
+- 权限模式 `TuiPermissionMode`（始终询问 / 按需询问 / 从不询问）经
+  `TuiPermissionGate`（`Approval` 实现）落到审批阈值；被拦截时弹出
+  「允许一次 / 信任此文件夹 / 总是允许该工具 / 拒绝」，状态栏常显当前模式
+- 「信任此文件夹」按「工具 + 目录」记住授权（判定走 `FileSystem.contains`）：
+  该工具访问该目录及子孙免问，目录外或换工具仍要问
+- 权限模式按会话持久化：`permission/mode` 事件追加进会话日志，切会话与重启
+  各自恢复（`restorePermissionMode` 折叠自身后缀，fork 不继承）；信任记录
+  随会话切换清空
+- 装配变化：`ConatusTuiRuntime.create()` 现在会 `provideApproval` 并注册
+  `ask_user`；此前 TUI 完全没有审批端口（`/plan` 的提示文案随之修正）
+
+`conatus_foundation`：
+
+- `Tool.pathParams`：声明工具哪些参数是文件系统路径；`tools.fn(..., pathParams:)`
+  同步支持
+- `Tool.timeout`：工具可声明自身超时，优先于注册表的 `defaultTimeout`
+  （交互类工具如 `ask_user` 的耗时由用户决定，不应受默认超时约束）
+
+`conatus_agent`：
+
+- `ApprovalRequest.pathArgs`：请求携带其涉及的文件系统路径
+- `Approval.preapproved(request)`：预授权钩子，中间件在询问前调用；返回 `true`
+  直接放行，不产生请求、不发遥测、不弹界面
+- `instrumentApproval` 路径感知：声明了路径参数的工具**即使低风险**也进入审批；
+  导出 `pathArguments(tool, call)` 供实现方复用取值逻辑
+- `provideApproval(..., instrument: false)`：只提供 `'approval'` 服务、不挂
+  拦截，供阈值由别处动态决定的装配方自行调用 `instrumentApproval`
+
 新增 `conatus_alerting` 包 —— 告警（实验性，不导出到伞包；依赖
 `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_tts`、`http`）：
 

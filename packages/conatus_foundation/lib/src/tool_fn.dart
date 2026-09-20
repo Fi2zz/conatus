@@ -20,12 +20,16 @@ import 'tools.dart';
 /// 便捷注册扩展。
 extension ToolFn on ToolRegistry {
   /// 注册一个由 [handler] 驱动的工具，返回撤销函数（幂等）。
+  ///
+  /// [pathParams] 声明路径参数（见 [Tool.pathParams]）：审批方据此按
+  /// 「工具 + 目录」授权。
   Disposer fn(
     String name, {
     String description = '',
     List<ParamSpec> params = const <ParamSpec>[],
     ToolRisk riskLevel = ToolRisk.low,
     String? group,
+    List<String> pathParams = const <String>[],
     required Future<ToolResult> Function(ToolContext context) handler,
   }) =>
       register(_FnTool(
@@ -34,6 +38,7 @@ extension ToolFn on ToolRegistry {
         params: params,
         riskLevel: riskLevel,
         group: group,
+        pathParams: pathParams,
         handler: handler,
       ));
 }
@@ -46,6 +51,7 @@ class _FnTool extends Tool {
     required this.params,
     required this.riskLevel,
     required this.group,
+    required this.pathParams,
     required this.handler,
   });
 
@@ -63,6 +69,9 @@ class _FnTool extends Tool {
 
   @override
   final String? group;
+
+  @override
+  final List<String> pathParams;
 
   final Future<ToolResult> Function(ToolContext context) handler;
 

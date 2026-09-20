@@ -17,11 +17,15 @@ import 'package:conatus_schedule/conatus_schedule.dart';
 import 'package:conatus_team/conatus_team.dart';
 import 'package:conatus_tts/conatus_tts.dart';
 
+import 'ask_user_tool.dart';
 import 'team_snapshot.dart';
 import 'team_subscription.dart';
 import 'transcript.dart';
+import 'tui_choice.dart';
 import 'tui_help.dart';
 import 'tui_message.dart';
+import 'tui_permission.dart';
+import 'tui_permission_gate.dart';
 import 'tui_session_picker.dart';
 import 'voice_reporter.dart';
 
@@ -46,7 +50,7 @@ const String kTeamUsage = '用法：/team [status|interrupt <成员 id>]';
 const String kTaskUsage = '用法：/task [claim <任务 id>|release <任务 id>]';
 
 /// TUI 会话控制器。
-class ConatusTuiController {
+class ConatusTuiController implements TuiUserPromptHost {
   ConatusTuiController({
     required Context app,
     required SessionStore sessions,
@@ -60,10 +64,25 @@ class ConatusTuiController {
         _sessions = sessions,
         _sessionId = initialSession {
     picker = TuiSessionPicker(sessions, onChanged: _refresh);
+    _app.provide('tuiController', this);
+    final TuiPermissionGate? gate = app.get<TuiPermissionGate>('approval');
+    _gate = gate;
+    choice.onChanged = _refresh;
+    _syncPermissionMode();
   }
 
   final Context _app;
   final SessionStore _sessions;
+
+  /// 选项浮层（`ask_user` 与工具审批共用）。
+  ///
+  /// 优先复用根上下文里已提供的 `'tuiChoice'`（审批门持有的是同一个），
+  /// 未提供时自建一个。
+  @override
+  late final TuiChoicePrompt choice =
+      _app.get<TuiChoicePrompt>('tuiChoice') ?? TuiChoicePrompt();
+
+  late final TuiPermissionGate? _gate;
 
   /// 顶栏展示的场景名。
   final String name;
@@ -113,6 +132,12 @@ class ConatusTuiController {
   /// 团队语音播报（随会话绑定/解绑；tts 注入时启用）。
   VoiceReporter? _voice;
 
+  /// 当前权限模式下挂着的审批中间件撤销句柄；Never Ask 时为 `null`。
+  Disposer? _approvalGate;
+
+  /// 当前权限模式（随绑定的会话变化）。
+  TuiPermissionMode _permissionMode = TuiPermissionMode.askWhenNeeded;
+
   /// 是否有在途轮次。
   bool busy = false;
 
@@ -122,8 +147,54 @@ class ConatusTuiController {
   /// 当前会话 id。
   String get sessionId => _sessionId;
 
+  /// 当前权限模式。
+  @override
+  TuiPermissionMode get permissionMode => _permissionMode;
+
+  /// 状态栏展示的权限模式名。
+  String get permissionLabel => _permissionMode.label;
+
   /// 团队状态快照（未装配团队或未绑定时为空）。
   TeamSnapshot get teamSnapshot => _teamSub?.snapshot ?? const TeamSnapshot();
+
+  /// 切换权限模式：持久化到当前会话、按新阈值重挂审批中间件并提示。
+  ///
+  /// 会话未绑定时拒绝：此时既无法持久化、模式也会在绑定后被恢复逻辑覆盖，
+  /// 静默生效只会让界面提示与实际状态不符。
+  @override
+  void applyPermissionMode(TuiPermissionMode mode) {
+    final Session? session = _session;
+    if (session == null) {
+      transcript.add(TuiRole.system, '会话尚未就绪，权限模式未切换。');
+      _refresh();
+      return;
+    }
+    if (mode == _permissionMode && _approvalGate != null) {
+      return;
+    }
+    _permissionMode = mode;
+    session.append(kPermissionModeEvent, data: <String, Object?>{'mode': mode.name});
+    _syncPermissionMode();
+    transcript.add(TuiRole.system, '权限模式已切换为「${mode.label}」：${mode.description}');
+    _refresh();
+  }
+
+  /// 按当前模式挂载 / 卸载审批中间件（幂等）。
+  void _syncPermissionMode() {
+    _approvalGate?.call();
+    _approvalGate = null;
+    final TuiPermissionGate? gate = _gate;
+    final ToolRisk? threshold = _permissionMode.threshold;
+    if (gate == null || threshold == null) {
+      return;
+    }
+    _approvalGate = instrumentApproval(
+      _app,
+      approval: gate,
+      threshold: threshold,
+      timeout: kTuiDecisionTimeout,
+    );
+  }
 
   /// 绑定初始会话。
   Future<void> start() async {
@@ -754,6 +825,11 @@ class ConatusTuiController {
     _agent = ctx.agentLoop;
     _planMode = ctx.planMode;
     _goal = ctx.goal;
+    // 权限模式按会话恢复：每个会话折叠自己的 permission/mode 后缀，
+    // 同时清空审批门的「总是允许」清单（它也是会话级状态）。
+    _gate?.resetAlwaysAllowed();
+    _permissionMode = restorePermissionMode(session);
+    _syncPermissionMode();
     transcript.rebuildFrom(session);
     _eventSub = session.onEvent((SessionEvent event) {
       transcript.apply(event);
@@ -782,6 +858,8 @@ class ConatusTuiController {
     _eventSub = null;
     _voice?.dispose();
     _voice = null;
+    _approvalGate?.call();
+    _approvalGate = null;
     _teamSub?.dispose();
     _teamSub = null;
     _sessionCtx?.dispose();

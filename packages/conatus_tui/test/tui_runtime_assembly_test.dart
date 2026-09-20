@@ -118,6 +118,65 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 50));
     await runtime.dispose();
   });
+
+  test('装配后 approval 与 ask_user 就绪，控制器共用同一浮层', () async {
+    final Directory dir = Directory.systemTemp.createTempSync('conatus-tui');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final String sep = Platform.pathSeparator;
+    final ConatusTuiRuntime runtime = await ConatusTuiRuntime.create(
+      baseDir: dir.path,
+      sessionDir: dir.path,
+      memoryFile: '${dir.path}${sep}memory.json',
+      webTools: false,
+      skills: false,
+      llm: FallbackLlm(const <LlmProvider>[]),
+    );
+    final ConatusTuiController controller =
+        runtime.createController(onExit: () {});
+
+    expect(runtime.tools.names, contains(kAskUserToolName));
+    expect(runtime.app.get<TuiPermissionGate>('approval'), isNotNull);
+    expect(
+      identical(runtime.app.get<TuiChoicePrompt>('tuiChoice'), controller.choice),
+      isTrue,
+    );
+
+    // 缺省按需询问：medium 工具放行，high 工具走浮层。
+    runtime.app.effect(() => runtime.tools.fn(
+          'mid',
+          description: '有副作用',
+          riskLevel: ToolRisk.medium,
+          handler: (ToolContext ctx) async => ToolResult.success('mid'),
+        ));
+    runtime.app.effect(() => runtime.tools.fn(
+          'danger',
+          description: '高危',
+          riskLevel: ToolRisk.high,
+          handler: (ToolContext ctx) async => ToolResult.success('danger'),
+        ));
+
+    expect((await runtime.tools.call(const ToolCall(name: 'mid'))).isError,
+        isFalse);
+
+    final Future<ToolResult> blocked =
+        runtime.tools.call(const ToolCall(name: 'danger'));
+    expect(controller.choice.open, isTrue);
+    controller.choice.confirm(); // 「允许一次」
+    expect((await blocked).isError, isFalse);
+
+    // ask_user 经同一浮层提问，选中项作为工具结果回传。
+    final Future<ToolResult> asked = runtime.tools.call(const ToolCall(
+      name: kAskUserToolName,
+      arguments: <String, Object?>{
+        'question': '选哪个？',
+        'options': <String>['甲', '乙'],
+      },
+    ));
+    controller.choice.confirm();
+    expect((await asked).content, contains('甲'));
+
+    await runtime.dispose();
+  });
 }
 
 /// 记录模型实际收到的消息。

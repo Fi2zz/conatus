@@ -18,6 +18,7 @@ class ApprovalRequest {
     required this.toolName,
     this.arguments = const <String, Object?>{},
     this.description = '',
+    this.pathArgs = const <String>[],
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -33,6 +34,11 @@ class ApprovalRequest {
   /// 面向用户的说明。
   final String description;
 
+  /// 本请求涉及的文件系统路径（工具 `Tool.pathParams` 声明的参数取值）。
+  ///
+  /// 无路径参数时为空列表。审批方据此把「工具 + 目录」作为信任粒度。
+  final List<String> pathArgs;
+
   /// 请求时间。
   final DateTime createdAt;
 
@@ -42,6 +48,7 @@ class ApprovalRequest {
         'toolName': toolName,
         'arguments': arguments,
         'description': description,
+        'pathArgs': pathArgs,
         'createdAt': createdAt.toIso8601String(),
       };
 
@@ -56,6 +63,15 @@ abstract class Approval {
 
   /// 待处理请求流（供 UI/外部系统订阅）。
   Stream<ApprovalRequest> get pending;
+
+  /// 是否已预先放行该请求，无需打扰用户。
+  ///
+  /// 默认 `false`（每次都问）。实现方可用它表达「工具 + 参数值」粒度的信任
+  /// （如某工具对某目录已获授权）。中间件在 [request] 之前调用它：返回 `true`
+  /// 则直接放行，不产生审批请求、不发遥测、不弹界面。
+  ///
+  /// 请求携带的路径见 [ApprovalRequest.pathArgs]。
+  Future<bool> preapproved(ApprovalRequest request) async => false;
 
   /// 一次性审批整份计划（默认走同一条 [request]，`toolName` 为 `plan`）。
   Future<bool> requestPlan(Plan plan) => request(ApprovalRequest(

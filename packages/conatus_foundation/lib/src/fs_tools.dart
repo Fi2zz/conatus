@@ -27,6 +27,9 @@ class ReadFileTool extends Tool {
   ToolRisk get riskLevel => ToolRisk.low;
 
   @override
+  List<String> get pathParams => const <String>['path'];
+
+  @override
   List<ParamSpec> get params => <ParamSpec>[
         ParamSpec.string('path', required: true, description: '文件路径'),
       ];

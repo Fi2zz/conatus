@@ -101,6 +101,17 @@ abstract class Tool {
   /// 所属分组；默认不分组。
   String? get group => null;
 
+  /// 该工具的超时；`null` 表示沿用注册表的默认超时。
+  ///
+  /// 用于等待外部输入的交互类工具（其耗时由用户决定，不应受默认超时约束）。
+  Duration? get timeout => null;
+
+  /// 声明哪些参数是文件系统路径（取值形如 `'path'`，可含 `a.b` 路径）。
+  ///
+  /// 审批中间件据此把「工具 + 参数路径」作为信任粒度：落在已信任目录内的
+  /// 调用可直接放行，无需再问用户。默认空集，表示该工具与路径无关。
+  List<String> get pathParams => const <String>[];
+
   /// 参数声明；默认无参数。
   List<ParamSpec> get params => const <ParamSpec>[];
 

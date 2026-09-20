@@ -98,9 +98,10 @@ class ToolRegistry {
 
   /// 调用一个工具：校验参数 → 守卫 → 中间件链 → 执行体 → 广播结果。
   ///
-  /// [timeout] 覆盖 [defaultTimeout]。参数不合法（`INVALID_ARGS`）、超时
-  /// （`TOOL_TIMEOUT`）、未知工具（`UNKNOWN_TOOL`）、守卫拒绝（`TOOL_DENIED`）
-  /// 与执行体异常（`TOOL_ERROR`）都返回失败结果而非抛出。
+  /// [timeout] 覆盖工具自身声明的 [Tool.timeout]，后者又覆盖 [defaultTimeout]。
+  /// 参数不合法（`INVALID_ARGS`）、超时（`TOOL_TIMEOUT`）、未知工具
+  /// （`UNKNOWN_TOOL`）、守卫拒绝（`TOOL_DENIED`）与执行体异常（`TOOL_ERROR`）
+  /// 都返回失败结果而非抛出。
   Future<ToolResult> call(ToolCall call, {Duration? timeout}) async {
     final ToolResult result = await _dispatch(call, timeout);
     for (final ToolResultListener listener
@@ -134,7 +135,7 @@ class ToolRegistry {
         );
       }
     }
-    final Duration? effective = timeout ?? defaultTimeout;
+    final Duration? effective = timeout ?? tool.timeout ?? defaultTimeout;
     try {
       final Future<ToolResult> execution = _chain(tool, call)();
       return await _withTimeout(call, execution, effective);

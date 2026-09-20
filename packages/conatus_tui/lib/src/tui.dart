@@ -9,6 +9,8 @@ import 'package:nocterm/nocterm.dart';
 
 import 'team_snapshot.dart';
 import 'team_views.dart';
+import 'tui_choice.dart';
+import 'tui_choice_view.dart';
 import 'tui_chrome.dart';
 import 'tui_command_menu_view.dart';
 import 'tui_commands.dart';
@@ -116,6 +118,9 @@ class _AgentTuiState extends State<AgentTui> {
       _toggleView();
       return true;
     }
+    if (_onChoiceKey(event)) {
+      return true;
+    }
     if (!_menu.open) {
       if (event.logicalKey == LogicalKey.escape) {
         _controller.interrupt();
@@ -177,6 +182,24 @@ class _AgentTuiState extends State<AgentTui> {
     setState(() {});
   }
 
+  /// 选项浮层按键：↑↓ 移动、Enter 确认、Esc 取消；浮层未打开返回 false。
+  bool _onChoiceKey(KeyboardEvent event) {
+    final TuiChoicePrompt prompt = _controller.choice;
+    if (!prompt.open) {
+      return false;
+    }
+    if (event.logicalKey == LogicalKey.arrowUp) {
+      prompt.move(-1);
+    } else if (event.logicalKey == LogicalKey.arrowDown) {
+      prompt.move(1);
+    } else if (event.logicalKey == LogicalKey.enter) {
+      prompt.confirm();
+    } else if (event.logicalKey == LogicalKey.escape) {
+      prompt.cancel();
+    }
+    return true; // 浮层打开时吞掉按键，避免误输入。
+  }
+
   bool _onKey(KeyboardEvent event) {
     // Ctrl+T 切换对话/团队视图（兜底：输入框聚焦时由 _onInputKey 先行处理）。
     if (event.matches(LogicalKey.keyT, ctrl: true)) {
@@ -186,6 +209,9 @@ class _AgentTuiState extends State<AgentTui> {
     // Ctrl+C 恒可用：首次提示确认，窗口内再按一次才退出。
     if (event.logicalKey == LogicalKey.keyC && event.isControlPressed) {
       _confirmExitChord();
+      return true;
+    }
+    if (_onChoiceKey(event)) {
       return true;
     }
     if (_controller.picker.open) {
@@ -248,7 +274,7 @@ class _AgentTuiState extends State<AgentTui> {
           TeamStatusBar(snapshot: _controller.teamSnapshot),
           TuiInputBar(
             controller: _input,
-            focused: !_controller.picker.open,
+            focused: !_controller.picker.open && !_controller.choice.open,
             busy: _controller.busy,
             onSubmitted: (_) => _submit(),
             onKeyEvent: _onInputKey,
@@ -258,7 +284,9 @@ class _AgentTuiState extends State<AgentTui> {
             busy: _controller.busy,
             tick: _tick,
             menuOpen: _menu.open,
+            choiceOpen: _controller.choice.open,
             exitPending: _confirmExit,
+            permissionLabel: _controller.permissionLabel,
           ),
         ],
       ),
@@ -273,6 +301,15 @@ class _AgentTuiState extends State<AgentTui> {
           style: TextStyle(color: Colors.gray),
         ),
       );
+    }
+    if (_controller.choice.open) {
+      final TuiChoiceRequest? request = _controller.choice.request;
+      if (request != null) {
+        return TuiChoiceView(
+          request: request,
+          selected: _controller.choice.index,
+        );
+      }
     }
     if (_controller.picker.open) {
       return SessionPickerView(
@@ -291,7 +328,7 @@ class _AgentTuiState extends State<AgentTui> {
         ),
       );
     }
-    return Scrollbar(
+    final child = Scrollbar(
       controller: _scroll,
       thumbVisibility: true,
       child: ListView.builder(
@@ -306,5 +343,6 @@ class _AgentTuiState extends State<AgentTui> {
         },
       ),
     );
+    return SelectionArea(child: child);
   }
 }

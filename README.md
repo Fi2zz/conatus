@@ -27,7 +27,7 @@
 | [`conatus_compaction`](packages/conatus_compaction) | 压缩能力缝：滚动摘要契约 + `compaction/*` 日志事件 + 工具配对平衡切点 | `conatus_core`、`conatus_foundation` |
 | [`conatus_agent`](packages/conatus_agent) | Agent Loop 与产品化：plan / sub-agent / reflection / telemetry / eval / approval / skill / recovery | `conatus_compaction`、`conatus_core`、`conatus_foundation`、`conatus_llm` |
 | [`conatus_tasks`](packages/conatus_tasks) | 任务中心（Task Center）：Agent Loop / sub-agent / shell / schedule 运行时任务追踪（任务树 + `task/changed` 持久化 + `list_tasks` / `cancel_task` 工具） | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_schedule` |
-| [`conatus_tui`](packages/conatus_tui) | 基于 [nocterm](https://pub.dev/packages/nocterm) 的文本 TUI：对话 + 工具闭环、斜杠命令、会话选择面板 | `conatus_agent`、`conatus_compaction`、`conatus_cron`、`conatus_llm`、`conatus_schedule`、`conatus_search`、`conatus_skill`、`nocterm` |
+| [`conatus_tui`](packages/conatus_tui) | 基于 [nocterm](https://pub.dev/packages/nocterm) 的文本 TUI：对话 + 工具闭环、斜杠命令、会话选择面板、选项浮层与权限模式 | `conatus_agent`、`conatus_compaction`、`conatus_cron`、`conatus_llm`、`conatus_schedule`、`conatus_search`、`conatus_skill`、`nocterm` |
 
 依赖方向自上而下，无环：
 
@@ -1198,11 +1198,11 @@ root.provide('x', 1);
 | 成员 | 说明 |
 |------|------|
 | `provideTools(ctx, {tools, timeout}) → ToolRegistry` / `ctx.tools` | 提供 `'tools'` / 快捷访问 |
-| `Tool({name, description, riskLevel, group, params, call})` | 工具基类（`toSchema()` 白名单投影） |
+| `Tool({name, description, riskLevel, group, timeout, pathParams, params, call})` | 工具基类（`toSchema()` 白名单投影；`timeout` 覆盖注册表默认超时；`pathParams` 声明路径参数供审批按目录授权） |
 | `ParamSpec.string/.integer/.number/.boolean/.enumeration/.array/.object` + `parameterSchema` | 参数声明与 schema 生成 |
 | `ToolContext`（`str` / `integer` / `number` / `boolean` / `array` / `object` / `require<T>`） | 类型安全取参 |
 | `register(Tool) → Disposer` | 注册工具（同名重复抛 `StateError`） |
-| `call(ToolCall, {timeout}) → Future<ToolResult>` | 校验 → 守卫 → 中间件 → 执行体（收敛失败） |
+| `call(ToolCall, {timeout}) → Future<ToolResult>` | 校验 → 守卫 → 中间件 → 执行体（收敛失败；超时按 调用参数 > `Tool.timeout` > `defaultTimeout` 取用） |
 | `describe()` / `describeOne(name)` | 当前可见工具的模型 schema |
 | `fn(name, {...}) → Disposer`（`ctx.tools.fn`） | 一行注册简单工具 |
 | `group(name, [tools]) → Disposer`（`ctx.tools.group`） | 按领域分组；`groups` / `groupOf` / `namesIn` / `describeGroup` |
@@ -1457,11 +1457,13 @@ root.provide('x', 1);
 
 | 成员 | 说明 |
 |------|------|
-| `provideApproval(ctx, {approval, tools, threshold, timeout})` / `ctx.approval` | 提供 `'approval'` + 安装拦截 |
-| `Approval` / `ApprovalRequest({id, toolName, arguments, description})` | 端口 / 请求 |
+| `provideApproval(ctx, {approval, tools, threshold, timeout, instrument})` / `ctx.approval` | 提供 `'approval'` + 安装拦截（`instrument: false` 时只提供服务，供阈值动态决定的装配方自行挂载） |
+| `Approval` / `ApprovalRequest({id, toolName, arguments, description, pathArgs})` | 端口 / 请求 |
 | `AutoApproval(bool)` / `RuleBasedApproval({allow})` / `AskUserApproval({askUser, yesWords, timeout})` | 内置 Provider |
+| `preapproved(request)` | 预授权钩子：`true` 则中间件直接放行，不询问、不埋点 |
 | `requestPlan(plan)` | 一次性审批计划 |
-| `instrumentApproval(ctx, {approval, tools, telemetry, threshold, timeout})` | 挂审批中间件 |
+| `instrumentApproval(ctx, {approval, tools, telemetry, threshold, timeout})` | 挂审批中间件（声明 `Tool.pathParams` 的工具即使低风险也进入审批） |
+| `pathArguments(tool, call)` | 取工具声明的路径参数取值（支持嵌套键） |
 
 ### 技能 / 恢复
 

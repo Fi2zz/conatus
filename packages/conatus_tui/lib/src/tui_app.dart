@@ -14,8 +14,11 @@ import 'package:conatus_llm/conatus_llm.dart';
 import 'package:conatus_search/conatus_search.dart';
 import 'package:conatus_skill/conatus_skill.dart';
 
+import 'ask_user_tool.dart';
 import 'system_notifier.dart';
+import 'tui_choice.dart';
 import 'tui_controller.dart';
+import 'tui_permission_gate.dart';
 
 /// conatus TUI 运行时：持有根 [Context] 与已装配的服务。
 class ConatusTuiRuntime {
@@ -88,6 +91,26 @@ class ConatusTuiRuntime {
     provideFileSystemLocal(app);
     provideFsTools(app);
     provideToolResultEviction(app);
+
+    // ── 交互：选项浮层 + 工具审批 ────────────────────────────────
+    // 浮层状态挂在根上下文：控制器构造时接上重绘回调，审批与 `ask_user`
+    // 共用同一条提问通道。审批中间件不在这里装——它随权限模式在控制器里
+    // 挂载 / 卸载（见 ConatusTuiController._syncPermissionMode）。
+    final TuiChoicePrompt choice = TuiChoicePrompt();
+    app.provide('tuiChoice', choice);
+    provideApproval(
+      app,
+      approval: TuiPermissionGate(
+        choice: choice,
+        fs: app.get<FileSystem>('fs'),
+      ),
+      // 拦截阈值随权限模式变化，由控制器按需挂载 / 卸载
+      // （见 ConatusTuiController._syncPermissionMode），这里只提供服务。
+      instrument: false,
+    );
+    app.effect(() => app.tools.register(AskUserTool(
+          host: () => app.get<TuiUserPromptHost>('tuiController'),
+        )));
 
     if (webTools) {
       provideSearch(app, exaApiKey: exaApiKey);
@@ -181,9 +204,6 @@ class ConatusTuiRuntime {
       modelLabel: modelLabel,
       onExit: onExit,
     );
-    // cron 运行时的交付端口经服务键找到当前控制器（首个 tick 前有 3s 延迟，
-    // createController 在此之前完成即可）。
-    app.provide('tuiController', controller);
     return controller;
   }
 

@@ -143,6 +143,10 @@ class VoiceApproval implements Approval {
   @override
   Stream<ApprovalRequest> get pending => _pending.stream;
 
+  /// 语音审批不做预授权：没有「静默放行」这条路径，每次都要口头确认。
+  @override
+  Future<bool> preapproved(ApprovalRequest request) async => false;
+
   @override
   Future<bool> requestPlan(Plan plan) => _confirm(summarizePlan(plan));
 

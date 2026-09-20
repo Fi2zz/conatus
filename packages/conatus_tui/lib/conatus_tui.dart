@@ -4,18 +4,38 @@
 /// [AgentTui] 渲染，即可得到一个可直接运行的对话式终端界面。
 library;
 
+export 'src/ask_user_tool.dart'
+    show
+        AskUserTool,
+        TuiUserPromptHost,
+        kAskUserPurposePermissionMode,
+        kAskUserTimeout,
+        kAskUserToolName;
 export 'src/team_snapshot.dart';
 export 'src/team_subscription.dart';
 export 'src/team_views.dart';
 export 'src/transcript.dart';
 export 'src/tui.dart';
 export 'src/tui_app.dart';
+export 'src/tui_choice.dart';
+export 'src/tui_choice_view.dart';
 export 'src/tui_chrome.dart';
 export 'src/tui_command_menu_view.dart';
 export 'src/tui_commands.dart';
 export 'src/tui_controller.dart' show ConatusTuiController, isValidSessionId;
 export 'src/tui_help.dart';
 export 'src/tui_message.dart';
+export 'src/tui_permission.dart';
+export 'src/tui_permission_gate.dart'
+    show
+        TuiPermissionGate,
+        kApprovalAllowAlways,
+        kApprovalAllowOnce,
+        kApprovalDeny,
+        kApprovalTrustFolder,
+        kPlanApprove,
+        kPlanReject,
+        kTuiDecisionTimeout;
 export 'src/tui_session_picker.dart';
 export 'src/tui_session_picker_view.dart';
 export 'src/tui_views.dart';

@@ -118,7 +118,9 @@ class TuiStatusBar extends StatelessComponent {
     required this.busy,
     required this.tick,
     this.menuOpen = false,
+    this.choiceOpen = false,
     this.exitPending = false,
+    this.permissionLabel = '',
   });
 
   /// 会话面板是否打开。
@@ -133,14 +135,22 @@ class TuiStatusBar extends StatelessComponent {
   /// `/` 命令菜单是否打开。
   final bool menuOpen;
 
+  /// 选项浮层是否打开。
+  final bool choiceOpen;
+
   /// Ctrl+C 退出确认是否挂起（等待再按一次）。
   final bool exitPending;
+
+  /// 当前权限模式名；空则不显示。
+  final String permissionLabel;
 
   @override
   Component build(BuildContext context) {
     final String hint;
     if (exitPending) {
       hint = '再按一次 Ctrl+C 退出';
+    } else if (choiceOpen) {
+      hint = '[↑↓] 选择 | [Enter] 确认 | [Esc] 取消';
     } else if (pickerOpen) {
       hint = '[↑↓] 选择会话 | [Enter] 切换 | [Esc] 关闭';
     } else if (menuOpen) {
@@ -157,8 +167,12 @@ class TuiStatusBar extends StatelessComponent {
         border: BoxBorder(top: BorderSide(color: Colors.cyan)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Component>[
+          Text(
+            permissionLabel.isEmpty ? '' : '权限：$permissionLabel',
+            style: const TextStyle(color: Colors.brightYellow),
+          ),
           Text(
             hint,
             style: TextStyle(

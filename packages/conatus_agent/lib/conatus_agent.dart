@@ -32,7 +32,8 @@ export 'src/approval.dart'
         AskUserApproval,
         AutoApproval,
         RuleBasedApproval;
-export 'src/approval_gate.dart' show instrumentApproval, provideApproval;
+export 'src/approval_gate.dart'
+    show instrumentApproval, pathArguments, provideApproval;
 export 'src/caching.dart'
     show
         CachePlan,

@@ -51,7 +51,34 @@ dart run packages/conatus_tui/example/deepseek_demo.dart \
   `SKILL.md` 指令集，目录注入 system prompt，模型按需用 `skill` 工具取回正文；
   `ConatusTuiRuntime.create(skills: false)` 可关闭。注意它与 `provideSkillLibrary`
   （把重复工具序列沉淀成新工具）不是同一件事。
-- **状态栏**：思考动画、按键提示与 Ctrl+C 连按两次退出。
+- **状态栏**：思考动画、按键提示与 Ctrl+C 连按两次退出；左侧常显当前权限模式。
+- **选项浮层**：`↑↓` 选择、`Enter` 确认、`Esc` 取消。模型可用 `ask_user` 工具
+  把候选选项交给你选；工具审批复用同一浮层。
+
+## 权限模式
+
+三档审批强度，由模型经 `ask_user(purpose: permission_mode)` 询问后切换：
+
+| 模式 | 拦截阈值 | 行为 |
+| --- | --- | --- |
+| 始终询问 `alwaysAsk` | `ToolRisk.medium` | 只读操作自动放行，其余都要先批准 |
+| 按需询问 `askWhenNeeded` | `ToolRisk.high` | 常规改动自动执行，高危操作仍会询问（默认） |
+| 从不询问 `neverAsk` | 不挂审批 | 不打断，所有操作自动执行 |
+
+被拦截时弹出「允许一次 / 信任此文件夹 / 总是允许该工具 / 拒绝」；选「总是允许」
+会在**当前会话**内记住该工具（切会话即清空）。
+
+**信任此文件夹**（仅对声明了路径参数的工具出现，如 `read_file`）按「工具 + 目录」
+记住授权：之后该工具访问该目录及其子孙都不再询问，目录之外仍会问，换一个工具
+也会重新问。判定用 `FileSystem.contains`，因此是真正的目录包含关系而非字符串前缀。
+
+> 声明路径参数的工具（`Tool.pathParams`）即使风险为 `low` 也会进入审批——
+> 这正是「读文件也要按目录授权」的落点。
+
+模式**按会话持久化**：以 `permission/mode` 事件追加到会话日志（append-only，折叠
+最后一条），因此切回某个会话即恢复它自己的模式，重启 TUI 后依然生效。fork 出的
+会话不继承父会话的模式（与 `plan/mode` 同款语义）。信任记录与权限模式不同，是
+**内存态**、随会话切换清空。
 
 ## 作为库使用
 

@@ -106,6 +106,7 @@ Future<(ConatusTuiController, Context)> _build(
   List<LlmResult> replies, {
   void Function(Context ctx, Session session)? configureSession,
   bool withCron = false,
+  bool withApproval = false,
 }) async {
   final Context app = Context.root();
   provideTools(app);
@@ -118,6 +119,15 @@ Future<(ConatusTuiController, Context)> _build(
   provideMemory(app);
   if (withCron) {
     provideCron(app, storage: _MemoryCronStorage());
+  }
+  if (withApproval) {
+    final TuiChoicePrompt choice = TuiChoicePrompt();
+    app.provide('tuiChoice', choice);
+    provideApproval(
+      app,
+      approval: TuiPermissionGate(choice: choice),
+      instrument: false,
+    );
   }
   final SessionStore sessions = provideSessions(app);
   final ConatusTuiController controller = ConatusTuiController(
@@ -696,6 +706,188 @@ void main() {
     expect(text, contains('完成'));
     expect(text, contains('t1'));
     expect(text, contains('一切正常'));
+    app.dispose();
+  });
+
+  test('applyPermissionMode 切换模式并重挂审批中间件', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+      withApproval: true,
+    );
+    app.effect(() => app.tools.fn(
+          'risky',
+          description: '有副作用的操作',
+          riskLevel: ToolRisk.medium,
+          handler: (ToolContext ctx) async => ToolResult.success('done'),
+        ));
+
+    // 缺省 Ask When Needed（阈值 high）：medium 工具放行。
+    expect(controller.permissionMode, TuiPermissionMode.askWhenNeeded);
+    expect(controller.permissionLabel, '按需询问');
+    expect(
+      (await app.tools.call(const ToolCall(name: 'risky'))).isError,
+      isFalse,
+    );
+
+    controller.applyPermissionMode(TuiPermissionMode.alwaysAsk);
+    expect(
+      controller.transcript.messages.last.text,
+      contains('权限模式已切换为「始终询问」'),
+    );
+
+    // Always Ask（阈值 medium）：medium 工具被拦，浮层等待选择。
+    final Future<ToolResult> blocked =
+        app.tools.call(const ToolCall(name: 'risky'));
+    expect(controller.choice.open, isTrue);
+    controller.choice
+      ..move(2)
+      ..confirm();
+    expect((await blocked).error!.code, 'APPROVAL_DENIED');
+
+    controller.applyPermissionMode(TuiPermissionMode.neverAsk);
+    expect(
+      (await app.tools.call(const ToolCall(name: 'risky'))).isError,
+      isFalse,
+    );
+    app.dispose();
+  });
+
+  test('applyPermissionMode 重复设置同一模式不重复提示', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+      withApproval: true,
+    );
+
+    controller.applyPermissionMode(TuiPermissionMode.alwaysAsk);
+    final int before = controller.transcript.messages.length;
+
+    controller.applyPermissionMode(TuiPermissionMode.alwaysAsk);
+    expect(controller.transcript.messages.length, before);
+    app.dispose();
+  });
+
+  test('dispose 撤销审批中间件', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+      withApproval: true,
+    );
+    app.effect(() => app.tools.fn(
+          'risky',
+          description: '有副作用的操作',
+          riskLevel: ToolRisk.medium,
+          handler: (ToolContext ctx) async => ToolResult.success('done'),
+        ));
+    controller.applyPermissionMode(TuiPermissionMode.alwaysAsk);
+
+    controller.dispose();
+
+    // 中间件已撤销：不再弹浮层，调用直接通过。
+    expect(
+      (await app.tools.call(const ToolCall(name: 'risky'))).isError,
+      isFalse,
+    );
+    expect(controller.choice.open, isFalse);
+    app.dispose();
+  });
+
+  test('choice 变化触发重绘回调', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+    );
+    int calls = 0;
+    controller.onChanged = () => calls++;
+
+    final Future<String?> pending = controller.choice.ask(const TuiChoiceRequest(
+      title: '选一个',
+      choices: <TuiChoice>[TuiChoice(id: 'a', label: '甲')],
+    ));
+    controller.choice.confirm();
+    await pending;
+
+    expect(calls, greaterThan(0));
+    app.dispose();
+  });
+
+  test('权限模式持久化到会话事件，切会话各自恢复', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+      withApproval: true,
+    );
+
+    expect(controller.permissionMode, TuiPermissionMode.askWhenNeeded);
+
+    controller.applyPermissionMode(TuiPermissionMode.alwaysAsk);
+    expect(
+      app.require<SessionStore>('sessions').get('s1')!.ownEvents.last.type,
+      kPermissionModeEvent,
+    );
+
+    // 切到另一会话：模式回落到默认档（新会话无记录）。
+    await controller.switchSession('s2');
+    expect(controller.permissionMode, TuiPermissionMode.askWhenNeeded);
+
+    controller.applyPermissionMode(TuiPermissionMode.neverAsk);
+
+    // 切回 s1：恢复它自己的模式。
+    await controller.switchSession('s1');
+    expect(controller.permissionMode, TuiPermissionMode.alwaysAsk);
+
+    await controller.switchSession('s2');
+    expect(controller.permissionMode, TuiPermissionMode.neverAsk);
+
+    app.dispose();
+  });
+
+  test('切会话清空「总是允许」白名单', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+      withApproval: true,
+    );
+    final TuiPermissionGate gate = app.require<TuiPermissionGate>('approval');
+    app.effect(() => app.tools.fn(
+          'risky',
+          description: '有副作用的操作',
+          riskLevel: ToolRisk.medium,
+          handler: (ToolContext ctx) async => ToolResult.success('done'),
+        ));
+    controller.applyPermissionMode(TuiPermissionMode.alwaysAsk);
+
+    // 选「总是允许」把它加进白名单。
+    final Future<ToolResult> first =
+        app.tools.call(const ToolCall(name: 'risky'));
+    controller.choice
+      ..move(1)
+      ..confirm();
+    await first;
+    expect(gate.alwaysAllowed, contains('risky'));
+
+    await controller.switchSession('s2');
+    expect(gate.alwaysAllowed, isEmpty);
+    app.dispose();
+  });
+
+  test('恢复的模式驱动审批阈值：重开会话后 medium 工具仍被拦', () async {
+    final (ConatusTuiController controller, Context app) = await _build(
+      const <LlmResult>[],
+      withApproval: true,
+    );
+    app.effect(() => app.tools.fn(
+          'risky',
+          description: '有副作用的操作',
+          riskLevel: ToolRisk.medium,
+          handler: (ToolContext ctx) async => ToolResult.success('done'),
+        ));
+    controller.applyPermissionMode(TuiPermissionMode.alwaysAsk);
+
+    await controller.switchSession('s2');
+    await controller.switchSession('s1');
+    expect(controller.permissionMode, TuiPermissionMode.alwaysAsk);
+
+    final Future<ToolResult> blocked =
+        app.tools.call(const ToolCall(name: 'risky'));
+    expect(controller.choice.open, isTrue);
+    controller.choice.cancel();
+    expect((await blocked).error!.code, 'APPROVAL_DENIED');
     app.dispose();
   });
 }

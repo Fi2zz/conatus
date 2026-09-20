@@ -84,6 +84,26 @@ class _SlowTool extends Tool {
   }
 }
 
+/// 自声明超时的慢工具：默认 20ms，长于注册表默认超时。
+class _SelfTimedTool extends Tool {
+  const _SelfTimedTool();
+
+  @override
+  String get name => 'self-timed';
+
+  @override
+  String get description => '';
+
+  @override
+  Duration? get timeout => const Duration(milliseconds: 20);
+
+  @override
+  Future<ToolResult> call(ToolContext ctx) async {
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    return ToolResult.success('done');
+  }
+}
+
 void main() {
   group('Tool / ToolResult', () {
     test('默认风险等级为 low、不分组，toSchema 只含白名单字段', () {
@@ -305,6 +325,25 @@ void main() {
       final ToolResult result = await tools.call(const ToolCall(name: 'slow'));
 
       expect(result.error!.code, 'TOOL_TIMEOUT');
+    });
+
+    test('工具自声明 timeout 覆盖 defaultTimeout，调用参数又覆盖它', () async {
+      final ToolRegistry tools = ToolRegistry(
+        defaultTimeout: const Duration(milliseconds: 500),
+      )..register(const _SelfTimedTool());
+
+      expect(
+        (await tools.call(const ToolCall(name: 'self-timed'))).error!.code,
+        'TOOL_TIMEOUT',
+      );
+      expect(
+        (await tools.call(
+          const ToolCall(name: 'self-timed'),
+          timeout: const Duration(seconds: 5),
+        ))
+            .isError,
+        isFalse,
+      );
     });
 
     test('describeOne 未注册返回 null', () {
