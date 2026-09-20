@@ -1,0 +1,30 @@
+name: conatus_intent
+description: >-
+  [实验性] conatus 的意图路由。用正则和向量做本地意图匹配，
+  命中则直接执行动作，不命中才走完整 Agent Loop。
+version: 0.15.0
+repository: https://github.com/Fi2zz/conatus
+issue_tracker: https://github.com/Fi2zz/conatus/issues
+publish_to: none # 实验性包暂不发布
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+dependencies:
+  conatus_agent: ^0.15.0
+  conatus_core: ^0.15.0
+  conatus_foundation: ^0.15.0
+  conatus_llm: ^0.15.0
+
+dev_dependencies:
+  conatus_skill: ^0.15.0
+  lints: ^4.0.0
+  test: ^1.25.0
+
+topics:
+  - plugin
+  - intent
+  - router
+  - experimental

@@ -21,6 +21,7 @@ workspace:
   - packages/conatus_credentials
   - packages/conatus_cron
   - packages/conatus_foundation
+  - packages/conatus_intent
   - packages/conatus_llm
   - packages/conatus_mcp
   - packages/conatus_observability
@@ -52,6 +53,7 @@ dependencies:
 dev_dependencies:
   conatus_alerting: ^0.15.0
   conatus_browser_use: ^0.15.0
+  conatus_intent: ^0.15.0
   conatus_observability: ^0.15.0
   conatus_team: ^0.15.0
   conatus_tui: ^0.15.0
