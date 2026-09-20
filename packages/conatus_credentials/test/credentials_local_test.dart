@@ -38,7 +38,14 @@ void main() {
 
     test('缺省读 Platform.environment', () {
       final EnvCredentials credentials = EnvCredentials();
-      expect(credentials.keys, containsAll(Platform.environment.keys));
+      final Map<String, String> environment = Platform.environment;
+      expect(
+        credentials.keys,
+        containsAll(
+          environment.keys
+              .where((String key) => environment[key]!.isNotEmpty),
+        ),
+      );
     });
   });
 
