@@ -4,6 +4,10 @@
 /// 复用同一套解析与用法文案，不必再抄一遍。
 library;
 
+/// 会话 id 规则：字母 / 数字 / 下划线 / 中文 / 短横，长度 1—64。
+bool isValidSessionId(String id) =>
+    RegExp(r'^[A-Za-z0-9_\-\u4e00-\u9fff]{1,64}$').hasMatch(id);
+
 /// 缺省启动会话 id。
 const String kTuiDefaultSession = 'tui';
 
@@ -35,9 +39,13 @@ class TuiOptions {
 
   /// 解析命令行参数。
   ///
-  /// 未知参数忽略；`--session` / `--first` 缺后续值时按未出现处理。
-  static TuiOptions parse(List<String> args) {
-    String session = kTuiDefaultSession;
+  /// [sessionId] 是 `--session` 未出现时的启动会话；`--session` 出现且取值合法
+  /// 时以它为准。最终选中的会话 id 不是合法会话 id 时抛 [ArgumentError]。
+  static TuiOptions parse(
+    List<String> args, {
+    String sessionId = kTuiDefaultSession,
+  }) {
+    String session = sessionId;
     String? first;
     bool helpRequested = false;
     for (int index = 0; index < args.length; index++) {
@@ -49,6 +57,9 @@ class TuiOptions {
       } else if (arg == '--first' && index + 1 < args.length) {
         first = args[++index];
       }
+    }
+    if (!isValidSessionId(session)) {
+      throw ArgumentError.value(session, 'sessionId', '必须是合法会话 id');
     }
     return TuiOptions(
       session: session,

@@ -35,6 +35,10 @@
 - `example/deepseek_demo.dart` 改用 `TuiOptions`：`--session` / `--first` /
   `--help` 走公开解析，Demo 专属的 `--model` 由 `parseModelFlag` 补取；默认会话
   随之统一为 `kTuiDefaultSession`（tui）。
+- `TuiOptions.parse` 支持 `sessionId` 参数：`--session` 未出现时用它（缺省
+  `kTuiDefaultSession`），`--session` 合法时以它为准；最终选中的会话 id 非法时
+  抛 `ArgumentError`。`isValidSessionId` 随之移到 `tui_options.dart`（对外签名
+  不变）。
 
 ## [0.15.0] — 2026-09-15
 

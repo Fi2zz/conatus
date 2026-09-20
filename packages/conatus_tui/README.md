@@ -124,7 +124,10 @@ final ConatusTuiController controller = runtime.createController(
 await runApp(AgentTui(controller: controller, firstInput: options.first));
 ```
 
-缺省会话 id 是 `kTuiDefaultSession`（`tui`）。
+缺省会话 id 是 `kTuiDefaultSession`（`tui`）。不想用缺省名时可以传第二个参数：
+`TuiOptions.parse(args, sessionId: 'my-app')`；命令行里给出合法 `--session` 时
+以它为准。最终选中的会话 id 不是合法 id（规则见 `isValidSessionId`：字母 / 数字 /
+下划线 / 中文 / 短横，长度 1—64）时，`parse` 直接抛 `ArgumentError`。
 
 ## 自定义命令表
 

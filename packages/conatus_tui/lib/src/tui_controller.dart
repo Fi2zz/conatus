@@ -26,15 +26,12 @@ import 'tui_choice.dart';
 import 'tui_commands.dart';
 import 'tui_help.dart';
 import 'tui_message.dart';
+import 'tui_options.dart';
 import 'tui_permission.dart';
 import 'tui_permission_gate.dart';
 import 'tui_session_picker.dart';
 import 'tui_skill_command.dart';
 import 'voice_reporter.dart';
-
-/// 会话 id 规则：字母 / 数字 / 下划线 / 中文 / 短横，长度 1—64。
-bool isValidSessionId(String id) =>
-    RegExp(r'^[A-Za-z0-9_\-\u4e00-\u9fff]{1,64}$').hasMatch(id);
 
 /// `/goal` 用法提示。
 const String kGoalUsage =

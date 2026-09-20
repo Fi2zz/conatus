@@ -61,4 +61,47 @@ void main() {
     expect(TuiOptions.usage, contains('--session <id>'));
     expect(TuiOptions.usage, contains('--first <文本>'));
   });
+
+  test('传入 sessionId 且无 --session 时以它为准', () {
+    final TuiOptions options =
+        TuiOptions.parse(const <String>[], sessionId: 'custom');
+
+    expect(options.session, 'custom');
+  });
+
+  test('--session 合法时覆盖传入的 sessionId', () {
+    final TuiOptions options = TuiOptions.parse(
+      const <String>['--session', 'cli'],
+      sessionId: 'custom',
+    );
+
+    expect(options.session, 'cli');
+  });
+
+  test('--session 非法时抛 ArgumentError', () {
+    expect(
+      () => TuiOptions.parse(const <String>['--session', 'a b']),
+      throwsArgumentError,
+    );
+    expect(
+      () => TuiOptions.parse(<String>['--session', 'x' * 65]),
+      throwsArgumentError,
+    );
+  });
+
+  test('传入的 sessionId 非法且无 --session 时抛 ArgumentError', () {
+    expect(
+      () => TuiOptions.parse(const <String>[], sessionId: 'a b'),
+      throwsArgumentError,
+    );
+  });
+
+  test('传入的 sessionId 非法但 --session 合法时用 --session 的值', () {
+    final TuiOptions options = TuiOptions.parse(
+      const <String>['--session', 'ok'],
+      sessionId: 'a b',
+    );
+
+    expect(options.session, 'ok');
+  });
 }

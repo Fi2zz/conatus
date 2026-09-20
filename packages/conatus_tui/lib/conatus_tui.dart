@@ -31,7 +31,7 @@ export 'src/tui_choice_view.dart';
 export 'src/tui_chrome.dart';
 export 'src/tui_command_menu_view.dart';
 export 'src/tui_commands.dart';
-export 'src/tui_controller.dart' show ConatusTuiController, isValidSessionId;
+export 'src/tui_controller.dart' show ConatusTuiController;
 export 'src/tui_help.dart';
 export 'src/tui_message.dart';
 export 'src/tui_options.dart';
