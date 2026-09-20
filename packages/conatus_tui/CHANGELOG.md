@@ -19,13 +19,13 @@
   - 新增斜杠命令 `/team`（status / interrupt）与 `/task`（claim / release）
 - `conatus_tui` `/cron add` 支持中文规则词（每天 / 每周X）与间隔单位
   （秒 / 分钟 / 小时）。
-- 技能斜杠命令：每个已发现的技能投影成 `/<技能名> [补充要求]`，进 `/` 菜单过滤；
+- 技能斜杠命令：每个已发现的技能投影成 `/skill:<技能名> [补充要求]`，进 `/` 菜单过滤；
   执行时把技能正文展开成一轮用户输入（照常进 `user/message`），屏上折回一行。
   `disable-model-invocation` 的技能对模型隐藏但用户能手动触发。
   - 新增 `skillTuiCommands` / `renderSkillPrompt` / `collapseSkillPrompt`
   - `TuiCommandMenu` 支持注入命令来源（缺省仍是静态表），
     `ConatusTuiController.commands` 给出「静态 + 技能」的合并表
-  - `Transcript` 把展开的技能正文块折叠回 `/<技能名> …` 再上屏
+  - `Transcript` 把展开的技能正文块折叠回 `/skill:<技能名> …` 再上屏
 - 再导出 `nocterm`：调用方只需依赖 `conatus_tui` 即可使用 `runApp` /
   `shutdownApp` / `Component` 等类型。仅屏蔽 nocterm 自带的 `isEmpty` /
   `isNotEmpty`（与 `package:test` 同名冲突）。

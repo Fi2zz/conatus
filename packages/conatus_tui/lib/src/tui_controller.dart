@@ -364,11 +364,18 @@ class ConatusTuiController implements TuiUserPromptHost {
   List<TuiCommand> get _skillCommands =>
       skillTuiCommands(_app.get<SkillRegistry>('skillRegistry'));
 
-  /// 把 `/<技能名> [补充要求]` 当作技能调用；不是已知技能时返回 `false`。
+  /// 把 `/skill:<技能名> [补充要求]` 当作技能调用；不是 `skill:` 前缀命令时
+  /// 返回 `false`（裸 `/skill` 给用法提示）。
   ///
   /// 展开后的正文块作为一轮用户输入交给 Agent Loop，因此照常进
   /// `user/message` 事件；屏上由 [collapseSkillPrompt] 折叠回一行。
-  Future<bool> _runSkill(String name, String arg) async {
+  Future<bool> _runSkill(String command, String arg) async {
+    if (command == 'skill') {
+      transcript.add(TuiRole.system, kTuiSkillUsage);
+      return true;
+    }
+    if (!command.startsWith(kTuiSkillCommandPrefix)) return false;
+    final String name = command.substring(kTuiSkillCommandPrefix.length);
     final SkillRegistry? registry = _app.get<SkillRegistry>('skillRegistry');
     if (registry == null) return false;
     final SkillDefinition? definition = await registry.load(name);

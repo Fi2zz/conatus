@@ -147,7 +147,7 @@ await provideSkillRegistry(child, registry: scoped); // 遮蔽父级的 'skillRe
   段名与工具名要显式换名，否则装配处抛 `StateError`。
 - provider 没有取消信号：一次慢的 `list()` 会拖住这一轮收集（收集天然串行）。
 - 只扫发现根一层，不递归 `**/SKILL.md`；发现根在装配时确定，之后不跟随工作目录。
-- 本包只有模型侧入口：斜杠 `/<技能名>` 由 `conatus_tui` 提供（它把技能投影成用户
+- 本包只有模型侧入口：斜杠 `/skill:<技能名>` 由 `conatus_tui` 提供（它把技能投影成用户
   命令，`disable-model-invocation` 的技能由此手动触发）；直接用本包时，那类技能
   对模型完全不可见，也没有别的调用路径。
 - 单个条目非法即整条丢弃，模型只能看到「不存在」。

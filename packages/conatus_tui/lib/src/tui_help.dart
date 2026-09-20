@@ -9,7 +9,7 @@ String buildTuiHelpText({List<TuiCommand> extra = const <TuiCommand>[]}) {
   for (final TuiCommand command in <TuiCommand>[...tuiCommands, ...extra]) {
     buffer.writeln('  ${command.usage.padRight(16)}${command.description}');
   }
-  buffer.writeln('技能也可以直接调用：/<技能名> [补充要求]。');
+  buffer.writeln('技能也可以直接调用：/skill:<技能名> [补充要求]。');
   buffer.writeln('其他输入直接进入 Agent 对话链路。');
   buffer.write('按键：Esc 关闭面板；Ctrl+C 连按两次退出。');
   return buffer.toString();

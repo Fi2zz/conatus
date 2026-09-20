@@ -6,9 +6,9 @@
 
 `conatus_tui` 支持技能斜杠命令，并再导出 `nocterm`：
 
-- 每个已发现的技能投影成 `/<技能名> [补充要求]` 命令，进 `/` 菜单过滤与补全；
+- 每个已发现的技能投影成 `/skill:<技能名> [补充要求]` 命令，进 `/` 菜单过滤与补全；
   执行时把技能正文展开成一轮用户输入交给模型（照常进 `user/message` 事件），
-  屏上折回一行 `/<技能名> …`；`disable-model-invocation` 的技能不进模型目录，
+  屏上折回一行 `/skill:<技能名> …`；`disable-model-invocation` 的技能不进模型目录，
   但用户能这样手动触发。新增 `skillTuiCommands` / `renderSkillPrompt` /
   `collapseSkillPrompt`，`TuiCommandMenu` 支持注入命令来源
 - `conatus_tui` 再导出 `nocterm` 的 API（屏蔽与 `package:test` 冲突的 `isEmpty` /

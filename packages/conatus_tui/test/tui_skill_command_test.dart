@@ -1,4 +1,4 @@
-/// 技能斜杠命令（`/<技能名>`）：投影、展开、折叠与分发。
+/// 技能斜杠命令（`/skill:<技能名>`）：投影、展开、折叠与分发。
 library;
 
 import 'package:conatus_core/conatus_core.dart';
@@ -108,7 +108,7 @@ Future<(ConatusTuiController, Context, SkillRegistry, _RecordingProvider)>
 
 void main() {
   group('命令投影', () {
-    test('把注册表里的技能投影成命令', () async {
+    test('把注册表里的技能投影成 /skill:<技能名> 命令', () async {
       final (_, Context app, SkillRegistry registry, _) = await _build();
       registry.register(const SkillRegistration(
         name: 'release-notes',
@@ -119,7 +119,9 @@ void main() {
 
       final List<TuiCommand> commands = skillTuiCommands(registry);
 
-      expect(commands.map((TuiCommand c) => c.name), <String>['release-notes']);
+      expect(commands.map((TuiCommand c) => c.name),
+          <String>['skill:release-notes']);
+      expect(commands.single.token, '/skill:release-notes');
       expect(commands.single.description, '把合并记录改写成发布说明');
       expect(commands.single.takesArgs, isFalse);
       app.dispose();
@@ -145,7 +147,7 @@ void main() {
       app.dispose();
     });
 
-    test('与静态命令同名时静态命令优先', () async {
+    test('skill: 前缀与静态命令命名空间隔离，同名不再冲突', () async {
       final (ConatusTuiController controller, Context app, SkillRegistry registry,
           _) = await _build();
       registry.register(const SkillRegistration(
@@ -153,14 +155,12 @@ void main() {
       await registry.refresh();
 
       expect(skillTuiCommands(registry).map((TuiCommand c) => c.name),
-          isNot(contains('help')));
-      expect(
-        controller.commands
-            .where((TuiCommand c) => c.name == 'help')
-            .single
-            .description,
-        '显示本帮助',
-      );
+          <String>['skill:help']);
+      final List<String> names = controller.commands
+          .map((TuiCommand c) => c.name)
+          .toList();
+      expect(names, contains('help'));
+      expect(names, contains('skill:help'));
       app.dispose();
     });
 
@@ -170,9 +170,9 @@ void main() {
 
       expect(registry.modelInvocable, isEmpty);
       expect(skillTuiCommands(registry).map((TuiCommand c) => c.name),
-          <String>['user-only']);
+          <String>['skill:user-only']);
       expect(controller.commands.map((TuiCommand c) => c.name),
-          contains('user-only'));
+          contains('skill:user-only'));
       app.dispose();
     });
   });
@@ -190,13 +190,13 @@ void main() {
           endsWith('生成 1.2.0 的说明'));
     });
 
-    test('折叠回 /<技能名> <补充要求>', () {
+    test('折叠回 /skill:<技能名> <补充要求>', () {
       final SkillDefinition definition = _definition();
 
       expect(collapseSkillPrompt(renderSkillPrompt(definition, '')),
-          '/release-notes');
+          '/skill:release-notes');
       expect(collapseSkillPrompt(renderSkillPrompt(definition, '生成说明')),
-          '/release-notes 生成说明');
+          '/skill:release-notes 生成说明');
       expect(collapseSkillPrompt('普通输入'), '普通输入');
     });
   });
@@ -206,13 +206,13 @@ void main() {
       final TuiCommandMenu menu = TuiCommandMenu(
         commands: () => <TuiCommand>[
           ...tuiCommands,
-          const TuiCommand(name: 'release-notes', description: '发布说明'),
+          const TuiCommand(name: 'skill:release-notes', description: '发布说明'),
         ],
       );
 
-      menu.syncInput('/rel');
+      menu.syncInput('/skill:rel');
 
-      expect(menu.matches.single.name, 'release-notes');
+      expect(menu.matches.single.name, 'skill:release-notes');
     });
 
     test('缺省仍只用静态命令表', () {
@@ -223,7 +223,7 @@ void main() {
   });
 
   group('分发', () {
-    test('/<技能名>：展开正文交给模型，屏上折叠成一行', () async {
+    test('/skill:<技能名>：展开正文交给模型，屏上折叠成一行', () async {
       final (ConatusTuiController controller, Context app, SkillRegistry registry,
           _RecordingProvider provider) = await _build();
       registry.register(const SkillRegistration(
@@ -233,7 +233,7 @@ void main() {
       ));
       await registry.refresh();
 
-      await controller.handleLine('/release-notes 生成 1.2.0 的说明');
+      await controller.handleLine('/skill:release-notes 生成 1.2.0 的说明');
 
       expect(provider.lastUserText,
           contains('<skill_content name="release-notes">'));
@@ -244,7 +244,7 @@ void main() {
             .where((TuiMessage m) => m.role == TuiRole.user)
             .last
             .text,
-        '/release-notes 生成 1.2.0 的说明',
+        '/skill:release-notes 生成 1.2.0 的说明',
       );
       app.dispose();
     });
@@ -253,9 +253,30 @@ void main() {
       final (ConatusTuiController controller, Context app, SkillRegistry _,
           _RecordingProvider provider) = await _build(withUserOnlySkill: true);
 
-      await controller.handleLine('/user-only');
+      await controller.handleLine('/skill:user-only');
 
       expect(provider.lastUserText, contains('只在用户调用时执行的正文。'));
+      app.dispose();
+    });
+
+    test('裸 /skill 给出用法提示', () async {
+      final (ConatusTuiController controller, Context app, SkillRegistry _, _) =
+          await _build();
+
+      await controller.handleLine('/skill');
+
+      expect(controller.transcript.messages.last.text, contains(kTuiSkillUsage));
+      app.dispose();
+    });
+
+    test('skill: 前缀的未知技能仍按未知命令提示', () async {
+      final (ConatusTuiController controller, Context app, SkillRegistry _, _) =
+          await _build();
+
+      await controller.handleLine('/skill:nope');
+
+      expect(controller.transcript.messages.last.text,
+          contains('未知命令：/skill:nope'));
       app.dispose();
     });
 
@@ -279,7 +300,8 @@ void main() {
 
       await controller.handleLine('/help');
 
-      expect(controller.transcript.messages.last.text, contains('/release-notes'));
+      expect(controller.transcript.messages.last.text,
+          contains('/skill:release-notes'));
       app.dispose();
     });
   });

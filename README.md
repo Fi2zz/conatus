@@ -29,7 +29,7 @@
 | [`conatus_compaction`](packages/conatus_compaction) | 压缩能力缝：滚动摘要契约 + `compaction/*` 日志事件 + 工具配对平衡切点 | `conatus_core`、`conatus_foundation` |
 | [`conatus_agent`](packages/conatus_agent) | Agent Loop 与产品化：plan / sub-agent / reflection / telemetry / eval / approval / skill / recovery | `conatus_compaction`、`conatus_core`、`conatus_foundation`、`conatus_llm` |
 | [`conatus_tasks`](packages/conatus_tasks) | 任务中心（Task Center）：Agent Loop / sub-agent / shell / schedule 运行时任务追踪（任务树 + `task/changed` 持久化 + `list_tasks` / `cancel_task` 工具） | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_schedule` |
-| [`conatus_tui`](packages/conatus_tui) | 基于 [nocterm](https://pub.dev/packages/nocterm) 的文本 TUI：对话 + 工具闭环、斜杠命令（含 `/<技能名>` 直接调用技能）、会话选择面板、选项浮层与权限模式（再导出 nocterm，调用方无需另装） | `conatus_agent`、`conatus_compaction`、`conatus_cron`、`conatus_llm`、`conatus_schedule`、`conatus_search`、`conatus_skill`、`nocterm` |
+| [`conatus_tui`](packages/conatus_tui) | 基于 [nocterm](https://pub.dev/packages/nocterm) 的文本 TUI：对话 + 工具闭环、斜杠命令（含 `/skill:<技能名>` 直接调用技能）、会话选择面板、选项浮层与权限模式（再导出 nocterm，调用方无需另装） | `conatus_agent`、`conatus_compaction`、`conatus_cron`、`conatus_llm`、`conatus_schedule`、`conatus_search`、`conatus_skill`、`nocterm` |
 
 ### 实验性包（不进伞包，`publish_to: none`）
 
@@ -702,7 +702,7 @@ await provideSkillFilesystem(app);   // 发现 .conatus/skills 等目录并监�
 （单 `parent`、整条覆盖），且挂载点要显式作用域化——多个作用域共用一份
 `SystemPrompt` / `ToolRegistry` 时，段名与工具名不换会在装配处抛 `StateError`。
 
-斜杠调用在 TUI 侧：`conatus_tui` 把每个技能投影成 `/<技能名> [补充要求]` 命令，
+斜杠调用在 TUI 侧：`conatus_tui` 把每个技能投影成 `/skill:<技能名> [补充要求]` 命令，
 `disable-model-invocation` 的技能也能由此手动触发（见其 README 的「技能直接调用」）。
 本包本身只有模型侧入口。
 
