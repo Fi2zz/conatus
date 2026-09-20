@@ -2,7 +2,7 @@ name: conatus_schedule
 description: >-
   conatus 的会话本地持久提醒：提醒写进会话事件流，提供 schedule_create /
   schedule_list / schedule_delete 工具，并在到期后把提醒交付回同一会话。
-version: 0.15.0
+version: 0.16.0
 repository: https://github.com/Fi2zz/conatus
 issue_tracker: https://github.com/Fi2zz/conatus/issues
 
@@ -12,13 +12,13 @@ environment:
 resolution: workspace
 
 dependencies:
-  conatus_core: ^0.15.0
-  conatus_foundation: ^0.15.0
+  conatus_core: ^0.16.0
+  conatus_foundation: ^0.16.0
   timezone: ^0.11.0
 
 dev_dependencies:
-  conatus_agent: ^0.15.0
-  conatus_llm: ^0.15.0
+  conatus_agent: ^0.16.0
+  conatus_llm: ^0.16.0
   lints: ^4.0.0
   test: ^1.25.0
 

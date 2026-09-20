@@ -3,7 +3,7 @@ description: >-
   时空可组合性（Spatiotemporal Composability）编程范式的 Dart 实现。
   伞包 conatus 再导出 core / foundation / llm / mcp / agent / tasks / tui
   等 14 个模块包，`package:conatus/conatus.dart` 即完整公开 API。
-version: 0.15.0
+version: 0.16.0
 repository: https://github.com/Fi2zz/conatus
 issue_tracker: https://github.com/Fi2zz/conatus/issues
 
@@ -35,29 +35,29 @@ workspace:
   - packages/conatus_workflow
 
 dependencies:
-  conatus_agent: ^0.15.0
-  conatus_asr: ^0.15.0
-  conatus_compaction: ^0.15.0
-  conatus_core: ^0.15.0
-  conatus_credentials: ^0.15.0
-  conatus_cron: ^0.15.0
-  conatus_foundation: ^0.15.0
-  conatus_llm: ^0.15.0
-  conatus_mcp: ^0.15.0
-  conatus_schedule: ^0.15.0
-  conatus_search: ^0.15.0
-  conatus_skill: ^0.15.0
-  conatus_tasks: ^0.15.0
-  conatus_tts: ^0.15.0
+  conatus_agent: ^0.16.0
+  conatus_asr: ^0.16.0
+  conatus_compaction: ^0.16.0
+  conatus_core: ^0.16.0
+  conatus_credentials: ^0.16.0
+  conatus_cron: ^0.16.0
+  conatus_foundation: ^0.16.0
+  conatus_llm: ^0.16.0
+  conatus_mcp: ^0.16.0
+  conatus_schedule: ^0.16.0
+  conatus_search: ^0.16.0
+  conatus_skill: ^0.16.0
+  conatus_tasks: ^0.16.0
+  conatus_tts: ^0.16.0
 
 dev_dependencies:
-  conatus_alerting: ^0.15.0
-  conatus_browser_use: ^0.15.0
-  conatus_intent: ^0.15.0
-  conatus_observability: ^0.15.0
-  conatus_team: ^0.15.0
-  conatus_tui: ^0.15.0
-  conatus_workflow: ^0.15.0
+  conatus_alerting: ^0.16.0
+  conatus_browser_use: ^0.16.0
+  conatus_intent: ^0.16.0
+  conatus_observability: ^0.16.0
+  conatus_team: ^0.16.0
+  conatus_tui: ^0.16.0
+  conatus_workflow: ^0.16.0
   lints: ^4.0.0
   nocterm: ^0.9.0
   test: ^1.25.0

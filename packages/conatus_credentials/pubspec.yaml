@@ -2,7 +2,7 @@ name: conatus_credentials
 description: >-
   conatus 的凭据能力缝：统一的 Credentials 契约，以及环境变量 / 内存 / 文件 /
   Vault / AWS Secrets Manager 五种来源。同步读内存快照，异步刷新。
-version: 0.15.0
+version: 0.16.0
 repository: https://github.com/Fi2zz/conatus
 issue_tracker: https://github.com/Fi2zz/conatus/issues
 
@@ -12,7 +12,7 @@ environment:
 resolution: workspace
 
 dependencies:
-  conatus_core: ^0.15.0
+  conatus_core: ^0.16.0
   crypto: ^3.0.0
   http: ^1.2.0
 

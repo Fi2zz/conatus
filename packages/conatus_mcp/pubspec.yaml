@@ -3,7 +3,7 @@ description: >-
   conatus 的 MCP（Model Context Protocol）客户端：JSON-RPC 2.0 词汇、
   stdio / HTTP / SSE 三种传输、McpClient 握手与会话，以及把服务端工具
   接入 ToolRegistry 的适配器与装配函数。
-version: 0.15.0
+version: 0.16.0
 repository: https://github.com/Fi2zz/conatus
 issue_tracker: https://github.com/Fi2zz/conatus/issues
 
@@ -13,9 +13,9 @@ environment:
 resolution: workspace
 
 dependencies:
-  conatus_core: ^0.15.0
-  conatus_credentials: ^0.15.0
-  conatus_foundation: ^0.15.0
+  conatus_core: ^0.16.0
+  conatus_credentials: ^0.16.0
+  conatus_foundation: ^0.16.0
   http: ^1.2.0
 
 dev_dependencies:

@@ -2,7 +2,7 @@ name: conatus_asr
 description: >-
   conatus 的 ASR 能力缝：可插拔流式 AsrProvider（豆包/火山 SAUC）、
   transcribe_audio 工具与可替换的音频源（ffmpeg 麦克风采集）。
-version: 0.15.0
+version: 0.16.0
 repository: https://github.com/Fi2zz/conatus
 issue_tracker: https://github.com/Fi2zz/conatus/issues
 
@@ -12,8 +12,8 @@ environment:
 resolution: workspace
 
 dependencies:
-  conatus_core: ^0.15.0
-  conatus_foundation: ^0.15.0
+  conatus_core: ^0.16.0
+  conatus_foundation: ^0.16.0
 
 dev_dependencies:
   lints: ^4.0.0

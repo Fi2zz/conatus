@@ -3,7 +3,7 @@ description: >-
   conatus 的任务中心（Task Center）：运行时任务追踪中枢。任务由 Agent Loop /
   sub-agent / shell / schedule 自动创建，按任务树（parentTaskId）组织，状态以
   task/changed 事件持久化到会话，提供 list_tasks / cancel_task 工具。
-version: 0.15.0
+version: 0.16.0
 repository: https://github.com/Fi2zz/conatus
 issue_tracker: https://github.com/Fi2zz/conatus/issues
 
@@ -13,13 +13,13 @@ environment:
 resolution: workspace
 
 dependencies:
-  conatus_agent: ^0.15.0
-  conatus_core: ^0.15.0
-  conatus_foundation: ^0.15.0
-  conatus_schedule: ^0.15.0
+  conatus_agent: ^0.16.0
+  conatus_core: ^0.16.0
+  conatus_foundation: ^0.16.0
+  conatus_schedule: ^0.16.0
 
 dev_dependencies:
-  conatus_llm: ^0.15.0
+  conatus_llm: ^0.16.0
   lints: ^4.0.0
   test: ^1.25.0
 

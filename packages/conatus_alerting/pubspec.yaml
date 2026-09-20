@@ -2,7 +2,7 @@ name: conatus_alerting
 description: >-
   [实验性] conatus 的告警能力。订阅遥测事件流，检测异常阈值，
   通过控制台 / Webhook / 语音主动通知用户。
-version: 0.15.0
+version: 0.16.0
 publish_to: none # 实验性包暂不发布
 repository: https://github.com/Fi2zz/conatus
 
@@ -12,10 +12,10 @@ environment:
 resolution: workspace
 
 dependencies:
-  conatus_agent: ^0.15.0
-  conatus_core: ^0.15.0
-  conatus_foundation: ^0.15.0
-  conatus_tts: ^0.15.0
+  conatus_agent: ^0.16.0
+  conatus_core: ^0.16.0
+  conatus_foundation: ^0.16.0
+  conatus_tts: ^0.16.0
   http: ^1.2.0
 
 dev_dependencies:

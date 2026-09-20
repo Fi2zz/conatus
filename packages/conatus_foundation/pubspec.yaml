@@ -2,7 +2,7 @@ name: conatus_foundation
 description: >-
   conatus 的基础设施插件：timer / logger / loader / tools / shell / fs /
   session / system-prompt / memory / database。
-version: 0.15.0
+version: 0.16.0
 repository: https://github.com/Fi2zz/conatus
 issue_tracker: https://github.com/Fi2zz/conatus/issues
 
@@ -12,7 +12,7 @@ environment:
 resolution: workspace
 
 dependencies:
-  conatus_core: ^0.15.0
+  conatus_core: ^0.16.0
 
 dev_dependencies:
   lints: ^4.0.0

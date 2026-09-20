@@ -2,7 +2,7 @@ name: conatus_tts
 description: >-
   conatus 的 TTS 能力缝：文本到音频的可插拔 TtsProvider（豆包/火山语音合成，
   v3 WebSocket 单向流式），以及可替换的音频输出接口（TtsAudioSink）。
-version: 0.15.0
+version: 0.16.0
 repository: https://github.com/Fi2zz/conatus
 issue_tracker: https://github.com/Fi2zz/conatus/issues
 
@@ -12,7 +12,7 @@ environment:
 resolution: workspace
 
 dependencies:
-  conatus_core: ^0.15.0
+  conatus_core: ^0.16.0
 
 dev_dependencies:
   lints: ^4.0.0

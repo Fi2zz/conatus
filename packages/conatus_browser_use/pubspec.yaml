@@ -2,7 +2,7 @@ name: conatus_browser_use
 description: >-
   [实验性] conatus 的浏览器操作能力。通过 MCP 连接 Playwright /
   Chrome DevTools / Stagehand，提供网页检查与交互。
-version: 0.15.0
+version: 0.16.0
 publish_to: none # 实验性包暂不发布
 repository: https://github.com/Fi2zz/conatus
 
@@ -12,12 +12,12 @@ environment:
 resolution: workspace
 
 dependencies:
-  conatus_agent: ^0.15.0
-  conatus_core: ^0.15.0
-  conatus_credentials: ^0.15.0
-  conatus_foundation: ^0.15.0
-  conatus_mcp: ^0.15.0
-  conatus_tasks: ^0.15.0
+  conatus_agent: ^0.16.0
+  conatus_core: ^0.16.0
+  conatus_credentials: ^0.16.0
+  conatus_foundation: ^0.16.0
+  conatus_mcp: ^0.16.0
+  conatus_tasks: ^0.16.0
 
 dev_dependencies:
   lints: ^4.0.0
