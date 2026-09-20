@@ -4,6 +4,7 @@
 library;
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:nocterm/nocterm.dart';
 
@@ -116,10 +117,13 @@ class _AgentTuiState extends State<AgentTui> {
 
   /// 输入框按键拦截：`/` 菜单打开时用 ↑↓ 选择、Enter 运行、Tab 补全；
   /// Esc 一律返回 false 冒泡，由根组件 `_onKey` 统一处理（关闭面板/视图、打断轮次）。
-  /// Ctrl+T 恒为视图切换，先于文本域消费。
+  /// Ctrl+T 视图切换、Ctrl+C/Alt+C 复制/打断/退出，先于文本域消费。
   bool _onInputKey(KeyboardEvent event) {
     if (event.matches(LogicalKey.keyT, ctrl: true)) {
       _toggleView();
+      return true;
+    }
+    if (_onCopyKey(event)) {
       return true;
     }
     if (_onChoiceKey(event)) {
@@ -195,20 +199,47 @@ class _AgentTuiState extends State<AgentTui> {
     return true; // 浮层打开时吞掉按键，避免误输入。
   }
 
+  /// Ctrl+C / Alt+C：平台差异化按键语义。
+  ///
+  /// macOS：Ctrl+C 忙时打断在飞轮次、空闲连按两次退出；复制走 Alt+C
+  /// （Option+C）。其他平台：Ctrl+C 有选中文本时复制，否则连按两次退出。
+  /// Alt+C 无选区也吞掉，避免 Option+C 被当作字符输入。
+  bool _onCopyKey(KeyboardEvent event) {
+    if (event.logicalKey == LogicalKey.keyC && event.isControlPressed) {
+      if (!Platform.isMacOS &&
+          !_controller.choice.open &&
+          !_controller.picker.open &&
+          _copySelection()) {
+        return true;
+      }
+      if (Platform.isMacOS && _controller.busy) {
+        _controller.interrupt();
+        return true;
+      }
+      _confirmExitChord();
+      return true;
+    }
+    if (Platform.isMacOS &&
+        event.logicalKey == LogicalKey.keyC &&
+        event.isAltPressed) {
+      if (!_controller.choice.open &&
+          !_controller.picker.open &&
+          _copySelection()) {
+        return true;
+      }
+      return true;
+    }
+    return false;
+  }
+
   bool _onKey(KeyboardEvent event) {
     // Ctrl+T 切换对话/团队视图（兜底：输入框聚焦时由 _onInputKey 先行处理）。
     if (event.matches(LogicalKey.keyT, ctrl: true)) {
       _toggleView();
       return true;
     }
-    // Ctrl+C：浮层打开时保持退出语义；有选中文本时复制；否则连按两次退出。
-    if (event.logicalKey == LogicalKey.keyC && event.isControlPressed) {
-      if (!_controller.choice.open &&
-          !_controller.picker.open &&
-          _copySelection()) {
-        return true;
-      }
-      _confirmExitChord();
+    // Ctrl+C / Alt+C：平台差异化语义，见 _onCopyKey。
+    if (_onCopyKey(event)) {
       return true;
     }
     if (_onChoiceKey(event)) {

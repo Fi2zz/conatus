@@ -101,7 +101,7 @@ void main() {
     }
   });
 
-  test('选中消息文本后 Ctrl+C 复制并清除选区', () async {
+  test('选中消息文本后 Alt+C 复制并清除选区', () async {
     final (ConatusTuiController controller, NoctermTester tester, Context app) =
         await _launchAgentTui();
     try {
@@ -118,20 +118,40 @@ void main() {
       await tester.mouseMove(match.x, match.y, match.x + 7, match.y);
       await tester.release(match.x + 7, match.y);
 
-      // Ctrl+C：复制到剪贴板，不触发退出确认。
+      // Alt+C（macOS 复制键）：复制到剪贴板，不触发退出确认。
       await tester.sendKeyEvent(const KeyboardEvent(
         logicalKey: LogicalKey.keyC,
-        modifiers: ModifierKeys(ctrl: true),
+        modifiers: ModifierKeys(alt: true),
       ));
       expect(ClipboardManager.paste(), 'copy me');
       expect(tester.terminalState, isNot(containsText('再按一次 Ctrl+C 退出')));
 
-      // 选区已清除：再按 Ctrl+C 恢复退出确认。
+      // 选区已清除：再按 Ctrl+C（macOS 空闲）恢复退出确认。
       await tester.sendKeyEvent(const KeyboardEvent(
         logicalKey: LogicalKey.keyC,
         modifiers: ModifierKeys(ctrl: true),
       ));
       expect(tester.terminalState, containsText('再按一次 Ctrl+C 退出'));
+    } finally {
+      tester.dispose();
+      controller.dispose();
+      app.dispose();
+    }
+  });
+
+  test('忙时 Ctrl+C 打断而不进入退出确认', () async {
+    final (ConatusTuiController controller, NoctermTester tester, Context app) =
+        await _launchAgentTui();
+    try {
+      // 模拟轮次在飞（busy）：输入框 readOnly，Ctrl+C 直接打断。
+      controller.busy = true;
+      controller.onChanged?.call();
+      await tester.pump();
+      await tester.sendKeyEvent(const KeyboardEvent(
+        logicalKey: LogicalKey.keyC,
+        modifiers: ModifierKeys(ctrl: true),
+      ));
+      expect(tester.terminalState, isNot(containsText('再按一次 Ctrl+C 退出')));
     } finally {
       tester.dispose();
       controller.dispose();
