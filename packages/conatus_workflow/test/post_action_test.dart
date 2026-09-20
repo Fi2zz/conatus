@@ -35,7 +35,8 @@ void main() {
   group('NotifyAction', () {
     test('模板替换名称与状态', () async {
       final askUser = _FakeAskUser();
-      final action = NotifyAction(askUser: askUser, template: '{name}:{status}');
+      final action =
+          NotifyAction(askUser: askUser, template: '{name}:{status}');
       await action.execute(_ctx());
       expect(askUser.prompts, ['nightly:completed']);
     });
@@ -56,7 +57,8 @@ void main() {
       final event = session.events.single;
       expect(event.type, 'automation/completed');
       expect(event.data, isA<Map<String, Object?>>());
-      expect((event.data! as Map).keys, containsAll(['name', 'runId', 'status']));
+      expect(
+          (event.data! as Map).keys, containsAll(['name', 'runId', 'status']));
     });
   });
 

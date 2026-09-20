@@ -35,8 +35,8 @@ void main() {
   });
 
   group('TimeWindowConstraint', () {
-    final window =
-        TimeWindow(start: const Duration(hours: 9), end: const Duration(hours: 18));
+    final window = TimeWindow(
+        start: const Duration(hours: 9), end: const Duration(hours: 18));
 
     test('窗口内放行', () async {
       final constraint = TimeWindowConstraint(window);
