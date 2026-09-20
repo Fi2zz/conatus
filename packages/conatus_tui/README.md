@@ -51,6 +51,10 @@ dart run packages/conatus_tui/example/deepseek_demo.dart \
   `SKILL.md` 指令集，目录注入 system prompt，模型按需用 `skill` 工具取回正文；
   `ConatusTuiRuntime.create(skills: false)` 可关闭。注意它与 `provideSkillLibrary`
   （把重复工具序列沉淀成新工具）不是同一件事。
+- **技能直接调用**：每个已发现的技能同时是一条 `/<技能名> [补充要求]` 命令，
+  跟着 `/` 菜单一起过滤与补全。执行时把技能正文展开成一轮用户输入交给模型
+  （照常进 `user/message` 事件），屏上折回一行 `/<技能名> …`。
+  `disable-model-invocation` 的技能不进模型目录，但用户仍能这样手动触发。
 - **状态栏**：思考动画、按键提示与 Ctrl+C 连按两次退出；左侧常显当前权限模式。
 - **选项浮层**：`↑↓` 选择、`Enter` 确认、`Esc` 取消。模型可用 `ask_user` 工具
   把候选选项交给你选；工具审批复用同一浮层。
@@ -82,6 +86,10 @@ dart run packages/conatus_tui/example/deepseek_demo.dart \
 
 ## 作为库使用
 
+`conatus_tui` 把 `nocterm` 的 API 一并再导出：挂载界面用的 `runApp` /
+`shutdownApp`、自定义视图用的 `Component` / `Text` 都在其中，因此调用方的
+`pubspec.yaml` 只需要声明 `conatus_tui`，不必再装一份 `nocterm`。
+
 ```dart
 import 'package:conatus_tui/conatus_tui.dart';
 
@@ -93,3 +101,18 @@ final ConatusTuiController controller = runtime.createController(
 await runApp(AgentTui(controller: controller));
 await runtime.dispose();
 ```
+
+唯一例外是 nocterm 自带的两个终端 matcher（`isEmpty` / `isNotEmpty`）：它们与
+`package:test` 的同名 matcher 冲突，已从再导出里屏蔽，需要时直接依赖 nocterm
+用前缀引入。
+
+## 自定义命令表
+
+`TuiCommandMenu` 的命令来源可以注入，缺省是静态表 `tuiCommands`：
+
+```dart
+final TuiCommandMenu menu = TuiCommandMenu(commands: () => controller.commands);
+```
+
+`ConatusTuiController.commands` 就是「静态命令 + 技能命令」的合并结果，技能注册表
+变化后下一次过滤即生效。

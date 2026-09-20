@@ -80,6 +80,12 @@ const List<TuiCommand> tuiCommands = <TuiCommand>[
 
 /// `/` 命令菜单状态：输入以 `/` 开头且命令词未带参时打开，用前缀过滤命令表。
 class TuiCommandMenu {
+  /// 构造菜单；[commands] 每次过滤时提供当前命令表（缺省用静态表
+  /// [tuiCommands]），技能命令这类动态条目由此注入。
+  TuiCommandMenu({List<TuiCommand> Function()? commands})
+      : _commands = commands ?? (() => tuiCommands);
+
+  final List<TuiCommand> Function() _commands;
   bool _open = false;
   String _query = '';
   List<TuiCommand> _matches = const <TuiCommand>[];
@@ -111,7 +117,7 @@ class TuiCommandMenu {
     final String query = text.substring(1);
     _query = query;
     _matches = <TuiCommand>[
-      for (final TuiCommand command in tuiCommands)
+      for (final TuiCommand command in _commands())
         if (command.name.startsWith(query)) command,
     ];
     _index = 0;

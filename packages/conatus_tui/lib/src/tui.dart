@@ -41,7 +41,8 @@ class _AgentTuiState extends State<AgentTui> {
   late final ConatusTuiController _controller = component.controller;
   final TextEditingController _input = TextEditingController();
   final AutoScrollController _scroll = AutoScrollController();
-  final TuiCommandMenu _menu = TuiCommandMenu();
+  late final TuiCommandMenu _menu =
+      TuiCommandMenu(commands: () => _controller.commands);
   Timer? _spin;
   Timer? _exitTimer;
   int _tick = 0;

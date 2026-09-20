@@ -14,6 +14,7 @@ import 'package:conatus_cron/conatus_cron.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 import 'package:conatus_schedule/conatus_schedule.dart';
+import 'package:conatus_skill/conatus_skill.dart';
 import 'package:conatus_team/conatus_team.dart';
 import 'package:conatus_tts/conatus_tts.dart';
 
@@ -22,11 +23,13 @@ import 'team_snapshot.dart';
 import 'team_subscription.dart';
 import 'transcript.dart';
 import 'tui_choice.dart';
+import 'tui_commands.dart';
 import 'tui_help.dart';
 import 'tui_message.dart';
 import 'tui_permission.dart';
 import 'tui_permission_gate.dart';
 import 'tui_session_picker.dart';
+import 'tui_skill_command.dart';
 import 'voice_reporter.dart';
 
 /// 会话 id 规则：字母 / 数字 / 下划线 / 中文 / 短横，长度 1—64。
@@ -317,7 +320,7 @@ class ConatusTuiController implements TuiUserPromptHost {
       case 'quit' || 'exit':
         onExit?.call();
       case 'help':
-        transcript.add(TuiRole.system, tuiHelpText);
+        transcript.add(TuiRole.system, buildTuiHelpText(extra: _skillCommands));
       case 'new':
         await newSession();
       case 'sessions':
@@ -349,9 +352,33 @@ class ConatusTuiController implements TuiUserPromptHost {
       case 'clear':
         transcript.clear();
       default:
-        transcript.add(TuiRole.system, '未知命令：/$command（/help 查看可用命令）');
+        // 静态命令都不匹配时，把命令词当作技能名试一次。
+        if (!await _runSkill(command, arg)) {
+          transcript.add(
+              TuiRole.system, '未知命令：/$command（/help 查看可用命令）');
+        }
     }
     _refresh();
+  }
+
+  /// 当前可用的斜杠命令：静态表 + 技能注册表投影出的技能命令。
+  List<TuiCommand> get commands => <TuiCommand>[...tuiCommands, ..._skillCommands];
+
+  List<TuiCommand> get _skillCommands =>
+      skillTuiCommands(_app.get<SkillRegistry>('skillRegistry'));
+
+  /// 把 `/<技能名> [补充要求]` 当作技能调用；不是已知技能时返回 `false`。
+  ///
+  /// 展开后的正文块作为一轮用户输入交给 Agent Loop，因此照常进
+  /// `user/message` 事件；屏上由 [collapseSkillPrompt] 折叠回一行。
+  Future<bool> _runSkill(String name, String arg) async {
+    final SkillRegistry? registry = _app.get<SkillRegistry>('skillRegistry');
+    if (registry == null) return false;
+    final SkillDefinition? definition = await registry.load(name);
+    if (definition == null) return false;
+    transcript.add(TuiRole.system, '已展开技能 `$name`，交给模型执行。');
+    await submit(renderSkillPrompt(definition, arg));
+    return true;
   }
 
   void _showTools() {

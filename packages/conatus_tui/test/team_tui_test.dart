@@ -6,7 +6,6 @@ import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 import 'package:conatus_team/conatus_team.dart';
 import 'package:conatus_tui/conatus_tui.dart';
-import 'package:nocterm/nocterm.dart';
 import 'package:test/test.dart';
 
 /// 从不被调用的占位 provider（spawn 只建成员运行时，不触发模型调用）。

@@ -10,6 +10,7 @@ import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 
 import 'tui_message.dart';
+import 'tui_skill_command.dart';
 
 /// 屏上记录。
 class Transcript {
@@ -35,7 +36,7 @@ class Transcript {
     final Object? data = event.data;
     switch (event.type) {
       case kUserMessageEvent:
-        add(TuiRole.user, _text(data));
+        add(TuiRole.user, collapseSkillPrompt(_text(data)));
       case kAssistantMessageEvent:
         final String text = _text(data);
         if (text.trim().isNotEmpty) {

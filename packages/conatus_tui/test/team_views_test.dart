@@ -3,7 +3,6 @@ library;
 
 import 'package:conatus_team/conatus_team.dart';
 import 'package:conatus_tui/conatus_tui.dart';
-import 'package:nocterm/nocterm.dart';
 import 'package:test/test.dart';
 
 Teammate _mate(String id, TeammateStatus status) => Teammate(

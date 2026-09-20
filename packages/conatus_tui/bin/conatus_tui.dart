@@ -10,7 +10,6 @@ library;
 import 'dart:io';
 
 import 'package:conatus_tui/conatus_tui.dart';
-import 'package:nocterm/nocterm.dart';
 
 Future<void> main(List<String> args) async {
   final _Options options = _Options.parse(args, stdout);

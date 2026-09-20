@@ -2,7 +2,16 @@
 ///
 /// 用 [ConatusTuiRuntime] 装配好 conatus 服务后，把 [ConatusTuiController] 交给
 /// [AgentTui] 渲染，即可得到一个可直接运行的对话式终端界面。
+///
+/// 本库把 `nocterm` 的 API 一并再导出：挂载界面要用 `runApp` / `shutdownApp`，
+/// 自定义视图要用 `Component` / `Text` 这些类型，调用方因此不必在自己的
+/// `pubspec.yaml` 里再声明 `nocterm`。
+///
+/// 只屏蔽 nocterm 自带的两个终端 matcher（`isEmpty` / `isNotEmpty`）——它们与
+/// `package:test` 的同名 matcher 冲突，需要时直接依赖 nocterm 用前缀引入。
 library;
+
+export 'package:nocterm/nocterm.dart' hide isEmpty, isNotEmpty;
 
 export 'src/ask_user_tool.dart'
     show
@@ -38,5 +47,6 @@ export 'src/tui_permission_gate.dart'
         kTuiDecisionTimeout;
 export 'src/tui_session_picker.dart';
 export 'src/tui_session_picker_view.dart';
+export 'src/tui_skill_command.dart';
 export 'src/tui_views.dart';
 export 'src/voice_reporter.dart';
