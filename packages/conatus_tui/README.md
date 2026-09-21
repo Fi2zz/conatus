@@ -43,7 +43,11 @@ dart run packages/conatus_tui/example/deepseek_demo.dart \
 - **对话 + 工具闭环**：`AgentLoop` 自动接入 llm / tools / system-prompt /
   memory / compaction / reflection，工具调用与结果实时回显到记录区。
 - **斜杠命令**：输入 `/` 弹出命令菜单（`↑↓` 选择、`Enter` 运行、`Tab` 补全）：
-  `/help` `/new` `/session <id>` `/sessions` `/tools` `/remember <内容>` `/forget <id 或 关键字>` `/telemetry` `/clear` `/exit`。
+  `/help` `/new` `/session <id>` `/sessions` `/tools` `/model [名字]` `/remember <内容>` `/forget <id 或 关键字>` `/telemetry` `/clear` `/exit`。
+- **模型切换**：`/model` 查看 / 切换当前模型，由宿主的 `onModelCommand` 钩子
+  决定可选清单与切换动作：替换根上下文 `'llm'` 服务（
+  `ConatusTuiRuntime.switchLlm`）后调 `ConatusTuiController.rebind()` 重绑会话，
+  Agent Loop 即用上新提供商（历史保留、有在途轮次时不动）。
 - **@ 文件引用**：输入 `@` 弹出文件补全菜单（`↑↓` 选择、`Enter` / `Tab` 补全、
   `Esc` 关闭；选中目录继续下钻），发送时把 `@<路径>` 展开为
   `<file path="...">内容</file>` 块交给模型；文件不存在 / 单文件超 200KB 时

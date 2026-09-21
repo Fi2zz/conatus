@@ -88,8 +88,8 @@ class ConatusTuiController implements TuiUserPromptHost {
   /// 顶栏展示的场景名。
   final String name;
 
-  /// 顶栏展示的模型标签。
-  final String modelLabel;
+  /// 顶栏展示的模型标签；`/model` 切换后可更新。
+  String modelLabel;
 
   /// 退出请求（`/exit`、`/quit`、Ctrl+C）；由宿主接 `shutdownApp`。
   final void Function()? onExit;
@@ -106,6 +106,12 @@ class ConatusTuiController implements TuiUserPromptHost {
   /// 缺省 null，不注入时行为与接入前一致。随会话绑定调用一次；切会话时子上下文
   /// 释放，钩子里登记的效应自动撤销。
   void Function(Context sessionCtx, Session session)? configureSession;
+
+  /// `/model [名字]` 钩子：返回给用户的提示文本（null 表示不提示）。
+  ///
+  /// 缺省 null 时该命令提示"未装配"。宿主（如 playground）在此切换 LLM 提供商：
+  /// 替换根上下文服务后调 [rebind] 让 Agent Loop 用上新提供商。
+  Future<String?> Function(String arg)? onModelCommand;
 
   /// 屏上记录。
   final Transcript transcript = Transcript();
@@ -205,6 +211,19 @@ class ConatusTuiController implements TuiUserPromptHost {
 
   /// 释放当前会话绑定（幂等）。
   void dispose() => _unbind();
+
+  /// 重新绑定当前会话：替换根上下文服务（如 `'llm'`）后调用，让 Agent Loop
+  /// 用新服务重建；屏上记录按会话事件重建，历史不丢。
+  ///
+  /// 有在途轮次时不动（避免打断），返回是否确实重绑。
+  Future<bool> rebind() async {
+    if (!ready || busy) return false;
+    final String id = _sessionId;
+    _unbind();
+    await _bind(id);
+    _refresh();
+    return true;
+  }
 
   /// 处理一行输入：斜杠命令本地处理，其余进对话链路。
   ///
@@ -346,6 +365,8 @@ class ConatusTuiController implements TuiUserPromptHost {
         }
       case 'tools':
         _showTools();
+      case 'model':
+        await _handleModel(arg);
       case 'plan':
         _togglePlanMode();
       case 'goal':
@@ -411,6 +432,19 @@ class ConatusTuiController implements TuiUserPromptHost {
       TuiRole.system,
       '已注册工具（${tools.names.length}）：${tools.names.join('、')}',
     );
+  }
+
+  /// `/model [名字]`：委托宿主钩子（查看 / 切换模型）。
+  Future<void> _handleModel(String arg) async {
+    final Future<String?> Function(String)? hook = onModelCommand;
+    if (hook == null) {
+      transcript.add(TuiRole.system, '模型切换未装配：宿主未注入 /model 钩子。');
+      return;
+    }
+    final String? message = await hook(arg);
+    if (message != null) {
+      transcript.add(TuiRole.system, message);
+    }
   }
 
   /// `/plan`：进入 / 退出 Plan Mode（先规划、经 exit_plan_mode 提交后执行）。

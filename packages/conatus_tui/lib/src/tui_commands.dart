@@ -40,6 +40,11 @@ const List<TuiCommand> tuiCommands = <TuiCommand>[
   TuiCommand(name: 'sessions', description: '打开会话选择面板（↑↓ 选择，Enter 切换）'),
   TuiCommand(name: 'tools', description: '列出当前已注册的工具'),
   TuiCommand(
+    name: 'model',
+    description: '查看或切换模型（/<model> <名字>）',
+    argHint: '[名字]',
+  ),
+  TuiCommand(
     name: 'plan',
     description: '进入 / 退出 Plan Mode（先规划，经 exit_plan_mode 提交后执行）',
   ),

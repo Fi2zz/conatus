@@ -28,7 +28,8 @@ class ConatusTuiRuntime {
     required this.sessions,
     required this.tools,
     required this.modelLabel,
-  });
+    required Disposer llmDisposer,
+  }) : _llmDisposer = llmDisposer;
 
   /// 根上下文。
   final Context app;
@@ -41,6 +42,18 @@ class ConatusTuiRuntime {
 
   /// 顶栏展示的模型标签。
   final String modelLabel;
+
+  /// `'llm'` 服务的撤销句柄；[switchLlm] 替换提供商时先撤销旧的。
+  Disposer _llmDisposer;
+
+  /// 运行时替换 LLM 提供商（`/model` 切换用）。
+  ///
+  /// 只换根上下文的服务；已绑定的会话仍持有旧提供商，需再调
+  /// [ConatusTuiController.rebind] 重建 Agent Loop 才生效。
+  void switchLlm(FallbackLlm llm) {
+    _llmDisposer();
+    _llmDisposer = provideLlm(app, llm: llm);
+  }
 
   /// 装配一个默认运行时。
   ///
@@ -119,7 +132,7 @@ class ConatusTuiRuntime {
     }
 
     // ── 模型 / 自省 / 子 Agent ──────────────────────────────────
-    provideLlm(app, llm: llm);
+    final Disposer llmDisposer = provideLlm(app, llm: llm);
     provideReflection(app);
     provideSpawnAgent(
       app,
@@ -188,6 +201,7 @@ class ConatusTuiRuntime {
       sessions: sessions,
       tools: app.tools,
       modelLabel: modelLabel ?? _modelLabel(),
+      llmDisposer: llmDisposer,
     );
   }
 

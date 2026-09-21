@@ -16,19 +16,21 @@ Future<void> main(List<String> args) async {
     stdout.write(kPlaygroundUsage);
     return;
   }
-  final String cwd = parseCwdFlag(args) ?? Directory.current.path;
+  final String cwd = parseFlag(args, '--cwd') ?? Directory.current.path;
+  final String model =
+      parseFlag(args, '--model') ?? kPlaygroundDefaultModel;
   final bool configured = _hasKey('ARK_API_KEY') || _hasKey('DEEPSEEK_API_KEY');
   if (!configured) {
     stdout.writeln('未检测到 ARK_API_KEY / DEEPSEEK_API_KEY：以离线脚本模型运行 Demo。');
     stdout.writeln('设置任一 Key 后重跑即可接入真实模型。');
   }
   final FallbackLlm llm = configured
-      ? FallbackLlm.withDefaults()
+      ? FallbackLlm(<LlmProvider>[providerForModel(model)])
       : FallbackLlm(<LlmProvider>[_OfflineProvider()]);
 
   final ConatusTuiRuntime runtime = await ConatusTuiRuntime.create(
     llm: llm,
-    modelLabel: configured ? 'doubao → DeepSeek' : '离线 Demo',
+    modelLabel: configured ? model : '离线 Demo',
   );
   final Context app = runtime.app;
   provideCodingForPlayground(app, cwd: cwd);
@@ -39,9 +41,48 @@ Future<void> main(List<String> args) async {
     onExit: shutdownApp,
     name: 'Playground',
   );
+  controller.onModelCommand = configured
+      ? (String arg) => switchModel(runtime, controller, arg)
+      : (String _) async => '离线 Demo 不支持切换模型；'
+          '设置 ARK_API_KEY / DEEPSEEK_API_KEY 后重跑。';
   await runApp(AgentTui(controller: controller, firstInput: options.first));
   await runtime.dispose();
 }
+
+/// `/model [名字]`：查看或切换模型；切换后重绑会话让 Agent Loop 用上新提供商。
+Future<String?> switchModel(
+  ConatusTuiRuntime runtime,
+  ConatusTuiController controller,
+  String arg,
+) async {
+  if (arg.isEmpty) {
+    return '当前模型：${controller.modelLabel}\n'
+        '可用模型：${kPlaygroundModels.join('、')}\n'
+        '切换：/model <名字>';
+  }
+  if (!kPlaygroundModels.contains(arg)) {
+    return '未知模型：$arg\n可用模型：${kPlaygroundModels.join('、')}';
+  }
+  runtime.switchLlm(FallbackLlm(<LlmProvider>[providerForModel(arg)]));
+  controller.modelLabel = arg;
+  final bool rebound = await controller.rebind();
+  return rebound ? '已切换模型：$arg' : '已切换模型：$arg（有在途轮次，稍后生效）';
+}
+
+/// 按名字选提供商：`deepseek-*` 走 DeepSeek，其余走豆包。
+LlmProvider providerForModel(String name) => name.startsWith('deepseek')
+    ? DeepSeekProvider(model: name)
+    : DoubaoProvider(model: name);
+
+/// `/model` 与 `--model` 共用的可选模型清单（首个为默认）。
+const List<String> kPlaygroundModels = <String>[
+  kPlaygroundDefaultModel,
+  'deepseek-chat',
+  'deepseek-flash',
+];
+
+/// 默认模型。
+const String kPlaygroundDefaultModel = 'doubao-seed-1-8-251228';
 
 /// 补齐 coding 能力：shell + rg + run_code。TUI 已注册 read/write/edit/glob，
 /// provideCoding 会重复注册 fs 工具（同名抛 StateError），故只补缺失件。
@@ -71,16 +112,18 @@ const String kPlaygroundPersona = '你是 Playground 编码助手。你可以：
     '需要信息时调用工具，否则直接简洁回答。';
 
 const String kPlaygroundUsage = '用法：dart run example/playground.dart '
-    '[--session <id>] [--first <文本>] [--cwd <目录>]\n'
+    '[--session <id>] [--first <文本>] [--cwd <目录>] [--model <名字>]\n'
     '  --session <id>   启动会话 id（默认 $kTuiDefaultSession）\n'
     '  --first <文本>   挂载后自动发一轮\n'
     '  --cwd <目录>     run_code 工作目录（默认当前目录）\n'
-    '输入 @<路径> 可引用文件（如 @lib/foo.dart 帮我看下这个文件）。\n';
+    '  --model <名字>   启动模型（默认 $kPlaygroundDefaultModel）\n'
+    '输入 @<路径> 可引用文件（如 @lib/foo.dart 帮我看下这个文件）。\n'
+    '会话中用 /model [名字] 查看或切换模型。\n';
 
-/// 取 `--cwd` 的值；未出现或缺尾值时返回 `null`。
-String? parseCwdFlag(List<String> args) {
+/// 取 `--<名字>` 的值；未出现或缺尾值时返回 `null`。
+String? parseFlag(List<String> args, String name) {
   for (int index = 0; index + 1 < args.length; index++) {
-    if (args[index] == '--cwd') return args[index + 1];
+    if (args[index] == name) return args[index + 1];
   }
   return null;
 }
