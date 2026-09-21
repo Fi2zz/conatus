@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:conatus_agent/conatus_agent.dart';
 import 'package:conatus_coding/conatus_coding.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
@@ -194,6 +197,60 @@ void main() {
           contains('code.run.failed'));
     });
 
+    test('执行期间任务被取消 → 状态 cancelled、结果正常返回、cancel 回调被调', () async {
+      final DefaultTaskCenter tasks = DefaultTaskCenter();
+      final _FakeRuntime runtime = _FakeRuntime(CodeRunResult.success('ok'))
+        ..gate = Completer<void>();
+      final RunCodeTool tool = _tool(runtime, taskCenter: tasks);
+
+      final Future<ToolResult> pending =
+          tool.call(_ctx(<String, Object?>{'program': 'x'}));
+      while (tasks.all.isEmpty) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      final String id = tasks.all.single.id;
+      await tasks.cancel(id);
+      runtime.gate!.complete();
+
+      final ToolResult result = await pending;
+
+      expect(tasks.all.single.status, TaskStatus.cancelled);
+      expect(runtime.cancelCount, 1);
+      expect(result.isError, isFalse, reason: '取消后不抛 already-terminal');
+    });
+
+    test('端到端：真实子进程可被 cancel 终止', () async {
+      if (Platform.isWindows) {
+        markTestSkipped('端到端取消测试依赖 bash');
+      }
+      final LocalShellExecutor shell = LocalShellExecutor();
+      final DefaultTaskCenter tasks = DefaultTaskCenter();
+      final SubprocessCodeRuntime runtime = SubprocessCodeRuntime(
+        shell: shell,
+        executable: 'bash',
+        extension: '.sh',
+      );
+      final RunCodeTool tool = RunCodeTool(
+        runtime: runtime,
+        tools: ToolRegistry(),
+        taskCenter: tasks,
+      );
+
+      final Future<ToolResult> pending =
+          tool.call(_ctx(<String, Object?>{'program': 'sleep 30'}));
+      while (tasks.all.isEmpty) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      final String id = tasks.all.single.id;
+      await tasks.cancel(id);
+
+      final ToolResult result = await pending;
+
+      expect(tasks.all.single.status, TaskStatus.cancelled);
+      expect(result.isError, isTrue);
+      expect(result.error!.code, 'CODE_ABORT');
+    });
+
     test('降级：无治理组件仍能执行', () async {
       final _FakeRuntime runtime = _FakeRuntime(CodeRunResult.success('ok'));
 
@@ -210,7 +267,9 @@ class _FakeRuntime implements CodeRuntime {
 
   CodeRunResult? result;
   Object? throwError;
+  Completer<void>? gate;
   int calls = 0;
+  int cancelCount = 0;
   String? lastProgram;
   List<CodeBindingNamespace>? lastBindings;
 
@@ -225,9 +284,15 @@ class _FakeRuntime implements CodeRuntime {
     calls++;
     lastProgram = request.program;
     lastBindings = request.bindings;
+    await gate?.future;
     final Object? error = throwError;
     if (error != null) throw error;
     return result!;
+  }
+
+  @override
+  Future<void> cancelCurrent() async {
+    cancelCount++;
   }
 
   @override

@@ -49,6 +49,7 @@ class LocalShellExecutor implements ShellExecutor {
       stdoutMaxBytes: request.stdoutMaxBytes ?? maxOutputBytes,
       stdin: request.stdin,
       env: request.env,
+      cancelSignal: request.cancelSignal,
     );
   }
 
@@ -56,6 +57,10 @@ class LocalShellExecutor implements ShellExecutor {
   Future<ShellRunResult> run(ShellExecSpec spec) async {
     final Process process = await _spawn(spec);
     _writeStdin(process, spec.stdin);
+    final Future<void>? cancel = spec.cancelSignal;
+    if (cancel != null) {
+      unawaited(cancel.then((_) => process.kill(ProcessSignal.sigkill)));
+    }
     final Future<CollectedOutput> stdout =
         _collect(process.stdout, spec.stdoutMaxBytes);
     final Future<CollectedOutput> stderr =

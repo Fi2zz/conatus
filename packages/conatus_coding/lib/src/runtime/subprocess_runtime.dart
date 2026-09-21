@@ -3,6 +3,7 @@
 /// 失败是结果字段（超时 / 非零退出 / 输出截断），不抛异常。
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -13,7 +14,7 @@ import 'code_runtime.dart';
 
 /// 子进程代码执行后端。
 class SubprocessCodeRuntime implements CodeRuntime {
-  const SubprocessCodeRuntime({
+  SubprocessCodeRuntime({
     required ShellExecutor shell,
     required this.executable,
     required this.extension,
@@ -22,6 +23,9 @@ class SubprocessCodeRuntime implements CodeRuntime {
   }) : _shell = shell;
 
   final ShellExecutor _shell;
+
+  /// 当前执行中的取消信号；单实例串行执行假设下只有一个活跃 run。
+  Completer<void>? _cancel;
 
   /// 可执行程序，如 'dart' / 'python3'。
   final String executable;
@@ -43,6 +47,8 @@ class SubprocessCodeRuntime implements CodeRuntime {
 
   @override
   Future<CodeRunResult> run(CodeRunRequest request) async {
+    final Completer<void> cancel = Completer<void>();
+    _cancel = cancel;
     final Directory tmp =
         await Directory.systemTemp.createTemp('conatus-code-');
     try {
@@ -54,12 +60,23 @@ class SubprocessCodeRuntime implements CodeRuntime {
         workdir: workingDirectory,
         timeoutMs: (request.timeout ?? limits.maxDuration).inMilliseconds,
         stdoutMaxBytes: limits.maxOutputBytes,
+        cancelSignal: cancel.future,
       ));
       final ShellRunResult result = await _shell.run(spec);
+      if (cancel.isCompleted) {
+        return CodeRunResult.failure(CodeRunFailureKind.abort, '执行已取消');
+      }
       return _mapResult(result);
     } finally {
+      if (identical(_cancel, cancel)) _cancel = null;
       await tmp.delete(recursive: true);
     }
+  }
+
+  /// 终止当前执行中的程序。幂等；无活跃执行时 no-op。
+  @override
+  Future<void> cancelCurrent() async {
+    _cancel?.complete();
   }
 
   @override

@@ -209,6 +209,9 @@ class _CountingRuntime implements CodeRuntime {
   }
 
   @override
+  Future<void> cancelCurrent() async {}
+
+  @override
   Future<CodeRunResult> run(CodeRunRequest request) async {
     runCount++;
     return CodeRunResult.success(null);

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:conatus_coding/conatus_coding.dart';
@@ -86,6 +87,41 @@ void main() {
 
       expect(shell.lastRequest!.timeoutMs, 30000);
       expect(shell.lastRequest!.stdoutMaxBytes, 1024 * 1024);
+    });
+
+    test('请求携带 cancelSignal', () async {
+      final FakeShellExecutor shell = FakeShellExecutor(_run(exitCode: 0));
+
+      await _runtime(shell).run(const CodeRunRequest(program: 'x'));
+
+      expect(shell.lastRequest!.cancelSignal, isNotNull);
+    });
+
+    test('cancelCurrent → 返回 abort 失败', () async {
+      final Completer<void> gate = Completer<void>();
+      final FakeShellExecutor shell =
+          FakeShellExecutor(_run(exitCode: 0), gate);
+      final SubprocessCodeRuntime runtime = _runtime(shell);
+
+      final Future<CodeRunResult> pending =
+          runtime.run(const CodeRunRequest(program: 'x'));
+      await runtime.cancelCurrent();
+      gate.complete();
+
+      final CodeRunResult result = await pending;
+
+      expect(result.error!.kind, CodeRunFailureKind.abort);
+    });
+
+    test('无活跃执行时 cancelCurrent 是 no-op', () async {
+      final FakeShellExecutor shell = FakeShellExecutor(_run(exitCode: 0));
+      final SubprocessCodeRuntime runtime = _runtime(shell);
+
+      await runtime.cancelCurrent();
+
+      final CodeRunResult result =
+          await runtime.run(const CodeRunRequest(program: 'x'));
+      expect(result.isSuccess, isTrue);
     });
 
     test('request.timeout 覆盖默认限制', () async {

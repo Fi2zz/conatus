@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:test/test.dart';
@@ -87,6 +89,20 @@ void main() {
 
       expect(result.stdout.truncated, isTrue);
       expect(result.stdout.text, 'abcd');
+    });
+
+    test('cancelSignal 落定 → 进程被终止', () async {
+      final executor = LocalShellExecutor();
+      final Completer<void> cancel = Completer<void>();
+      final Future<ShellRunResult> pending = executor.run(executor.resolve(
+        ShellExecRequest(command: 'sleep 30', cancelSignal: cancel.future),
+      ));
+      cancel.complete();
+
+      final ShellRunResult result = await pending;
+
+      expect(result.exitCode, isNot(0));
+      expect(result.timedOut, isFalse);
     });
   });
 

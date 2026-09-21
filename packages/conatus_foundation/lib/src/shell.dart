@@ -35,6 +35,7 @@ class ShellExecRequest {
     this.stdoutMaxBytes,
     this.stdin,
     this.env,
+    this.cancelSignal,
   });
 
   /// 要执行的命令。
@@ -54,6 +55,9 @@ class ShellExecRequest {
 
   /// 追加环境变量。
   final Map<String, String>? env;
+
+  /// 取消信号：落定时终止进程（若实现支持）。缺省不取消。
+  final Future<void>? cancelSignal;
 }
 
 /// 解析后的**执行规格**：必填字段已由 [ShellExecutor.resolve] 补齐并封顶。
@@ -65,6 +69,7 @@ class ShellExecSpec {
     required this.stdoutMaxBytes,
     this.stdin,
     this.env,
+    this.cancelSignal,
   });
 
   /// 要执行的命令。
@@ -84,6 +89,9 @@ class ShellExecSpec {
 
   /// 追加环境变量。
   final Map<String, String>? env;
+
+  /// 取消信号（透传自请求）：落定时终止进程。
+  final Future<void>? cancelSignal;
 }
 
 /// 一次前台运行的结局。

@@ -89,7 +89,9 @@ class RunCodeTool extends Tool {
     }));
     try {
       if (center != null) {
-        await center.update(taskId!, status: TaskStatus.running);
+        final String id = taskId!;
+        await center.update(id, status: TaskStatus.running);
+        center.registerCancel(id, _runtime.cancelCurrent);
       }
       final bool exposeTools = ctx.optional<bool>('expose_tools') ?? true;
       final List<CodeBindingNamespace> bindings = exposeTools
@@ -128,12 +130,16 @@ class RunCodeTool extends Tool {
   ) async {
     final TaskCenter? center = taskCenter;
     if (center != null) {
-      await center.update(
-        taskId!,
-        status: result.isSuccess ? TaskStatus.completed : TaskStatus.failed,
-        result: result.value,
-        error: result.error,
-      );
+      try {
+        await center.update(
+          taskId!,
+          status: result.isSuccess ? TaskStatus.completed : TaskStatus.failed,
+          result: result.value,
+          error: result.error,
+        );
+      } on TaskException {
+        // 任务已被取消（终态）：状态更新让位给取消结果。
+      }
     }
     telemetry?.emit(TelemetryEvent('code.run.finished', data: <String, Object?>{
       'language': _runtime.language,
@@ -168,7 +174,11 @@ class RunCodeTool extends Tool {
   Future<void> _fail(Object error, String? taskId) async {
     final TaskCenter? center = taskCenter;
     if (center != null) {
-      await center.update(taskId!, status: TaskStatus.failed, error: error);
+      try {
+        await center.update(taskId!, status: TaskStatus.failed, error: error);
+      } on TaskException {
+        // 任务已被取消（终态）：状态更新让位给取消结果。
+      }
     }
     telemetry?.emit(TelemetryEvent('code.run.failed', data: <String, Object?>{
       'error': '$error',

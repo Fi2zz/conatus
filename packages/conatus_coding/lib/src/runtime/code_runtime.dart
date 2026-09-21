@@ -17,6 +17,9 @@ abstract class CodeRuntime {
   /// 执行一段代码。失败以 [CodeRunResult.error] 返回，不抛异常。
   Future<CodeRunResult> run(CodeRunRequest request);
 
+  /// 终止当前执行中的程序（若后端支持）。缺省 no-op。幂等。
+  Future<void> cancelCurrent() async {}
+
   /// 释放后端资源。幂等。
   void dispose();
 }
