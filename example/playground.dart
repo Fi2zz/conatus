@@ -1,23 +1,14 @@
-// Playground Demo：conatus_coding × conatus_tui 组装。
-//
-// TUI 对话 + coding 工具（read/write/edit/glob/rg/run_code）+ @ 文件引用。
-//
-// 运行：
-//   export ARK_API_KEY="..."      # 或 DEEPSEEK_API_KEY
-//   dart run example/playground.dart [--session <id>] [--first <文本>] [--cwd <目录>]
-//
-// 未设置 Key 时以离线脚本模型运行：可预览界面并演示 run_code 闭环
-// （发送「执行代码」触发）。@ 引用实现见 at_ref.dart。
+// Playground Demo：conatus_coding × conatus_tui 组装：TUI 对话 + coding 工具
+// （read/write/edit/glob/rg/run_code）+ @ 文件引用（`@<路径>` 展开进消息）。
+// 运行：export ARK_API_KEY="..."（或 DEEPSEEK_API_KEY）；未设置 Key 时离线
+// 脚本模型兜底（发「执行代码」演示 run_code 闭环）。
 
 import 'dart:convert';
 import 'dart:io';
-
 import 'package:conatus/conatus.dart';
 import 'package:conatus_coding/conatus_coding.dart';
 import 'package:conatus_fs_tools/conatus_fs_tools.dart';
 import 'package:conatus_tui/conatus_tui.dart';
-
-import 'at_ref.dart';
 
 Future<void> main(List<String> args) async {
   final TuiOptions options = TuiOptions.parse(args);
@@ -26,7 +17,6 @@ Future<void> main(List<String> args) async {
     return;
   }
   final String cwd = parseCwdFlag(args) ?? Directory.current.path;
-
   final bool configured = _hasKey('ARK_API_KEY') || _hasKey('DEEPSEEK_API_KEY');
   if (!configured) {
     stdout.writeln('未检测到 ARK_API_KEY / DEEPSEEK_API_KEY：以离线脚本模型运行 Demo。');
@@ -44,7 +34,6 @@ Future<void> main(List<String> args) async {
   provideCodingForPlayground(app, cwd: cwd);
   app.require<SystemPrompt>('systemPrompt')
       .add(kPlaygroundPersona, name: 'playground-persona');
-
   final PlaygroundController controller = PlaygroundController(
     app: app,
     sessions: runtime.sessions,
@@ -57,10 +46,8 @@ Future<void> main(List<String> args) async {
   await runtime.dispose();
 }
 
-/// 在 TUI 根上下文上补齐 coding 能力：shell 服务 + rg + run_code。
-///
-/// TUI 已注册 read/write/edit/glob；provideCoding 会重复注册 fs 工具
-/// （同名注册抛 StateError），故这里只补缺失件。
+/// 补齐 coding 能力：shell + rg + run_code。TUI 已注册 read/write/edit/glob，
+/// provideCoding 会重复注册 fs 工具（同名抛 StateError），故只补缺失件。
 void provideCodingForPlayground(Context app, {required String cwd}) {
   final ShellExecutor shell = provideShellLocal(app);
   final RipgrepBinary? rg = RipgrepBinary.discover();
@@ -76,26 +63,76 @@ void provideCodingForPlayground(Context app, {required String cwd}) {
   app.provide('codeRuntime', codeRuntime);
   app.onDispose(codeRuntime.dispose);
   app.effect(() => app.tools.register(RunCodeTool(
-        runtime: codeRuntime,
-        tools: app.tools,
-        telemetry: app.get<Telemetry>('telemetry'),
-      )));
+      runtime: codeRuntime, tools: app.tools,
+      telemetry: app.get<Telemetry>('telemetry'))));
 }
 
-/// Playground 的 coding 人设段。
 const String kPlaygroundPersona = '你是 Playground 编码助手。你可以：\n'
     '- 用 read_file / write_file / edit_file 读写文件，用 glob / rg 搜索代码；\n'
     '- 用 run_code 执行一段 Dart 程序（高危，执行前会请你确认）；\n'
     '- 用户消息里的 <file path="..."> 块是用户引用的文件内容。\n'
     '需要信息时调用工具，否则直接简洁回答。';
 
-/// 本 Demo 的用法文案。
 const String kPlaygroundUsage = '用法：dart run example/playground.dart '
     '[--session <id>] [--first <文本>] [--cwd <目录>]\n'
     '  --session <id>   启动会话 id（默认 $kTuiDefaultSession）\n'
     '  --first <文本>   挂载后自动发一轮\n'
     '  --cwd <目录>     run_code 工作目录（默认当前目录）\n'
     '输入 @<路径> 可引用文件（如 @lib/foo.dart 帮我看下这个文件）。\n';
+
+/// @ 引用单个文件的大小上限（超过不展开，保留原文并提示）。
+const int kAtRefMaxBytes = 200 * 1024;
+
+/// 会话控制器：发送前展开 `@<路径>` 文件引用（继承自 TUI，不改库）。
+class PlaygroundController extends ConatusTuiController {
+  PlaygroundController({
+    required super.app,
+    required super.sessions,
+    required super.name,
+    required super.initialSession,
+    required super.modelLabel,
+    super.onExit,
+  });
+
+  @override
+  Future<void> handleLine(String raw) async {
+    final String line = raw.trim();
+    if (line.isEmpty || line.startsWith('/')) {
+      await super.handleLine(raw);
+      return;
+    }
+    await super.handleLine(expandAtRefs(line));
+  }
+}
+
+/// 把一行里的 `@<路径>` 逐个展开为 `<file path="...">内容</file>` 块。
+String expandAtRefs(String line) {
+  final StringBuffer buffer = StringBuffer();
+  int cursor = 0;
+  for (final RegExpMatch match in RegExp(r'@([^\s]+)').allMatches(line)) {
+    buffer.write(line.substring(cursor, match.start));
+    buffer.write(renderAtRef(match.group(1)!));
+    cursor = match.end;
+  }
+  buffer.write(line.substring(cursor));
+  return buffer.toString();
+}
+
+/// 单个引用：可读且未超限 → `<file>` 块；否则保留原文 + 提示。
+String renderAtRef(String path) {
+  try {
+    final File file = File(path);
+    if (!file.existsSync()) return '@$path（文件不存在，未展开）';
+    final int length = file.lengthSync();
+    if (length > kAtRefMaxBytes) {
+      return '@$path（超过 ${kAtRefMaxBytes ~/ 1024}KB，未展开）';
+    }
+    final String content = file.readAsStringSync();
+    return '<file path="$path">\n$content\n</file>';
+  } catch (_) {
+    return '@$path（读取失败，未展开）';
+  }
+}
 
 /// 取 `--cwd` 的值；未出现或缺尾值时返回 `null`。
 String? parseCwdFlag(List<String> args) {
@@ -108,32 +145,24 @@ String? parseCwdFlag(List<String> args) {
 bool _hasKey(String name) =>
     (Platform.environment[name] ?? '').trim().isNotEmpty;
 
-/// 无 Key 时的离线脚本模型：含「执行/运行/代码」且本轮未用过工具时请求一次
-/// run_code（真实执行一段 Dart 程序），其余直接回显。
+/// 无 Key 时的离线脚本模型：含「执行/运行/代码」且未用过工具时请求一次
+/// run_code（真实执行 Dart 程序），其余直接回显。
 class _OfflineProvider implements LlmProvider {
   @override
   String get name => 'offline';
 
   @override
-  Future<LlmResult> chat(
-    List<LlmMessage> messages, {
-    Map<String, dynamic>? options,
-    List<Map<String, dynamic>>? tools,
-  }) async {
+  Future<LlmResult> chat(List<LlmMessage> messages,
+      {Map<String, dynamic>? options, List<Map<String, dynamic>>? tools}) async {
     final String user = _lastUser(messages);
     final bool toolUsed = messages.any((LlmMessage m) => m.role == 'tool');
     if (!toolUsed && _asksCode(user)) {
       return LlmResult(
-        content: '',
-        provider: 'offline',
-        model: 'scripted',
-        toolCalls: <LlmToolCall>[
-          LlmToolCall(
+        content: '', provider: 'offline', model: 'scripted',
+        toolCalls: <LlmToolCall>[LlmToolCall(
             id: 'offline-1',
             name: 'run_code',
-            arguments: '{"program":${jsonEncode(_offlineProgram)}}',
-          ),
-        ],
+            arguments: '{"program":${jsonEncode(_offlineProgram)}}')],
       );
     }
     return LlmResult(
@@ -145,11 +174,8 @@ class _OfflineProvider implements LlmProvider {
   }
 
   @override
-  Stream<LlmStreamEvent> chatStream(
-    List<LlmMessage> messages, {
-    Map<String, dynamic>? options,
-    List<Map<String, dynamic>>? tools,
-  }) =>
+  Stream<LlmStreamEvent> chatStream(List<LlmMessage> messages,
+      {Map<String, dynamic>? options, List<Map<String, dynamic>>? tools}) =>
       const Stream<LlmStreamEvent>.empty();
 
   @override
@@ -159,16 +185,13 @@ class _OfflineProvider implements LlmProvider {
       text.contains('执行') || text.contains('运行') || text.contains('代码');
 
   static String _lastUser(List<LlmMessage> messages) {
-    for (int i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role == 'user') {
-        return messages[i].content;
-      }
+    for (final LlmMessage m in messages.reversed) {
+      if (m.role == 'user') return m.content;
     }
     return '';
   }
 }
 
-/// 离线模型触发 run_code 时执行的演示程序（纯 Dart，不依赖外部绑定）。
 const String _offlineProgram = 'import \'dart:io\';\n'
     'void main() {\n'
     '  print(\'当前时间: \' + DateTime.now().toIso8601String());\n'
