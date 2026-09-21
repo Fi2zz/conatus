@@ -100,13 +100,20 @@ class AgentLoop {
   /// [cancel] 非空时，模型调用、工具执行与路由都与其竞速；取消后本方法以
   /// [AgentCancelled] 结束（结果丢弃，调用方可立即开始新一轮）。
   ///
+  /// [images] 非空时随用户消息发给模型并写入会话事件（多模态输入）。
+  ///
   /// 若挂载了 [goalDriver]，一轮收口后按其决策自动续行：继续则递增轮次并
   /// 以 [kGoalContinuationPrompt] 再跑一轮，直到等待用户或停止为止。
-  Future<AgentTurn> run(String userInput, {AgentCancel? cancel}) async {
+  Future<AgentTurn> run(
+    String userInput, {
+    AgentCancel? cancel,
+    List<LlmImage> images = const <LlmImage>[],
+  }) async {
     final AgentTurnTracker? tracker = turnTracker;
     await tracker?.beginTurn(userInput);
     try {
-      final AgentTurn turn = await _continue(userInput, cancel: cancel);
+      final AgentTurn turn =
+          await _continue(userInput, cancel: cancel, images: images);
       await tracker?.endTurn(result: turn.reply);
       return turn;
     } catch (error) {
@@ -116,8 +123,13 @@ class AgentLoop {
   }
 
   /// run() 的追踪外壳主体：单轮加 goalDriver 续行。
-  Future<AgentTurn> _continue(String userInput, {AgentCancel? cancel}) async {
-    final AgentTurn turn = await _runOnce(userInput, cancel: cancel);
+  Future<AgentTurn> _continue(
+    String userInput, {
+    AgentCancel? cancel,
+    List<LlmImage> images = const <LlmImage>[],
+  }) async {
+    final AgentTurn turn =
+        await _runOnce(userInput, cancel: cancel, images: images);
     final GoalRoundDriver? driver = goalDriver;
     if (driver == null) return turn;
     if (session?.closed ?? false) return turn;
@@ -126,11 +138,20 @@ class AgentLoop {
   }
 
   /// 单轮实现：从 [userInput] 到最终文本回复。
-  Future<AgentTurn> _runOnce(String userInput, {AgentCancel? cancel}) async {
+  Future<AgentTurn> _runOnce(
+    String userInput, {
+    AgentCancel? cancel,
+    List<LlmImage> images = const <LlmImage>[],
+  }) async {
     final Session? session = this.session;
     ensureSessionOpen(session);
-    session
-        ?.append(kUserMessageEvent, data: <String, Object?>{'text': userInput});
+    session?.append(
+      kUserMessageEvent,
+      data: <String, Object?>{
+        'text': userInput,
+        if (images.isNotEmpty) 'images': imagesToJson(images),
+      },
+    );
     final MemoryStore? memory = this.memory;
     if (memory != null) await memory.load();
     _historyStart = await compactSession(

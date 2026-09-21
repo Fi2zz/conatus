@@ -19,7 +19,11 @@ List<LlmMessage> deriveAgentMessages(Iterable<SessionEvent> events) {
     if (data is! Map) continue;
     switch (event.type) {
       case kUserMessageEvent:
-        messages.add(LlmMessage('user', '${data['text'] ?? ''}'));
+        messages.add(LlmMessage(
+          'user',
+          '${data['text'] ?? ''}',
+          images: imagesFromJson(data['images']),
+        ));
       case kAssistantMessageEvent:
         messages.add(LlmMessage(
           'assistant',
@@ -36,6 +40,30 @@ List<LlmMessage> deriveAgentMessages(Iterable<SessionEvent> events) {
   }
   return messages;
 }
+
+/// 把事件里的 `images` 负载还原为 [LlmImage] 列表。
+List<LlmImage> imagesFromJson(Object? raw) {
+  if (raw is! List) return const <LlmImage>[];
+  final List<LlmImage> images = <LlmImage>[];
+  for (final Object? item in raw) {
+    if (item is! Map) continue;
+    final Object? mime = item['mimeType'];
+    final Object? data = item['base64Data'];
+    if (mime is! String || data is! String) continue;
+    images.add(LlmImage(mimeType: mime, base64Data: data));
+  }
+  return images;
+}
+
+/// 把 [LlmImage] 列表序列化为事件负载。
+List<Map<String, Object?>> imagesToJson(List<LlmImage> images) =>
+    <Map<String, Object?>>[
+      for (final LlmImage image in images)
+        <String, Object?>{
+          'mimeType': image.mimeType,
+          'base64Data': image.base64Data,
+        },
+    ];
 
 /// 把事件里的 `toolCalls` 负载还原为 [LlmToolCall] 列表。
 List<LlmToolCall> toolCallsFromJson(Object? raw) {

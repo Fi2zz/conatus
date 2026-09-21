@@ -4,6 +4,10 @@
 
 ## [未发布]
 
+- `AgentLoop.run` 新增可选 `images` 参数：随用户消息发给模型，并写入
+  `user/message` 事件（`images` 字段，base64）；`deriveAgentMessages` 回放、
+  历史压缩与「模型可见即已记录」不变式均支持图片
+
 - 压缩实现迁到 `conatus_compaction`：`Compactor` / `CompactionResult` /
   `Summarizer` / `provideCompaction` 由该包提供，`AgentLoop` /
   `provideAgentLoop` / `compactSession` / `buildSystemText` 改为依赖

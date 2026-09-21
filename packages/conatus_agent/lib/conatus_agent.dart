@@ -5,6 +5,8 @@ export 'src/agent_events.dart'
         compactSession,
         deriveAgentMessages,
         ensureSessionOpen,
+        imagesFromJson,
+        imagesToJson,
         kCompactionSummaryPrompt,
         parseToolArguments,
         recentAgentEvents,
