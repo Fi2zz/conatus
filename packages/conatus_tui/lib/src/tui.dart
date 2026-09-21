@@ -517,7 +517,11 @@ class _AgentTuiState extends State<AgentTui> {
                 : TeamView(snapshot: _controller.teamSnapshot),
           ),
           if (_menu.open)
-            TuiCommandMenuView(matches: _menu.matches, selected: _menu.index),
+            TuiCommandMenuView(
+              matches: _menu.matches,
+              selected: _menu.index,
+              windowStart: _menu.windowStart,
+            ),
           if (_atMenu.open)
             AtRefMenuView(matches: _atMenu.matches, selected: _atMenu.index),
           TeamStatusBar(snapshot: _controller.teamSnapshot),

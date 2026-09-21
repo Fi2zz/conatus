@@ -73,4 +73,35 @@ void main() {
     expect(tuiHelpText, contains('/task <子命令>'));
     expect(tuiHelpText, contains('其他输入直接进入 Agent 对话链路。'));
   });
+
+  test('可见窗口跟随选中：短列表不滚动，长列表钳在范围内', () {
+    final TuiCommandMenu menu = TuiCommandMenu()
+      ..syncInput('/');
+    expect(menu.matches.length, greaterThan(kTuiCommandMenuVisible));
+    expect(menu.windowStart, 0);
+
+    // 移到末尾：窗口贴住底部。
+    menu.move(menu.matches.length);
+    expect(menu.index, menu.matches.length - 1);
+    expect(
+      menu.windowStart,
+      menu.matches.length - kTuiCommandMenuVisible,
+    );
+
+    // 移到中间：窗口居中。
+    menu.syncInput('/');
+    menu.move(kTuiCommandMenuVisible);
+    expect(menu.windowStart, greaterThan(0));
+    expect(
+      menu.windowStart + kTuiCommandMenuVisible,
+      lessThanOrEqualTo(menu.matches.length),
+    );
+  });
+
+  test('短列表窗口起点恒为 0', () {
+    final TuiCommandMenu menu = TuiCommandMenu()..syncInput('/se');
+    expect(menu.matches.length, lessThanOrEqualTo(kTuiCommandMenuVisible));
+    menu.move(99);
+    expect(menu.windowStart, 0);
+  });
 }

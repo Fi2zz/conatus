@@ -88,6 +88,9 @@ const List<TuiCommand> tuiCommands = <TuiCommand>[
   TuiCommand(name: 'exit', description: '退出并关闭 TUI（同 /quit、Ctrl+C）'),
 ];
 
+/// `/` 菜单同时可见的命令行数（超出滚动，避免长技能列表铺满屏幕）。
+const int kTuiCommandMenuVisible = 6;
+
 /// `/` 命令菜单状态：输入以 `/` 开头且命令词未带参时打开，用前缀过滤命令表。
 class TuiCommandMenu {
   /// 构造菜单；[commands] 每次过滤时提供当前命令表（缺省用静态表
@@ -115,6 +118,21 @@ class TuiCommandMenu {
 
   /// 当前选中命令；无匹配返回 `null`。
   TuiCommand? get selected => _matches.isEmpty ? null : _matches[_index];
+
+  /// 可见窗口起点（选中项始终在窗口内）。
+  int get windowStart {
+    final int length = _matches.length;
+    if (length <= kTuiCommandMenuVisible) {
+      return 0;
+    }
+    final int start = _index - kTuiCommandMenuVisible ~/ 2;
+    if (start < 0) {
+      return 0;
+    }
+    return start + kTuiCommandMenuVisible > length
+        ? length - kTuiCommandMenuVisible
+        : start;
+  }
 
   /// 跟随输入框文本：`/` 开头且未出现空白时打开并按前缀过滤，否则关闭。
   void syncInput(String text) {
