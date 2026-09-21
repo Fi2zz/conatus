@@ -12,3 +12,4 @@ export 'src/runtime/code_run_result.dart'
     show CodeRunFailure, CodeRunFailureKind, CodeRunResult;
 export 'src/runtime/code_runtime.dart' show CodeRuntime;
 export 'src/runtime/subprocess_runtime.dart' show SubprocessCodeRuntime;
+export 'src/tools/run_code_tool.dart' show RunCodeTool;

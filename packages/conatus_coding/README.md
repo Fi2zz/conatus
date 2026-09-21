@@ -26,6 +26,10 @@ final CodeRunResult result = await runtime.run(
 );
 ```
 
+`enableRuntime` 时额外注册 `run_code` 工具（`riskLevel: high`，经
+`instrumentApproval` 自动审批，程序完整可见）；taskCenter / sessionLog /
+telemetry 可从上下文自动接入，缺省时降级不阻塞执行。
+
 依赖 `conatus_foundation` 的 `fs` / `shell` / `tools` 接缝：`fs` 与 `tools`
 必需；`shell` 缺省或未发现 ripgrep 二进制时跳过 `rg`（`glob` 仍注册）。
 
