@@ -41,13 +41,11 @@ const List<TuiCommand> tuiCommands = <TuiCommand>[
   TuiCommand(name: 'tools', description: '列出当前已注册的工具'),
   TuiCommand(
     name: 'model',
-    description: '查看或切换模型（/<model> <名字>）',
-    argHint: '[名字]',
+    description: '打开模型选择浮层（/model <名字> 可直接切换）',
   ),
   TuiCommand(
     name: 'provider',
-    description: '管理模型提供商（列表 / 切换 / 删除 / 导入）',
-    argHint: '[子命令]',
+    description: '打开提供商管理浮层（add 导入 / <名字> 切换 / remove 删除）',
   ),
   TuiCommand(
     name: 'plan',

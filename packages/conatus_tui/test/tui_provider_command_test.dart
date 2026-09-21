@@ -224,6 +224,27 @@ void main() {
     dir.deleteSync(recursive: true);
   });
 
+  test('/model 与 /provider 是无参命令：菜单 Enter 直接打开浮层', () async {
+    final (ConatusTuiController controller, Context app, Directory dir) =
+        await _build();
+
+    final TuiCommand model = controller.commands
+        .firstWhere((TuiCommand c) => c.name == 'model');
+    final TuiCommand provider = controller.commands
+        .firstWhere((TuiCommand c) => c.name == 'provider');
+    expect(model.takesArgs, isFalse);
+    expect(provider.takesArgs, isFalse);
+
+    await controller.handleLine(model.token);
+    expect(controller.modelPrompt.open, isTrue);
+    controller.modelPrompt.close();
+
+    await controller.handleLine(provider.token);
+    expect(controller.providerPrompt.open, isTrue);
+    app.dispose();
+    dir.deleteSync(recursive: true);
+  });
+
   test('provider 浮层：默认选中当前项，移动越界钳制', () {
     final TuiProviderPrompt prompt = TuiProviderPrompt();
     prompt.show(<TuiProviderItem>[

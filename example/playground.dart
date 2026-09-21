@@ -21,8 +21,7 @@ Future<void> main(List<String> args) async {
   // Key 经凭据服务判断（缺省 EnvCredentials，即环境变量）；provider 内部不再
   // 直接读环境变量。
   final Credentials credentials = EnvCredentials();
-  final bool configured =
-      credentials.get('ARK_API_KEY') != null ||
+  final bool configured = credentials.get('ARK_API_KEY') != null ||
       credentials.get('DEEPSEEK_API_KEY') != null;
   if (!configured) {
     stdout.writeln('未检测到 ARK_API_KEY / DEEPSEEK_API_KEY：以离线脚本模型运行 Demo。');
@@ -37,7 +36,8 @@ Future<void> main(List<String> args) async {
   );
   final Context app = runtime.app;
   provideCodingForPlayground(app, cwd: cwd);
-  app.require<SystemPrompt>('systemPrompt')
+  app
+      .require<SystemPrompt>('systemPrompt')
       .add(kPlaygroundPersona, name: 'playground-persona');
   final ConatusTuiController controller = runtime.createController(
     initialSession: options.session,
@@ -65,7 +65,8 @@ void provideCodingForPlayground(Context app, {required String cwd}) {
   app.provide('codeRuntime', codeRuntime);
   app.onDispose(codeRuntime.dispose);
   app.effect(() => app.tools.register(RunCodeTool(
-      runtime: codeRuntime, tools: app.tools,
+      runtime: codeRuntime,
+      tools: app.tools,
       telemetry: app.get<Telemetry>('telemetry'))));
 }
 
@@ -100,16 +101,21 @@ class _OfflineProvider implements LlmProvider {
 
   @override
   Future<LlmResult> chat(List<LlmMessage> messages,
-      {Map<String, dynamic>? options, List<Map<String, dynamic>>? tools}) async {
+      {Map<String, dynamic>? options,
+      List<Map<String, dynamic>>? tools}) async {
     final String user = _lastUser(messages);
     final bool toolUsed = messages.any((LlmMessage m) => m.role == 'tool');
     if (!toolUsed && _asksCode(user)) {
       return LlmResult(
-        content: '', provider: 'offline', model: 'scripted',
-        toolCalls: <LlmToolCall>[LlmToolCall(
-            id: 'offline-1',
-            name: 'run_code',
-            arguments: '{"program":${jsonEncode(_offlineProgram)}}')],
+        content: '',
+        provider: 'offline',
+        model: 'scripted',
+        toolCalls: <LlmToolCall>[
+          LlmToolCall(
+              id: 'offline-1',
+              name: 'run_code',
+              arguments: '{"program":${jsonEncode(_offlineProgram)}}')
+        ],
       );
     }
     return LlmResult(
@@ -122,7 +128,7 @@ class _OfflineProvider implements LlmProvider {
 
   @override
   Stream<LlmStreamEvent> chatStream(List<LlmMessage> messages,
-      {Map<String, dynamic>? options, List<Map<String, dynamic>>? tools}) =>
+          {Map<String, dynamic>? options, List<Map<String, dynamic>>? tools}) =>
       const Stream<LlmStreamEvent>.empty();
 
   @override
