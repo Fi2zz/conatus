@@ -45,6 +45,11 @@ const List<TuiCommand> tuiCommands = <TuiCommand>[
     argHint: '[名字]',
   ),
   TuiCommand(
+    name: 'provider',
+    description: '管理模型提供商（列表 / 切换 / 删除 / 导入）',
+    argHint: '[子命令]',
+  ),
+  TuiCommand(
     name: 'plan',
     description: '进入 / 退出 Plan Mode（先规划，经 exit_plan_mode 提交后执行）',
   ),

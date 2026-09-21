@@ -35,6 +35,8 @@ export 'src/tui_chrome.dart';
 export 'src/tui_command_menu_view.dart';
 export 'src/tui_commands.dart';
 export 'src/tui_controller.dart' show ConatusTuiController;
+export 'src/tui_form.dart';
+export 'src/tui_form_view.dart';
 export 'src/tui_help.dart';
 export 'src/tui_message.dart';
 export 'src/tui_options.dart';
@@ -49,6 +51,8 @@ export 'src/tui_permission_gate.dart'
         kPlanApprove,
         kPlanReject,
         kTuiDecisionTimeout;
+export 'src/tui_provider.dart';
+export 'src/tui_provider_view.dart';
 export 'src/tui_session_picker.dart';
 export 'src/tui_session_picker_view.dart';
 export 'src/tui_skill_command.dart';

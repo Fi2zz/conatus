@@ -654,3 +654,29 @@ class DeepSeekProvider extends _OpenAiCompatibleProvider {
   @override
   String get name => 'deepseek';
 }
+
+// ═══════════════════════════════════════════════════════════════
+// 通用 OpenAI 兼容端点
+// ═══════════════════════════════════════════════════════════════
+
+/// 通用 OpenAI 兼容提供商：端点 / 模型 / 凭据键全部由调用方指定。
+///
+/// 用于自建网关、第三方聚合等任意 OpenAI 兼容服务；豆包与 DeepSeek 保留各自的
+/// 专用子类（默认端点与凭据键不同）。
+class OpenAiCompatibleProvider extends _OpenAiCompatibleProvider {
+  OpenAiCompatibleProvider({
+    required this.name,
+    required super.baseUrl,
+    required super.model,
+    super.credentialKey = '',
+    super.apiKey,
+    super.apiStyle,
+    super.client,
+    super.credentials,
+    super.timeout,
+  });
+
+  /// 展示名（如 `'opencode-go'`）。
+  @override
+  final String name;
+}

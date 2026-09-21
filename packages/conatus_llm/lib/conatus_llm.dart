@@ -12,4 +12,5 @@ export 'src/llm.dart'
         LlmTextDelta,
         LlmToolCall,
         provideLlm;
-export 'src/llm_openai.dart' show DeepSeekProvider, DoubaoProvider;
+export 'src/llm_openai.dart'
+    show DeepSeekProvider, DoubaoProvider, OpenAiCompatibleProvider;

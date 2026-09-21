@@ -12,6 +12,7 @@ import 'package:conatus_cron/conatus_cron.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_fs_tools/conatus_fs_tools.dart';
 import 'package:conatus_llm/conatus_llm.dart';
+import 'package:conatus_providers/conatus_providers.dart';
 import 'package:conatus_search/conatus_search.dart';
 import 'package:conatus_skill/conatus_skill.dart';
 
@@ -28,8 +29,9 @@ class ConatusTuiRuntime {
     required this.sessions,
     required this.tools,
     required this.modelLabel,
-    required Disposer llmDisposer,
-  }) : _llmDisposer = llmDisposer;
+    required this.providers,
+    required void Function(FallbackLlm llm) switchLlm,
+  }) : _switchLlm = switchLlm;
 
   /// 根上下文。
   final Context app;
@@ -43,17 +45,16 @@ class ConatusTuiRuntime {
   /// 顶栏展示的模型标签。
   final String modelLabel;
 
-  /// `'llm'` 服务的撤销句柄；[switchLlm] 替换提供商时先撤销旧的。
-  Disposer _llmDisposer;
+  /// 提供商注册表；`providers: false` 时为 `null`（`/provider` 不可用）。
+  final ProviderRegistry? providers;
 
-  /// 运行时替换 LLM 提供商（`/model` 切换用）。
+  final void Function(FallbackLlm llm) _switchLlm;
+
+  /// 运行时替换 LLM 提供商（`/model`、`/provider` 切换用）。
   ///
   /// 只换根上下文的服务；已绑定的会话仍持有旧提供商，需再调
   /// [ConatusTuiController.rebind] 重建 Agent Loop 才生效。
-  void switchLlm(FallbackLlm llm) {
-    _llmDisposer();
-    _llmDisposer = provideLlm(app, llm: llm);
-  }
+  void switchLlm(FallbackLlm llm) => _switchLlm(llm);
 
   /// 装配一个默认运行时。
   ///
@@ -63,7 +64,10 @@ class ConatusTuiRuntime {
   /// 发现技能，注入目录段并注册 `skill` 工具。
   /// [llm] 缺省用 `FallbackLlm.withDefaults()`（豆包 → DeepSeek）；传入后按注入的
   /// 提供商为准（如 DeepSeek-only 的 Demo）。[modelLabel] 覆盖顶栏模型标签。
-  // REASON: 装配入口的参数聚合是既定形态（本参数之前已 7 个），调用方是进程级
+  /// [providers] 为 true 时装配提供商注册表（`<baseDir>/providers.json`，
+  /// [providersFile] 可覆盖），`/provider` 命令据此可用；未显式传 [llm] 时优先
+  /// 用注册表当前提供商构造（[model] 覆盖其默认模型名）。
+  // REASON: 装配入口的参数聚合是既定形态（本参数之前已 9 个），调用方是进程级
   // main，不存在逐层透传问题。
   static Future<ConatusTuiRuntime> create({
     String? sessionDir,
@@ -72,6 +76,9 @@ class ConatusTuiRuntime {
     String? exaApiKey,
     bool webTools = true,
     bool skills = true,
+    bool providers = true,
+    String? providersFile,
+    String? model,
     FallbackLlm? llm,
     String? modelLabel,
   }) async {
@@ -132,7 +139,29 @@ class ConatusTuiRuntime {
     }
 
     // ── 模型 / 自省 / 子 Agent ──────────────────────────────────
-    final Disposer llmDisposer = provideLlm(app, llm: llm);
+    ProviderRegistry? registry;
+    if (providers) {
+      registry = provideProviders(
+        app,
+        store: ProviderStore(
+          path: providersFile ?? '$resolvedBaseDir${sep}providers.json',
+        ),
+      );
+      await registry.load();
+    }
+    final LlmProvider? fromRegistry =
+        registry?.buildLlm(registry.currentName ?? '', model: model);
+    Disposer llmDisposer = provideLlm(
+      app,
+      llm: llm ??
+          (fromRegistry == null
+              ? FallbackLlm.withDefaults()
+              : FallbackLlm(<LlmProvider>[fromRegistry])),
+    );
+    void switchLlm(FallbackLlm next) {
+      llmDisposer();
+      llmDisposer = provideLlm(app, llm: next);
+    }
     provideReflection(app);
     provideSpawnAgent(
       app,
@@ -200,8 +229,9 @@ class ConatusTuiRuntime {
       app: app,
       sessions: sessions,
       tools: app.tools,
-      modelLabel: modelLabel ?? _modelLabel(),
-      llmDisposer: llmDisposer,
+      modelLabel: modelLabel ?? model ?? _modelLabel(registry),
+      providers: registry,
+      switchLlm: switchLlm,
     );
   }
 
@@ -219,6 +249,7 @@ class ConatusTuiRuntime {
       modelLabel: modelLabel,
       onExit: onExit,
     );
+    controller.switchLlm = switchLlm;
     return controller;
   }
 
@@ -228,7 +259,9 @@ class ConatusTuiRuntime {
     app.dispose();
   }
 
-  static String _modelLabel() {
+  static String _modelLabel(ProviderRegistry? registry) {
+    final String? model = registry?.current?.defaultModel;
+    if (model != null) return model;
     final bool ark = (Platform.environment['ARK_API_KEY'] ?? '').isNotEmpty;
     final bool deepseek =
         (Platform.environment['DEEPSEEK_API_KEY'] ?? '').isNotEmpty;

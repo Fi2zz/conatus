@@ -13,6 +13,7 @@ import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_cron/conatus_cron.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
+import 'package:conatus_providers/conatus_providers.dart';
 import 'package:conatus_schedule/conatus_schedule.dart';
 import 'package:conatus_skill/conatus_skill.dart';
 import 'package:conatus_team/conatus_team.dart';
@@ -25,14 +26,18 @@ import 'team_subscription.dart';
 import 'transcript.dart';
 import 'tui_choice.dart';
 import 'tui_commands.dart';
+import 'tui_form.dart';
 import 'tui_help.dart';
 import 'tui_message.dart';
 import 'tui_options.dart';
 import 'tui_permission.dart';
 import 'tui_permission_gate.dart';
+import 'tui_provider.dart';
 import 'tui_session_picker.dart';
 import 'tui_skill_command.dart';
 import 'voice_reporter.dart';
+
+part 'tui_controller_provider.dart';
 
 /// `/goal` 用法提示。
 const String kGoalUsage =
@@ -112,6 +117,19 @@ class ConatusTuiController implements TuiUserPromptHost {
   /// 缺省 null 时该命令提示"未装配"。宿主（如 playground）在此切换 LLM 提供商：
   /// 替换根上下文服务后调 [rebind] 让 Agent Loop 用上新提供商。
   Future<String?> Function(String arg)? onModelCommand;
+
+  /// LLM 服务替换钩子（由 `ConatusTuiRuntime.createController` 注入）。
+  ///
+  /// `/provider` 与 `/model` 切换提供商 / 模型时调用；未注入时这两个命令
+  /// 只提示不可用。
+  void Function(FallbackLlm llm)? switchLlm;
+
+  /// provider 管理浮层（`/provider`）。
+  late final TuiProviderPrompt providerPrompt =
+      TuiProviderPrompt(onChanged: _refresh);
+
+  /// 表单浮层（导入 registry）。
+  late final TuiFormPrompt formPrompt = TuiFormPrompt(onChanged: _refresh);
 
   /// 屏上记录。
   final Transcript transcript = Transcript();
@@ -367,6 +385,8 @@ class ConatusTuiController implements TuiUserPromptHost {
         _showTools();
       case 'model':
         await _handleModel(arg);
+      case 'provider':
+        await _handleProvider(arg);
       case 'plan':
         _togglePlanMode();
       case 'goal':
@@ -434,18 +454,14 @@ class ConatusTuiController implements TuiUserPromptHost {
     );
   }
 
-  /// `/model [名字]`：委托宿主钩子（查看 / 切换模型）。
-  Future<void> _handleModel(String arg) async {
-    final Future<String?> Function(String)? hook = onModelCommand;
-    if (hook == null) {
-      transcript.add(TuiRole.system, '模型切换未装配：宿主未注入 /model 钩子。');
-      return;
-    }
-    final String? message = await hook(arg);
-    if (message != null) {
-      transcript.add(TuiRole.system, message);
-    }
-  }
+  /// `/model [名字]` 与 `/provider` 的实现见 part 文件
+  /// `tui_controller_provider.dart`。
+
+  /// 确认 provider 浮层选中项（根组件按键调用）。
+  Future<void> confirmProviderItem() => _confirmProviderItem();
+
+  /// 删除 provider 浮层选中项（根组件按键调用）。
+  Future<void> deleteSelectedProvider() => _deleteSelectedProvider();
 
   /// `/plan`：进入 / 退出 Plan Mode（先规划、经 exit_plan_mode 提交后执行）。
   void _togglePlanMode() {

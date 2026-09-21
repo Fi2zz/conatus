@@ -18,7 +18,11 @@ import 'tui_chrome.dart';
 import 'tui_command_menu_view.dart';
 import 'tui_commands.dart';
 import 'tui_controller.dart';
+import 'tui_form.dart';
+import 'tui_form_view.dart';
 import 'tui_message.dart';
+import 'tui_provider.dart';
+import 'tui_provider_view.dart';
 import 'tui_session_picker_view.dart';
 import 'tui_views.dart';
 
@@ -141,6 +145,12 @@ class _AgentTuiState extends State<AgentTui> {
     if (_onAtMenuKey(event)) {
       return true;
     }
+    if (_onFormKey(event)) {
+      return true;
+    }
+    if (_onProviderKey(event)) {
+      return true;
+    }
     if (!_menu.open) {
       return false;
     }
@@ -163,6 +173,51 @@ class _AgentTuiState extends State<AgentTui> {
       return true;
     }
     return false;
+  }
+
+  /// 表单浮层按键：Tab / ↑↓ 切字段、Enter 下一字段（末字段提交）、Esc 取消。
+  bool _onFormKey(KeyboardEvent event) {
+    final TuiFormPrompt form = _controller.formPrompt;
+    if (!form.open) {
+      return false;
+    }
+    if (event.logicalKey == LogicalKey.tab ||
+        event.logicalKey == LogicalKey.arrowDown) {
+      form.move(1);
+    } else if (event.logicalKey == LogicalKey.arrowUp) {
+      form.move(-1);
+    } else if (event.logicalKey == LogicalKey.enter) {
+      form.next();
+    } else if (event.logicalKey == LogicalKey.escape) {
+      form.cancel();
+    } else {
+      return false; // 其余按键交给字段输入框。
+    }
+    _refresh();
+    return true;
+  }
+
+  /// provider 浮层按键：↑↓ 选择、Enter 确认、D 删除、Esc 关闭。
+  bool _onProviderKey(KeyboardEvent event) {
+    final TuiProviderPrompt prompt = _controller.providerPrompt;
+    if (!prompt.open) {
+      return false;
+    }
+    if (event.logicalKey == LogicalKey.arrowUp) {
+      prompt.move(-1);
+    } else if (event.logicalKey == LogicalKey.arrowDown) {
+      prompt.move(1);
+    } else if (event.logicalKey == LogicalKey.enter) {
+      unawaited(_controller.confirmProviderItem());
+    } else if (event.logicalKey == LogicalKey.keyD) {
+      unawaited(_controller.deleteSelectedProvider());
+    } else if (event.logicalKey == LogicalKey.escape) {
+      prompt.close();
+    } else {
+      return false;
+    }
+    _refresh();
+    return true;
   }
 
   /// `@` 文件补全按键：↑↓ 移动、Tab/Enter 补全、Esc 关闭；未打开返回 false。
@@ -298,6 +353,12 @@ class _AgentTuiState extends State<AgentTui> {
     if (_onChoiceKey(event)) {
       return true;
     }
+    if (_onFormKey(event)) {
+      return true;
+    }
+    if (_onProviderKey(event)) {
+      return true;
+    }
     if (_controller.picker.open) {
       if (event.logicalKey == LogicalKey.arrowUp) {
         _controller.movePicker(-1);
@@ -322,6 +383,14 @@ class _AgentTuiState extends State<AgentTui> {
       if (_atMenu.open) {
         _atMenu.close();
         _refresh();
+        return true;
+      }
+      if (_controller.formPrompt.open) {
+        _controller.formPrompt.cancel();
+        return true;
+      }
+      if (_controller.providerPrompt.open) {
+        _controller.providerPrompt.close();
         return true;
       }
       if (_controller.transcript.closeHelp()) {
@@ -417,7 +486,10 @@ class _AgentTuiState extends State<AgentTui> {
           TeamStatusBar(snapshot: _controller.teamSnapshot),
           TuiInputBar(
             controller: _input,
-            focused: !_controller.picker.open && !_controller.choice.open,
+            focused: !_controller.picker.open &&
+                !_controller.choice.open &&
+                !_controller.providerPrompt.open &&
+                !_controller.formPrompt.open,
             busy: _controller.busy,
             onSubmitted: (_) => _submit(),
             onKeyEvent: _onInputKey,
@@ -436,6 +508,36 @@ class _AgentTuiState extends State<AgentTui> {
     );
   }
 
+  /// 浮层优先渲染：选项 / 会话面板 / 表单 / provider；无浮层返回 `null`。
+  Component? _overlay() {
+    final TuiChoiceRequest? request =
+        _controller.choice.open ? _controller.choice.request : null;
+    if (request != null) {
+      return TuiChoiceView(request: request, selected: _controller.choice.index);
+    }
+    if (_controller.picker.open) {
+      return SessionPickerView(
+        sessions: _controller.picker.list,
+        currentId: _controller.sessionId,
+        selected: _controller.picker.index,
+      );
+    }
+    if (_controller.formPrompt.open) {
+      return TuiFormView(
+        request: _controller.formPrompt.request!,
+        index: _controller.formPrompt.index,
+        onKeyEvent: _onFormKey,
+      );
+    }
+    if (_controller.providerPrompt.open) {
+      return TuiProviderView(
+        items: _controller.providerPrompt.items,
+        selected: _controller.providerPrompt.index,
+      );
+    }
+    return null;
+  }
+
   Component _body() {
     if (!_controller.ready) {
       return const Center(
@@ -445,21 +547,9 @@ class _AgentTuiState extends State<AgentTui> {
         ),
       );
     }
-    if (_controller.choice.open) {
-      final TuiChoiceRequest? request = _controller.choice.request;
-      if (request != null) {
-        return TuiChoiceView(
-          request: request,
-          selected: _controller.choice.index,
-        );
-      }
-    }
-    if (_controller.picker.open) {
-      return SessionPickerView(
-        sessions: _controller.picker.list,
-        currentId: _controller.sessionId,
-        selected: _controller.picker.index,
-      );
+    final Component? overlay = _overlay();
+    if (overlay != null) {
+      return overlay;
     }
     final List<TuiMessage> messages = _controller.transcript.messages;
     final bool loading = _controller.busy;
