@@ -11,8 +11,6 @@
 library;
 
 import 'package:conatus_core/conatus_core.dart';
-import 'package:conatus_credentials/conatus_credentials.dart';
-import 'llm_openai.dart';
 
 /// OpenAI 兼容端点的请求形态。
 enum LlmApiStyle { chat, responses }
@@ -212,21 +210,6 @@ class FallbackLlm implements LlmProvider {
   @override
   String get name => 'fallback';
 
-  /// 用默认提供商列表构建：豆包 → DeepSeek。
-  ///
-  /// [credentials] 是 Key 的唯一来源（缺省不注入时 Key 为空）；调用方通常传
-  /// `provideCredentials(app)` 拿到的凭据服务（缺省实现 `EnvCredentials`）。
-  factory FallbackLlm.withDefaults({
-    List<LlmProvider>? extra,
-    Credentials? credentials,
-  }) {
-    final List<LlmProvider> list = <LlmProvider>[
-      DoubaoProvider(credentials: credentials),
-      DeepSeekProvider(credentials: credentials),
-      ...?extra,
-    ];
-    return FallbackLlm(list);
-  }
 
   @override
   Future<LlmResult> chat(
@@ -306,8 +289,10 @@ class FallbackLlm implements LlmProvider {
 ///   });
 /// });
 /// ```
-Disposer provideLlm(Context ctx, {FallbackLlm? llm}) {
-  final FallbackLlm instance = llm ?? FallbackLlm.withDefaults();
+Disposer provideLlm(Context ctx, {required FallbackLlm llm}) {
+  // 具体提供商（豆包 / DeepSeek 与默认回退链）在 conatus_providers：
+  // `defaultFallbackLlm(credentials: ...)`。
+  final FallbackLlm instance = llm;
   final Disposer disposer = ctx.provide('llm', instance);
   ctx.onDispose(instance.close);
   return disposer;

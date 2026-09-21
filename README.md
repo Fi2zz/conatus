@@ -296,7 +296,13 @@ export DEEPSEEK_API_KEY="你的 DeepSeek Key"    # DeepSeek（可选）
 
 ```dart
 // 走 Responses 形态
-final llm = DoubaoProvider(apiStyle: LlmApiStyle.responses);
+final llm = OpenAiCompatibleProvider(
+  name: 'doubao',
+  baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
+  model: 'doubao-seed-1-8-251228',
+  apiKey: '...',
+  apiStyle: LlmApiStyle.responses,
+);
 
 // 非流式
 final result = await llm.chat([const LlmMessage('user', '你好')]);
@@ -339,7 +345,13 @@ await for (final event in llm.chatStream(
 
 ```dart
 final credentials = provideCredentials(app);          // 缺省 EnvCredentials
-final llm = DoubaoProvider(credentials: credentials); // 取 'ARK_API_KEY'
+final llm = OpenAiCompatibleProvider(
+  name: 'doubao',
+  baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
+  model: 'doubao-seed-1-8-251228',
+  credentialKey: 'ARK_API_KEY',
+  credentials: credentials,
+);
 
 print(credentials.require('ARK_API_KEY').masked);     // sk-1...cdef
 credentials.validate(<String>['ARK_API_KEY']);        // 缺失抛 CredentialsException('missing')
@@ -351,9 +363,11 @@ credentials.validate(<String>['ARK_API_KEY']);        // 缺失抛 CredentialsEx
   `"KEY": {"value": ..., "expiresAt": ...}` 两种形态；
 - 对外只暴露 `Credential.masked`（前 4 + `...` + 后 4，长度 ≤ 8 时整串星号），
   `toString()` 也只含脱敏值；结构化日志交给 `conatus_core` 的 `redactSecrets`；
-- `DoubaoProvider` / `DeepSeekProvider` 可传 `credentials` 与 `credentialKey`
-  （缺省 `ARK_API_KEY` / `DEEPSEEK_API_KEY`），解析顺序是「显式 `apiKey` → 凭据服务 →
-  环境变量」，并订阅 `changes` 做运行时轮换——Header 每次请求重算，不重建 HTTP client；
+- OpenAI 兼容 provider 可传 `credentials` 与 `credentialKey`（如 `ARK_API_KEY`），
+  解析顺序是「显式 `apiKey` → 凭据服务」，**不直接读环境变量**，并订阅 `changes`
+  做运行时轮换——Header 每次请求重算，不重建 HTTP client；具体提供商
+  （`DoubaoProvider` / `DeepSeekProvider`）与默认回退链 `defaultFallbackLlm`
+  在 `conatus_providers`；
 - 不传 `credentials` 时行为与从前完全一致。
 
 ### `timer` — 定时器即可逆效应
@@ -1337,8 +1351,8 @@ root.provide('x', 1);
 | `chat(messages, {options, tools}) → Future<LlmResult>` | 非流式补全（`tools` 触发原生 function calling） |
 | `chatStream(messages, {options, tools}) → Stream<LlmStreamEvent>` | 流式补全 |
 | `close()` | 释放底层 HTTP 客户端 |
-| `DoubaoProvider({apiStyle, ...})` / `DeepSeekProvider({apiStyle, ...})` | 内置 provider，`apiStyle` 默认 `chat` |
-| `FallbackLlm(providers)` / `FallbackLlm.withDefaults()` | 顺序回退链（豆包 → DeepSeek） |
+| `OpenAiCompatibleProvider({name, baseUrl, model, ...})` | 任意 OpenAI 兼容端点，`apiStyle` 默认 `chat` |
+| `FallbackLlm(providers)` | 顺序回退链；`defaultFallbackLlm()`（豆包 → DeepSeek）在 `conatus_providers` |
 | `LlmTextDelta` / `LlmReasoningDelta` / `LlmStreamDone` | 流式事件：正文增量 / 思考增量 / 终态（用量、结束原因、累积的工具调用） |
 
 ### `Credentials`（`credentials`）

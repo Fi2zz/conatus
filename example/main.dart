@@ -41,7 +41,7 @@ Future<void> main() async {
   provideFsTools(app);
   provideToolResultEviction(app);
 
-  provideLlm(app);
+  provideLlm(app, llm: defaultFallbackLlm(credentials: EnvCredentials()));
 
   // 工具失败时自省并重试（默认 onError）。
   provideReflection(app);

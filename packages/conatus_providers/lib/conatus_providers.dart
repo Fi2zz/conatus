@@ -4,6 +4,8 @@
 /// **实验性**：API 可能在没有 major 版本变更的情况下调整，勿在生产环境依赖。
 library;
 
+export 'src/builtin_providers.dart'
+    show DeepSeekProvider, DoubaoProvider, defaultFallbackLlm;
 export 'src/provider_defaults.dart' show kDefaultProviders;
 export 'src/provider_import.dart'
     show ProviderImportResult, fetchProviderRegistry, parseProviderRegistry;

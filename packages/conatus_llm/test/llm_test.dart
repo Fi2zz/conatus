@@ -4,6 +4,7 @@ import 'package:conatus_llm/conatus_llm.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
+import 'builtin_provider_helpers.dart';
 
 MockClient _okClient(String content, {String model = 'test-model'}) {
   return MockClient((http.Request request) async {
@@ -55,7 +56,7 @@ MockClient _sseClient(String sse) {
 void main() {
   group('DoubaoProvider', () {
     test('成功返回结果', () async {
-      final provider = DoubaoProvider(
+      final provider = doubaoProviderForTest(
         apiKey: 'test-key',
         client: _okClient('你好', model: 'doubao-seed-1-8-251228'),
       );
@@ -70,7 +71,7 @@ void main() {
     });
 
     test('缺少 API Key 抛 LlmException', () async {
-      final provider = DoubaoProvider(apiKey: '');
+      final provider = doubaoProviderForTest(apiKey: '');
       expect(
         () => provider.chat(<LlmMessage>[const LlmMessage('user', 'hi')]),
         throwsA(isA<LlmException>()),
@@ -78,7 +79,7 @@ void main() {
     });
 
     test('非 200 响应抛 LlmException', () async {
-      final provider = DoubaoProvider(
+      final provider = doubaoProviderForTest(
         apiKey: 'test-key',
         client: _errClient(401, 'unauthorized'),
       );
@@ -91,7 +92,7 @@ void main() {
 
   group('DeepSeekProvider', () {
     test('成功返回结果', () async {
-      final provider = DeepSeekProvider(
+      final provider = deepseekProviderForTest(
         apiKey: 'test-key',
         client: _okClient('hi', model: 'deepseek-flash'),
       );
@@ -108,11 +109,11 @@ void main() {
   group('FallbackLlm', () {
     test('首选成功时不调用备选', () async {
       var fallbackCalled = false;
-      final primary = DoubaoProvider(
+      final primary = doubaoProviderForTest(
         apiKey: 'k',
         client: _okClient('primary'),
       );
-      final fallback = DeepSeekProvider(
+      final fallback = deepseekProviderForTest(
         apiKey: 'k',
         client: MockClient((_) async {
           fallbackCalled = true;
@@ -130,11 +131,11 @@ void main() {
     });
 
     test('首选失败时回退到备选', () async {
-      final primary = DoubaoProvider(
+      final primary = doubaoProviderForTest(
         apiKey: 'k',
         client: _errClient(500, 'server error'),
       );
-      final fallback = DeepSeekProvider(
+      final fallback = deepseekProviderForTest(
         apiKey: 'k',
         client: _okClient('fallback ok'),
       );
@@ -149,11 +150,11 @@ void main() {
     });
 
     test('全部失败时抛出汇总异常', () async {
-      final primary = DoubaoProvider(
+      final primary = doubaoProviderForTest(
         apiKey: 'k',
         client: _errClient(500, 'a'),
       );
-      final fallback = DeepSeekProvider(
+      final fallback = deepseekProviderForTest(
         apiKey: 'k',
         client: _errClient(500, 'b'),
       );
@@ -170,7 +171,7 @@ void main() {
   group('Responses 形态', () {
     test('非流式：端点、载荷与解析', () async {
       late http.Request captured;
-      final provider = DoubaoProvider(
+      final provider = doubaoProviderForTest(
         apiKey: 'k',
         apiStyle: LlmApiStyle.responses,
         client: MockClient((http.Request request) async {
@@ -229,7 +230,7 @@ void main() {
     });
 
     test('流式：增量、思考与终态用量', () async {
-      final provider = DoubaoProvider(
+      final provider = doubaoProviderForTest(
         apiKey: 'k',
         apiStyle: LlmApiStyle.responses,
         client: _sseClient(
@@ -254,7 +255,7 @@ void main() {
 
   group('流式 — Chat Completions', () {
     test('增量、结束原因与用量', () async {
-      final provider = DoubaoProvider(
+      final provider = doubaoProviderForTest(
         apiKey: 'k',
         client: _sseClient(
           'data: {"choices":[{"delta":{"content":"你"},"finish_reason":null}]}\n\n'
@@ -278,11 +279,11 @@ void main() {
 
   group('FallbackLlm 流式', () {
     test('首选失败时回退到备选', () async {
-      final primary = DoubaoProvider(
+      final primary = doubaoProviderForTest(
         apiKey: 'k',
         client: _errClient(500, 'server error'),
       );
-      final fallback = DeepSeekProvider(
+      final fallback = deepseekProviderForTest(
         apiKey: 'k',
         client: _sseClient(
           'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\n'
@@ -300,14 +301,14 @@ void main() {
 
     test('首选成功时不调用备选', () async {
       var fallbackCalled = false;
-      final primary = DoubaoProvider(
+      final primary = doubaoProviderForTest(
         apiKey: 'k',
         client: _sseClient(
           'data: {"choices":[{"delta":{"content":"primary"},"finish_reason":"stop"}]}\n\n'
           'data: [DONE]\n\n',
         ),
       );
-      final fallback = DeepSeekProvider(
+      final fallback = deepseekProviderForTest(
         apiKey: 'k',
         client: MockClient((_) async {
           fallbackCalled = true;
@@ -328,7 +329,7 @@ void main() {
       final ctx = Context.root();
       addTearDown(ctx.dispose);
 
-      provideLlm(ctx);
+      provideLlm(ctx, llm: FallbackLlm(const <LlmProvider>[]));
 
       expect(ctx.has('llm'), isTrue);
       expect(ctx.get<FallbackLlm>('llm'), isA<FallbackLlm>());

@@ -63,7 +63,7 @@ class ConatusTuiRuntime {
   /// （默认 `<cwd>/.conatus`）下；[webTools] 为 true 时注册 DuckDuckGo（有
   /// [exaApiKey] 则 Exa 优先）；[skills] 为 true 时从 `.conatus/skills` 等目录
   /// 发现技能，注入目录段并注册 `skill` 工具。
-  /// [llm] 缺省用 `FallbackLlm.withDefaults()`（豆包 → DeepSeek）；传入后按注入的
+  /// [llm] 缺省用 `defaultFallbackLlm()`（豆包 → DeepSeek，见 conatus_providers）；传入后按注入的
   /// 提供商为准（如 DeepSeek-only 的 Demo）。[modelLabel] 覆盖顶栏模型标签。
   /// [providers] 为 true 时装配提供商注册表（`<baseDir>/providers.json`，
   /// [providersFile] 可覆盖），`/provider` 命令据此可用；未显式传 [llm] 时优先
@@ -160,7 +160,7 @@ class ConatusTuiRuntime {
       app,
       llm: llm ??
           (fromRegistry == null
-              ? FallbackLlm.withDefaults(credentials: credentials)
+              ? defaultFallbackLlm(credentials: credentials)
               : FallbackLlm(<LlmProvider>[fromRegistry])),
     );
     void switchLlm(FallbackLlm next) {

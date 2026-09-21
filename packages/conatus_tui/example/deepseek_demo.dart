@@ -18,6 +18,7 @@ import 'dart:io';
 
 import 'package:conatus_credentials/conatus_credentials.dart';
 import 'package:conatus_llm/conatus_llm.dart';
+import 'package:conatus_providers/conatus_providers.dart';
 import 'package:conatus_tui/conatus_tui.dart';
 
 Future<void> main(List<String> args) async {

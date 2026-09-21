@@ -3,6 +3,7 @@ import 'package:conatus_llm/conatus_llm.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
+import 'builtin_provider_helpers.dart';
 
 const List<Map<String, dynamic>> _tools = <Map<String, dynamic>>[
   <String, dynamic>{
@@ -31,7 +32,7 @@ void main() {
   group('Chat Completions function calling', () {
     test('下发 tools 并解析 tool_calls', () async {
       http.Request? captured;
-      final DoubaoProvider provider = DoubaoProvider(
+      final OpenAiCompatibleProvider provider = doubaoProviderForTest(
         apiKey: 'k',
         baseUrl: 'https://x',
         model: 'm',
@@ -85,7 +86,7 @@ void main() {
 
     test('助手工具调用与工具结果消息正确序列化', () async {
       http.Request? captured;
-      final DoubaoProvider provider = DoubaoProvider(
+      final OpenAiCompatibleProvider provider = doubaoProviderForTest(
         apiKey: 'k',
         baseUrl: 'https://x',
         model: 'm',
@@ -133,7 +134,7 @@ void main() {
   group('Responses function calling', () {
     test('下发 tools 并解析 function_call', () async {
       http.Request? captured;
-      final DoubaoProvider provider = DoubaoProvider(
+      final OpenAiCompatibleProvider provider = doubaoProviderForTest(
         apiKey: 'k',
         baseUrl: 'https://x',
         model: 'm',
@@ -176,7 +177,7 @@ void main() {
 
     test('工具结果序列化为 function_call_output', () async {
       http.Request? captured;
-      final DoubaoProvider provider = DoubaoProvider(
+      final OpenAiCompatibleProvider provider = doubaoProviderForTest(
         apiKey: 'k',
         baseUrl: 'https://x',
         model: 'm',
@@ -221,7 +222,7 @@ void main() {
   group('流式 function calling', () {
     test('Chat：下发 tools 并按 index 累积 tool_calls 分片', () async {
       late http.Request captured;
-      final DoubaoProvider provider = DoubaoProvider(
+      final OpenAiCompatibleProvider provider = doubaoProviderForTest(
         apiKey: 'k',
         baseUrl: 'https://x',
         model: 'm',
@@ -261,7 +262,7 @@ void main() {
     });
 
     test('Chat：并行多个 tool_calls 按 index 分别累积', () async {
-      final DoubaoProvider provider = DoubaoProvider(
+      final OpenAiCompatibleProvider provider = doubaoProviderForTest(
         apiKey: 'k',
         baseUrl: 'https://x',
         model: 'm',
@@ -293,7 +294,7 @@ void main() {
 
     test('Responses：output_item + arguments 分片累积为完整 function_call', () async {
       late http.Request captured;
-      final DoubaoProvider provider = DoubaoProvider(
+      final OpenAiCompatibleProvider provider = doubaoProviderForTest(
         apiKey: 'k',
         baseUrl: 'https://x',
         model: 'm',
@@ -340,7 +341,7 @@ void main() {
 
     test('FallbackLlm 流式转发 tools', () async {
       late http.Request captured;
-      final DoubaoProvider provider = DoubaoProvider(
+      final OpenAiCompatibleProvider provider = doubaoProviderForTest(
         apiKey: 'k',
         baseUrl: 'https://x',
         model: 'm',

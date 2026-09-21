@@ -7,6 +7,7 @@ import 'package:conatus_llm/conatus_llm.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
+import 'builtin_provider_helpers.dart';
 
 /// 记录请求头的假客户端。
 class _Recorder {
@@ -37,7 +38,7 @@ const List<LlmMessage> messages = <LlmMessage>[LlmMessage('user', 'hi')];
 void main() {
   test('默认 User-Agent：ConatusCode/0.16', () async {
     final _Recorder recorder = _Recorder();
-    final DoubaoProvider provider = DoubaoProvider(
+    final OpenAiCompatibleProvider provider = doubaoProviderForTest(
       apiKey: 'k',
       client: recorder.client,
     );
@@ -67,7 +68,7 @@ void main() {
 
   test('流式请求同样携带 User-Agent', () async {
     final _Recorder recorder = _Recorder();
-    final DeepSeekProvider provider = DeepSeekProvider(
+    final OpenAiCompatibleProvider provider = deepseekProviderForTest(
       apiKey: 'k',
       client: recorder.client,
     );

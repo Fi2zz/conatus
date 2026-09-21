@@ -5,6 +5,7 @@ import 'package:conatus_llm/conatus_llm.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
+import 'builtin_provider_helpers.dart';
 
 /// 记录每次请求 `Authorization` 头的假客户端。
 class _Recorder {
@@ -48,7 +49,7 @@ void main() {
     final InMemoryCredentials credentials = InMemoryCredentials(
       initial: <String, String>{'ARK_API_KEY': 'from-store'},
     );
-    final DoubaoProvider provider = DoubaoProvider(
+    final OpenAiCompatibleProvider provider = doubaoProviderForTest(
       credentials: credentials,
       client: recorder.client,
     );
@@ -65,7 +66,7 @@ void main() {
     final InMemoryCredentials credentials = InMemoryCredentials(
       initial: <String, String>{'ARK_API_KEY': 'old-key'},
     );
-    final DoubaoProvider provider = DoubaoProvider(
+    final OpenAiCompatibleProvider provider = doubaoProviderForTest(
       credentials: credentials,
       client: recorder.client,
     );
@@ -86,7 +87,7 @@ void main() {
     final InMemoryCredentials credentials = InMemoryCredentials(
       initial: <String, String>{'ARK_API_KEY': 'ark-key'},
     );
-    final DoubaoProvider provider = DoubaoProvider(
+    final OpenAiCompatibleProvider provider = doubaoProviderForTest(
       credentials: credentials,
       client: recorder.client,
     );
@@ -105,7 +106,7 @@ void main() {
     final InMemoryCredentials credentials = InMemoryCredentials(
       initial: <String, String>{'ARK_API_KEY': 'before-close'},
     );
-    final DoubaoProvider provider = DoubaoProvider(
+    final OpenAiCompatibleProvider provider = doubaoProviderForTest(
       credentials: credentials,
       client: recorder.client,
     );
@@ -124,7 +125,7 @@ void main() {
     final InMemoryCredentials credentials = InMemoryCredentials(
       initial: <String, String>{'ARK_API_KEY': 'from-store'},
     );
-    final DoubaoProvider provider = DoubaoProvider(
+    final OpenAiCompatibleProvider provider = doubaoProviderForTest(
       apiKey: 'explicit-key',
       credentials: credentials,
       client: recorder.client,
@@ -142,7 +143,7 @@ void main() {
     final InMemoryCredentials credentials = InMemoryCredentials(
       initial: <String, String>{'DEEPSEEK_API_KEY': 'ds-store'},
     );
-    final DeepSeekProvider provider = DeepSeekProvider(
+    final OpenAiCompatibleProvider provider = deepseekProviderForTest(
       credentials: credentials,
       client: recorder.client,
     );
@@ -156,7 +157,7 @@ void main() {
 
   test('不传 credentials 时缺少 API Key（不再直接读环境变量）', () async {
     final _Recorder recorder = _Recorder();
-    final DoubaoProvider provider = DoubaoProvider(
+    final OpenAiCompatibleProvider provider = doubaoProviderForTest(
       credentialKey: 'PATH',
       client: recorder.client,
     );

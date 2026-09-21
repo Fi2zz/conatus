@@ -605,66 +605,6 @@ Stream<String> _sseData(Stream<List<int>> byteStream) async* {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 豆包（首选）
-// ═══════════════════════════════════════════════════════════════
-
-/// 豆包提供商。走火山引擎方舟的 OpenAI 兼容端点。
-///
-/// 环境变量：`ARK_API_KEY`
-/// 默认模型：`doubao-seed-1-8-251228`
-/// 传入 `credentials` 时优先从凭据服务同步取键，并订阅其变更流做轮换。
-class DoubaoProvider extends _OpenAiCompatibleProvider {
-  DoubaoProvider({
-    super.apiKey,
-    String? baseUrl,
-    String? model,
-    super.apiStyle,
-    super.userAgent,
-    super.client,
-    super.credentials,
-    super.credentialKey = 'ARK_API_KEY',
-    Duration? timeout,
-  }) : super(
-          baseUrl: baseUrl ?? 'https://ark.cn-beijing.volces.com/api/v3',
-          model: model ?? 'doubao-seed-1-8-251228',
-          timeout: timeout ?? const Duration(seconds: 60),
-        );
-
-  @override
-  String get name => 'doubao';
-}
-
-// ═══════════════════════════════════════════════════════════════
-// DeepSeek（备选）
-// ═══════════════════════════════════════════════════════════════
-
-/// DeepSeek 提供商。
-///
-/// 环境变量：`DEEPSEEK_API_KEY`
-/// 默认模型：`deepseek-flash`
-/// 传入 `credentials` 时优先从凭据服务同步取键，并订阅其变更流做轮换。
-class DeepSeekProvider extends _OpenAiCompatibleProvider {
-  DeepSeekProvider({
-    super.apiKey,
-    String? baseUrl,
-    String? model,
-    super.apiStyle,
-    super.userAgent,
-    super.client,
-    super.credentials,
-    super.credentialKey = 'DEEPSEEK_API_KEY',
-    Duration? timeout,
-  }) : super(
-          baseUrl: baseUrl ?? 'https://api.deepseek.com',
-          model: model ?? 'deepseek-flash',
-          timeout: timeout ?? const Duration(seconds: 60),
-        );
-
-  @override
-  String get name => 'deepseek';
-}
-
-// ═══════════════════════════════════════════════════════════════
 // 通用 OpenAI 兼容端点
 // ═══════════════════════════════════════════════════════════════
 

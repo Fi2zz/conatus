@@ -31,7 +31,7 @@ Future<void> main() async {
   provideTools(app);
   provideTelemetry(app, telemetry: ConsoleTelemetry());
   instrumentTools(app);
-  provideLlm(app);
+  provideLlm(app, llm: defaultFallbackLlm(credentials: EnvCredentials()));
 
   final SystemPrompt prompt = provideSystemPrompt(app);
   prompt.section(PromptSection(

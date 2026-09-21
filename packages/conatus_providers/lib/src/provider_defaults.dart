@@ -1,7 +1,8 @@
 /// 内置默认提供商：常见 OpenAI 兼容平台。
 ///
-/// 密钥经 [ProviderProfile.credentialKey] 从环境变量 / 凭据服务读取，因此这里
-/// 可以无条件列出；未配置密钥的项在调用时才会报缺凭据。
+/// 密钥经 [ProviderProfile.credentialKey] 由注入的 [Credentials] 解析（调用方
+/// 显式构建实例，如 `EnvCredentials` / `FileCredentials`）；未配置对应键的项在
+/// 调用时才会报缺凭据。
 library;
 
 import 'provider_profile.dart';
