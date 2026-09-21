@@ -31,6 +31,7 @@ class ConatusTuiRuntime {
     required this.tools,
     required this.modelLabel,
     required this.providers,
+    required this.maxSteps,
     required void Function(FallbackLlm llm) switchLlm,
   }) : _switchLlm = switchLlm;
 
@@ -48,6 +49,9 @@ class ConatusTuiRuntime {
 
   /// 提供商注册表；`providers: false` 时为 `null`（`/provider` 不可用）。
   final ProviderRegistry? providers;
+
+  /// Agent Loop 单轮最大步数。
+  final int maxSteps;
 
   final void Function(FallbackLlm llm) _switchLlm;
 
@@ -80,6 +84,7 @@ class ConatusTuiRuntime {
     bool providers = true,
     String? providersFile,
     String? model,
+    int maxSteps = 8,
     FallbackLlm? llm,
     String? modelLabel,
   }) async {
@@ -236,6 +241,7 @@ class ConatusTuiRuntime {
       tools: app.tools,
       modelLabel: modelLabel ?? model ?? _modelLabel(registry, credentials),
       providers: registry,
+      maxSteps: maxSteps,
       switchLlm: switchLlm,
     );
   }
@@ -252,6 +258,7 @@ class ConatusTuiRuntime {
       name: name,
       initialSession: initialSession,
       modelLabel: modelLabel,
+      maxSteps: maxSteps,
       onExit: onExit,
     );
     controller.switchLlm = switchLlm;

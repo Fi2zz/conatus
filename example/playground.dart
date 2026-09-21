@@ -18,14 +18,18 @@ Future<void> main(List<String> args) async {
   }
   final String cwd = parseFlag(args, '--cwd') ?? Directory.current.path;
   final String? model = parseFlag(args, '--model');
-  // Key 经凭据服务判断（缺省 EnvCredentials，即环境变量）；provider 内部不再
-  // 直接读环境变量。
-  final Credentials credentials = EnvCredentials();
-  final bool configured = credentials.get('ARK_API_KEY') != null ||
-      credentials.get('DEEPSEEK_API_KEY') != null;
+  final EnvCredentials envCredentials = EnvCredentials();
+  // 是否已配置 Key：providers.json 里任一 provider 带了 apiKey（推荐，一次
+  // 配置永久生效），或凭据服务（缺省环境变量）命中其 credentialKey。
+  final ProviderSnapshot snapshot = ProviderStore(
+    path: '$cwd${Platform.pathSeparator}.conatus${Platform.pathSeparator}providers.json',
+  ).load();
+  final bool configured = snapshot.providers.any((ProviderProfile p) =>
+      p.apiKey.isNotEmpty || envCredentials.get(p.credentialKey) != null);
   if (!configured) {
-    stdout.writeln('未检测到 ARK_API_KEY / DEEPSEEK_API_KEY：以离线脚本模型运行 Demo。');
-    stdout.writeln('设置任一 Key 后重跑即可接入真实模型。');
+    stdout.writeln('尚未配置任何 Key：以离线脚本模型运行 Demo。');
+    stdout.writeln('在 .conatus/providers.json 的 provider 里填 apiKey（推荐），');
+    stdout.writeln('或设置 ARK_API_KEY / DEEPSEEK_API_KEY 后重跑。');
   }
   // 有 Key 时由提供商注册表（`.conatus/providers.json`）的当前 provider 构造
   // LLM（--model 覆盖其默认模型名），/provider 与 /model 命令据此工作。

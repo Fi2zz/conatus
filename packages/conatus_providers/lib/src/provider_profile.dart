@@ -16,6 +16,7 @@ class ProviderProfile {
     this.apiStyle = LlmApiStyle.chat,
     this.description = '',
     this.userAgent = '',
+    this.apiKey = '',
   });
 
   /// 从 JSON 反序列化；缺 `name` / `baseUrl` 时抛 [FormatException]。
@@ -38,6 +39,7 @@ class ProviderProfile {
           json['apiStyle'] == 'responses' ? LlmApiStyle.responses : LlmApiStyle.chat,
       description: json['description'] as String? ?? '',
       userAgent: json['userAgent'] as String? ?? '',
+      apiKey: json['apiKey'] as String? ?? '',
     );
   }
 
@@ -63,6 +65,13 @@ class ProviderProfile {
   /// harness 客户端，如 dsh）。
   final String userAgent;
 
+  /// 该提供商的 API Key（可选，落地在 providers.json）。
+  ///
+  /// 非空时优先于凭据服务（`credentialKey` → 环境变量 / Vault 等）；空串则
+  /// 只经 [Credentials] 解析。**配置文件含明文 Key**：放在 gitignore 的目录
+  /// （如 `.conatus/`），不要提交进仓库。
+  final String apiKey;
+
   /// 默认模型；无清单返回 `null`。
   String? get defaultModel => models.isEmpty ? null : models.first;
 
@@ -75,5 +84,6 @@ class ProviderProfile {
         'apiStyle': apiStyle.name,
         if (description.isNotEmpty) 'description': description,
         if (userAgent.isNotEmpty) 'userAgent': userAgent,
+        if (apiKey.isNotEmpty) 'apiKey': apiKey,
       };
 }

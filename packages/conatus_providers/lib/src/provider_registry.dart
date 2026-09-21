@@ -132,8 +132,22 @@ class ProviderRegistry {
       credentialKey: profile.credentialKey,
       apiStyle: profile.apiStyle,
       userAgent: profile.userAgent.isEmpty ? kDefaultLlmUserAgent : profile.userAgent,
+      // 配置文件里的 Key 优先于凭据服务。
+      apiKey: profile.apiKey.isEmpty ? null : profile.apiKey,
       credentials: _credentials,
     );
+  }
+
+  /// 该提供商是否已有可用 Key（配置内 `apiKey` 或凭据服务命中）。
+  bool hasKey(String name) {
+    final ProviderProfile? profile = byName(name);
+    if (profile == null) {
+      return false;
+    }
+    if (profile.apiKey.isNotEmpty) {
+      return true;
+    }
+    return _credentials?.get(profile.credentialKey) != null;
   }
 
   void _persist() =>

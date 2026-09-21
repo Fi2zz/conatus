@@ -65,6 +65,7 @@ class ConatusTuiController implements TuiUserPromptHost {
     required this.name,
     required String initialSession,
     required this.modelLabel,
+    this.maxSteps = 8,
     this.onExit,
     this.tts,
     this.ttsSink,
@@ -97,6 +98,9 @@ class ConatusTuiController implements TuiUserPromptHost {
 
   /// 顶栏展示的模型标签；`/model` 切换后可更新。
   String modelLabel;
+
+  /// Agent Loop 单轮最大步数。
+  final int maxSteps;
 
   /// 退出请求（`/exit`、`/quit`、Ctrl+C）；由宿主接 `shutdownApp`。
   final void Function()? onExit;
@@ -918,7 +922,7 @@ class ConatusTuiController implements TuiUserPromptHost {
     final Session session = await _sessions.open(id);
     _session = session;
     final Context ctx = _app.plugin('tui-session:$id', (Context child) {
-      provideAgentLoop(child, session: session);
+      provideAgentLoop(child, session: session, maxSteps: maxSteps);
       providePlanMode(child, session: session);
       provideGoal(child, session: session);
       provideSessionSchedule(child, session: session, sessions: _sessions);
