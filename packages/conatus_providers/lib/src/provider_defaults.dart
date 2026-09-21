@@ -26,7 +26,8 @@ const List<ProviderProfile> kDefaultProviders = <ProviderProfile>[
   ProviderProfile(
     name: 'volcengine-coding-plan',
     baseUrl: 'https://ark.cn-beijing.volces.com/api/coding/v3',
-    credentialKey: 'ARK_API_KEY',
+    // Plan 端点只认订阅后生成的专属 Key，与普通方舟 Key 不同值，故独立凭据键。
+    credentialKey: 'ARK_CODING_PLAN_API_KEY',
     // 见 Coding Plan 支持模型（文档 + 控制台）；`ark-code-latest` 在控制台切模型。
     models: <String>[
       'ark-code-latest',
@@ -47,7 +48,7 @@ const List<ProviderProfile> kDefaultProviders = <ProviderProfile>[
   ProviderProfile(
     name: 'ark-agent-plan',
     baseUrl: 'https://ark.cn-beijing.volces.com/api/plan/v3',
-    credentialKey: 'ARK_API_KEY',
+    credentialKey: 'ARK_AGENT_PLAN_API_KEY',
     // 见 Agent Plan 支持模型（仅文本生成；图片/视频/语音模型不入列表）。
     models: <String>[
       'doubao-seed-evolving',

@@ -36,3 +36,7 @@ final LlmProvider? llm = registry.buildLlm(registry.currentName ?? '');
 首次运行（无 providers.json）落盘四个常见平台：火山方舟 `api/v3`、DeepSeek
 官方、火山方舟 Coding Plan（`api/coding/v3`）、Agent Plan（`api/plan/v3`）。
 未配置密钥的项仍会列出，调用时才报缺凭据。
+
+**Plan 端点只认订阅后生成的专属 Key**：`ark-agent-plan` 用
+`ARK_AGENT_PLAN_API_KEY`、`volcengine-coding-plan` 用 `ARK_CODING_PLAN_API_KEY`，
+普通方舟 Key（`ARK_API_KEY`）对 plan 端点会返回 401。

@@ -10,6 +10,10 @@ Agent Loop 驱动多轮对话，把会话事件投射为屏上消息，并提供
 # 在仓库根目录
 export ARK_API_KEY="你的火山方舟 API Key"       # 豆包（首选）
 export DEEPSEEK_API_KEY="你的 DeepSeek Key"     # DeepSeek（备选）
+# Agent Plan / Coding Plan 需订阅后在控制台生成的「专属 Key」（普通方舟 Key 对
+# plan 端点无效）：
+export ARK_AGENT_PLAN_API_KEY="..."             # /provider 切到 ark-agent-plan
+export ARK_CODING_PLAN_API_KEY="..."            # /provider 切到 volcengine-coding-plan
 dart run conatus_tui
 ```
 
