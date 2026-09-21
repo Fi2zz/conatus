@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:conatus_agent/conatus_agent.dart';
 import 'package:conatus_compaction/conatus_compaction.dart';
 import 'package:conatus_core/conatus_core.dart';
+import 'package:conatus_credentials/conatus_credentials.dart';
 import 'package:conatus_cron/conatus_cron.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_fs_tools/conatus_fs_tools.dart';
@@ -138,7 +139,10 @@ class ConatusTuiRuntime {
       provideWebTools(app);
     }
 
-    // ── 模型 / 自省 / 子 Agent ──────────────────────────────────
+    // ── 凭据 / 模型 / 自省 / 子 Agent ───────────────────────────
+    // Key 统一经凭据服务（缺省 EnvCredentials）：provider 与注册表都不直接读
+    // 环境变量，换 File / Vault 等来源时只改这一处注入。
+    final Credentials credentials = provideCredentials(app);
     ProviderRegistry? registry;
     if (providers) {
       registry = provideProviders(
@@ -146,6 +150,7 @@ class ConatusTuiRuntime {
         store: ProviderStore(
           path: providersFile ?? '$resolvedBaseDir${sep}providers.json',
         ),
+        credentials: credentials,
       );
       await registry.load();
     }
@@ -155,7 +160,7 @@ class ConatusTuiRuntime {
       app,
       llm: llm ??
           (fromRegistry == null
-              ? FallbackLlm.withDefaults()
+              ? FallbackLlm.withDefaults(credentials: credentials)
               : FallbackLlm(<LlmProvider>[fromRegistry])),
     );
     void switchLlm(FallbackLlm next) {
@@ -229,7 +234,7 @@ class ConatusTuiRuntime {
       app: app,
       sessions: sessions,
       tools: app.tools,
-      modelLabel: modelLabel ?? model ?? _modelLabel(registry),
+      modelLabel: modelLabel ?? model ?? _modelLabel(registry, credentials),
       providers: registry,
       switchLlm: switchLlm,
     );
@@ -259,14 +264,11 @@ class ConatusTuiRuntime {
     app.dispose();
   }
 
-  static String _modelLabel(ProviderRegistry? registry) {
+  static String _modelLabel(ProviderRegistry? registry, Credentials credentials) {
     final String? model = registry?.current?.defaultModel;
     if (model != null) return model;
-    final bool ark = (Platform.environment['ARK_API_KEY'] ?? '').isNotEmpty;
-    final bool deepseek =
-        (Platform.environment['DEEPSEEK_API_KEY'] ?? '').isNotEmpty;
-    if (ark) return 'doubao-seed-1-8-251228';
-    if (deepseek) return 'deepseek-flash';
+    if (credentials.get('ARK_API_KEY') != null) return 'doubao-seed-1-8-251228';
+    if (credentials.get('DEEPSEEK_API_KEY') != null) return 'deepseek-flash';
     return '未配置（设置 ARK_API_KEY / DEEPSEEK_API_KEY）';
   }
 }

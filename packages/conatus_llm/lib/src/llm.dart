@@ -11,6 +11,7 @@
 library;
 
 import 'package:conatus_core/conatus_core.dart';
+import 'package:conatus_credentials/conatus_credentials.dart';
 import 'llm_openai.dart';
 
 /// OpenAI 兼容端点的请求形态。
@@ -212,10 +213,16 @@ class FallbackLlm implements LlmProvider {
   String get name => 'fallback';
 
   /// 用默认提供商列表构建：豆包 → DeepSeek。
-  factory FallbackLlm.withDefaults({List<LlmProvider>? extra}) {
+  ///
+  /// [credentials] 是 Key 的唯一来源（缺省不注入时 Key 为空）；调用方通常传
+  /// `provideCredentials(app)` 拿到的凭据服务（缺省实现 `EnvCredentials`）。
+  factory FallbackLlm.withDefaults({
+    List<LlmProvider>? extra,
+    Credentials? credentials,
+  }) {
     final List<LlmProvider> list = <LlmProvider>[
-      DoubaoProvider(),
-      DeepSeekProvider(),
+      DoubaoProvider(credentials: credentials),
+      DeepSeekProvider(credentials: credentials),
       ...?extra,
     ];
     return FallbackLlm(list);

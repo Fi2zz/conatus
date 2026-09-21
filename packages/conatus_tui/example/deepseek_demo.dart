@@ -16,6 +16,7 @@ library;
 
 import 'dart:io';
 
+import 'package:conatus_credentials/conatus_credentials.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 import 'package:conatus_tui/conatus_tui.dart';
 
@@ -26,11 +27,13 @@ Future<void> main(List<String> args) async {
     return;
   }
   final String? model = parseModelFlag(args);
-  final String key = Platform.environment['DEEPSEEK_API_KEY'] ?? '';
-  final bool configured = key.trim().isNotEmpty;
+  // Key 经凭据服务解析（缺省 EnvCredentials，即环境变量）。
+  final Credentials credentials = EnvCredentials();
+  final bool configured = credentials.get('DEEPSEEK_API_KEY') != null;
 
   final FallbackLlm llm = configured
-      ? FallbackLlm(<LlmProvider>[DeepSeekProvider(model: model)])
+      ? FallbackLlm(
+          <LlmProvider>[DeepSeekProvider(model: model, credentials: credentials)])
       : FallbackLlm(<LlmProvider>[_OfflineProvider()]);
   final String label = configured
       ? (model ?? 'deepseek-flash')

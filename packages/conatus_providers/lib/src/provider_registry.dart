@@ -1,6 +1,7 @@
 /// 提供商注册表：增删改查、当前选中、持久化与 LlmProvider 构造。
 library;
 
+import 'package:conatus_credentials/conatus_credentials.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 import 'package:http/http.dart' as http;
 
@@ -13,11 +14,17 @@ class ProviderRegistry {
   ProviderRegistry({
     required ProviderStore store,
     List<ProviderProfile> builtin = const <ProviderProfile>[],
+    Credentials? credentials,
   })  : _store = store,
-        _builtin = builtin;
+        _builtin = builtin,
+        _credentials = credentials;
 
   final ProviderStore _store;
   final List<ProviderProfile> _builtin;
+
+  /// Key 的唯一来源（缺省不注入时构造出的提供商没有 Key）。
+  final Credentials? _credentials;
+
   final List<ProviderProfile> _profiles = <ProviderProfile>[];
   String? _current;
 
@@ -110,6 +117,8 @@ class ProviderRegistry {
   }
 
   /// 按名构造 OpenAI 兼容提供商；无此 provider 或没有模型名时返回 `null`。
+  ///
+  /// Key 经注册表持有的 [Credentials] 解析（不直接读环境变量）。
   LlmProvider? buildLlm(String name, {String? model}) {
     final ProviderProfile? profile = byName(name);
     final String resolvedModel = model ?? profile?.defaultModel ?? '';
@@ -122,6 +131,7 @@ class ProviderRegistry {
       model: resolvedModel,
       credentialKey: profile.credentialKey,
       apiStyle: profile.apiStyle,
+      credentials: _credentials,
     );
   }
 

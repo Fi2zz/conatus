@@ -18,7 +18,12 @@ Future<void> main(List<String> args) async {
   }
   final String cwd = parseFlag(args, '--cwd') ?? Directory.current.path;
   final String? model = parseFlag(args, '--model');
-  final bool configured = _hasKey('ARK_API_KEY') || _hasKey('DEEPSEEK_API_KEY');
+  // Key 经凭据服务判断（缺省 EnvCredentials，即环境变量）；provider 内部不再
+  // 直接读环境变量。
+  final Credentials credentials = EnvCredentials();
+  final bool configured =
+      credentials.get('ARK_API_KEY') != null ||
+      credentials.get('DEEPSEEK_API_KEY') != null;
   if (!configured) {
     stdout.writeln('未检测到 ARK_API_KEY / DEEPSEEK_API_KEY：以离线脚本模型运行 Demo。');
     stdout.writeln('设置任一 Key 后重跑即可接入真实模型。');
@@ -86,9 +91,6 @@ String? parseFlag(List<String> args, String name) {
   }
   return null;
 }
-
-bool _hasKey(String name) =>
-    (Platform.environment[name] ?? '').trim().isNotEmpty;
 
 /// 无 Key 时的离线脚本模型：含「执行/运行/代码」且未用过工具时请求一次
 /// run_code（真实执行 Dart 程序），其余直接回显。

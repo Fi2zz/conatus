@@ -50,16 +50,15 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
   final http.Client _client;
   StreamSubscription<Credential>? _credentialsSubscription;
 
-  /// 构造期解析顺序：显式 `apiKey` → 凭据服务 → 环境变量。
+  /// 构造期解析顺序：显式 `apiKey` → 凭据服务（缺省 `EnvCredentials` 由调用方
+  /// 经 `provideCredentials` 注入）。**不直接读环境变量**——需要环境变量时用
+  /// `EnvCredentials` 作为凭据来源。
   static String _resolveApiKey(
     String? apiKey,
     Credentials? credentials,
     String credentialKey,
   ) =>
-      apiKey ??
-      credentials?.get(credentialKey)?.value ??
-      Platform.environment[credentialKey] ??
-      '';
+      apiKey ?? credentials?.get(credentialKey)?.value ?? '';
 
   void _watchCredentials(Credentials? credentials) {
     if (credentials == null || credentialKey.isEmpty) return;

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:conatus_credentials/conatus_credentials.dart';
 import 'package:conatus_llm/conatus_llm.dart';
@@ -155,17 +154,15 @@ void main() {
     credentials.close();
   });
 
-  test('不传 credentials 时回退 Platform.environment', () async {
-    final String path = Platform.environment['PATH'] ?? '';
-    expect(path, isNotEmpty, reason: '测试进程应设置 PATH');
+  test('不传 credentials 时缺少 API Key（不再直接读环境变量）', () async {
     final _Recorder recorder = _Recorder();
     final DoubaoProvider provider = DoubaoProvider(
       credentialKey: 'PATH',
       client: recorder.client,
     );
 
-    await provider.chat(messages);
-    expect(recorder.last, 'Bearer $path');
+    await expectLater(provider.chat(messages), throwsA(isA<LlmException>()));
+    expect(recorder.authorizations, isEmpty);
 
     provider.close();
   });
