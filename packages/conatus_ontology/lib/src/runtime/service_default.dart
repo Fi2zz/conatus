@@ -12,7 +12,7 @@ import '../builder/source.dart';
 import '../evolver/evaluator.dart';
 import '../evolver/evolver.dart';
 import '../evolver/paired_evaluator.dart';
-import '../ontology/edits.dart';
+import '../ontology/apply.dart';
 import '../ontology/layer.dart';
 import '../store/store.dart';
 import 'browse.dart';

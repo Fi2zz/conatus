@@ -40,6 +40,7 @@ export 'src/evolver/generic_evolver.dart'
 export 'src/evolver/paired_evaluator.dart' show PairedEvaluator;
 export 'src/evolver/patcher.dart' show generateEdits, parseTypedEdits;
 export 'src/mcp/tools.dart' show registerOntologyTools;
+export 'src/ontology/apply.dart' show applyEdits;
 export 'src/ontology/edit_validator.dart' show TypedEditValidator;
 export 'src/ontology/edits.dart'
     show
@@ -52,8 +53,7 @@ export 'src/ontology/edits.dart'
         RemoveRelation,
         SplitTerm,
         TypedEdit,
-        UpdateNodeFields,
-        applyEdits;
+        UpdateNodeFields;
 export 'src/ontology/layer.dart' show OntologyLayer;
 export 'src/ontology/node.dart'
     show Constraint, Evidence, Mapping, OntologyNode, Term;
