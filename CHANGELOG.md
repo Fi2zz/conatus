@@ -26,6 +26,15 @@
   `SkillLoadTool({name})` 与 `provideSkillTool({tools, name})` 换工具名与目标表，
   多个作用域得以共用一份 system prompt 与一张工具表
 
+新增实验性包 `conatus_fs_tools`（文件系统工具，`publish_to: none`，不进伞包）：
+
+- 五个工具：`read_file`（分页 + 行号，`%6d\t` 对齐 DSH）/ `write_file`（create /
+  overwrite / append 三模式 + 版本守卫）/ `edit_file`（字面替换，唯一匹配）/
+  `rg`（直接调用原生 ripgrep，透传其文本输出，结果超上限落盘）/ `glob`
+  （按模式发现文件，跳过 `.git` / `node_modules` / `.dart_tool` / `build`）
+- `conatus_foundation` 移除 `ReadFileTool` / `provideFsTools`（破坏性变更），
+  工具层职责整体迁往本包；`conatus_tui` 与 example 同步切换
+
 ## [0.16.0] — 2026-09-20
 
 新增实验性包 `conatus_intent`（意图路由，`publish_to: none`，不进伞包）：

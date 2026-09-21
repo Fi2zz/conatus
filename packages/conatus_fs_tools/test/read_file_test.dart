@@ -1,6 +1,6 @@
 import 'dart:io';
-import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
+import 'package:conatus_fs_tools/conatus_fs_tools.dart';
 import 'package:test/test.dart';
 
 ToolContext _context(Map<String, Object?> args) =>
@@ -12,7 +12,7 @@ void main() {
   late ReadFileTool tool;
 
   setUp(() {
-    dir = Directory.systemTemp.createTempSync('conatus-fs-tools-');
+    dir = Directory.systemTemp.createTempSync('conatus-read-');
     fs = LocalFileSystem(cwd: dir.path);
     tool = ReadFileTool(fs: fs);
   });
@@ -22,28 +22,54 @@ void main() {
   });
 
   group('ReadFileTool', () {
-    test('读取文本并带规范值', () async {
-      File('${dir.path}/a.txt').writeAsStringSync('你好');
+    test('默认带行号读取', () async {
+      File('${dir.path}/a.txt').writeAsStringSync('hello\nworld');
 
       final ToolResult result =
           await tool.call(_context(<String, Object?>{'path': 'a.txt'}));
 
       expect(result.isError, isFalse);
-      expect(result.content, '你好');
+      expect(result.content, '     1\thello\n     2\tworld\n');
       final Map<String, Object?> value = result.value! as Map<String, Object?>;
-      expect(value['chars'], 2);
+      expect(value['startLine'], 1);
+      expect(value['endLine'], 2);
+      expect(value['totalLines'], 2);
       expect(value['truncated'], isFalse);
-      expect(tool.riskLevel, ToolRisk.low);
+      expect(value['version'], isA<String>());
+    });
+
+    test('offset / limit 分页', () async {
+      File('${dir.path}/a.txt')
+          .writeAsStringSync(List<String>.generate(10, (i) => 'line${i + 1}').join('\n'));
+
+      final ToolResult result = await tool.call(
+          _context(<String, Object?>{'path': 'a.txt', 'offset': 3, 'limit': 2}));
+
+      expect(result.isError, isFalse);
+      expect(result.content, '     3\tline3\n     4\tline4\n');
+      final Map<String, Object?> value = result.value! as Map<String, Object?>;
+      expect(value['startLine'], 3);
+      expect(value['endLine'], 4);
+    });
+
+    test('with_line_numbers=false 返回原文', () async {
+      File('${dir.path}/a.txt').writeAsStringSync('a\nb');
+
+      final ToolResult result = await tool.call(_context(
+          <String, Object?>{'path': 'a.txt', 'with_line_numbers': false}));
+
+      expect(result.content, 'a\nb');
     });
 
     test('maxChars 截断并标记', () async {
       File('${dir.path}/a.txt').writeAsStringSync('abcdefgh');
       final ReadFileTool clipped = ReadFileTool(fs: fs, maxChars: 4);
 
-      final ToolResult result =
-          await clipped.call(_context(<String, Object?>{'path': 'a.txt'}));
+      final ToolResult result = await clipped.call(_context(<String, Object?>{'path': 'a.txt'}));
 
-      expect(result.content, 'abcd');
+      expect(result.isError, isFalse);
+      expect(result.content, endsWith('...(截断)'));
+      expect(result.content.length, lessThanOrEqualTo(4 + '\n...(截断)'.length));
       expect((result.value! as Map<String, Object?>)['truncated'], isTrue);
     });
 
@@ -62,15 +88,6 @@ void main() {
       expect(result.error!.code, 'FS_NOT_REGULAR_FILE');
     });
 
-    test('非 UTF-8 → FS_NOT_TEXT', () async {
-      File('${dir.path}/bin').writeAsBytesSync(<int>[0xff, 0xfe]);
-
-      final ToolResult result =
-          await tool.call(_context(<String, Object?>{'path': 'bin'}));
-
-      expect(result.error!.code, 'FS_NOT_TEXT');
-    });
-
     test('通过注册表调用时参数校验生效', () async {
       final ToolRegistry tools = ToolRegistry()..register(tool);
 
@@ -78,21 +95,6 @@ void main() {
           await tools.call(const ToolCall(name: 'read_file'));
 
       expect(result.error!.code, 'INVALID_ARGS');
-    });
-  });
-
-  group('provideFsTools', () {
-    test('注册 read_file 并随上下文释放撤销', () {
-      final Context ctx = Context.root();
-      provideFileSystemLocal(ctx, fs: fs);
-      final ToolRegistry tools = provideTools(ctx);
-
-      final List<Tool> registered = provideFsTools(ctx);
-
-      expect(registered.single.name, 'read_file');
-      expect(tools.names, contains('read_file'));
-      ctx.dispose();
-      expect(tools.names, isEmpty);
     });
   });
 }

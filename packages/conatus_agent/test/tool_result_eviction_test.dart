@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:conatus_agent/conatus_agent.dart';
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
+import 'package:conatus_fs_tools/conatus_fs_tools.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -50,7 +51,8 @@ void main() {
         ReadFileTool(fs: ctx.require<FileSystem>('fs'), maxChars: 10000);
     final ToolResult read = await reader.call(
       ToolContext(ToolCall(
-          name: 'read_file', arguments: <String, Object?>{'path': path})),
+          name: 'read_file',
+          arguments: <String, Object?>{'path': path, 'with_line_numbers': false})),
     );
     expect(read.content, big);
   });

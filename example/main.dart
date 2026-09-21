@@ -15,6 +15,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:conatus/conatus.dart';
+import 'package:conatus_fs_tools/conatus_fs_tools.dart';
 
 Future<void> main() async {
   final app = Context.root(name: 'app');

@@ -17,6 +17,7 @@ dependencies:
   conatus_core: ^0.16.0
   conatus_cron: ^0.16.0
   conatus_foundation: ^0.16.0
+  conatus_fs_tools: ^0.16.0
   conatus_llm: ^0.16.0
   conatus_schedule: ^0.16.0
   conatus_search: ^0.16.0

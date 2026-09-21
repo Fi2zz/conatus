@@ -38,6 +38,7 @@
 | `conatus_alerting` | 告警：订阅遥测事件流，声明式规则判定后主动通知 | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_tts`、`http` | [README](packages/conatus_alerting/README.md) |
 | `conatus_browser_use` | 浏览器操作：经 MCP 接 Playwright / Chrome DevTools，检查与交互网页 | `conatus_agent`、`conatus_core`、`conatus_credentials`、`conatus_foundation`、`conatus_mcp`、`conatus_tasks` | [README](packages/conatus_browser_use/README.md) |
 | `conatus_computer_use` | 桌面操作：经 MCP 接 Cua Driver，截屏 / 鼠标 / 键盘 | `conatus_agent`、`conatus_core`、`conatus_credentials`、`conatus_foundation`、`conatus_mcp`、`conatus_tasks` | [README](packages/conatus_computer_use/README.md) |
+| `conatus_fs_tools` | 文件系统工具：`read_file` / `write_file` / `edit_file` / `rg` / `glob`，对齐 DSH `dsh-tool-fs` | `conatus_agent`、`conatus_core`、`conatus_foundation`、`glob` | [README](packages/conatus_fs_tools/README.md) |
 | `conatus_intent` | 意图路由：正则 + 向量本地匹配，命中走确定性动作，未命中落回 Agent Loop | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_intent/README.md) |
 | `conatus_observability` | 可观测性导出器：span 语义 + 从 Session Log 派生 trace | `conatus_agent`、`conatus_foundation` | [README](packages/conatus_observability/README.md) |
 | `conatus_team` | 多智能体协作：任务板（DAG + CAS）+ 成员运行时 + 协作模式 | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_team/README.md) |
@@ -564,7 +565,7 @@ await fs.editText(target, const FsEditRequest(oldString: 'hello', newString: 'hi
 
 - 写入守卫：`FsCreateIfAbsent`（已存在 → `FS_NOT_OBSERVED`）/ `FsReplaceIfVersion`（版本不符 → `FS_STALE_VERSION`）；
 - 错误统一由 `FsError` 携带 `FsErrorCode`（`FS_NOT_FOUND` / `FS_NOT_TEXT` / `FS_AMBIGUOUS_EDIT` …），便于上层按码分支；
-- `provideFsTools(app)` 注册 `read_file`（`ReadFileTool`）把 fs 暴露给模型；`provideToolResultEviction` 落盘的大结果即由它读回。
+- `provideFsTools(app)`（`conatus_fs_tools` 包）注册 `read_file` / `write_file` / `edit_file` / `rg` / `glob` 把 fs 暴露给模型；`provideToolResultEviction` 落盘的大结果即由 `read_file` 读回。
 
 ### `tool-result-eviction` — 大结果落盘
 
@@ -1621,7 +1622,6 @@ root.provide('x', 1);
 |------|------|
 | `provideToolResultEviction(ctx, {eviction, fs, tools, threshold, previewChars, dir})` | 安装驱逐中间件，返回 `ToolResultEviction` |
 | `ToolResultEviction({fs, threshold, previewChars, dir})` / `evict(content)` / `clear()` / `spilledPaths` | 驱逐器 |
-| `ReadFileTool({fs, maxChars})` / `provideFsTools(ctx, {fs, tools})` | `read_file` 工具 |
 | `PlanTool({session})` / `providePlanTool(ctx, {session, tools})` | `plan_write` 工具 |
 | `Plan({goal, steps})` / `PlanStep` / `readPlan(session)` / `writePlan(session, plan)` / `planSection(session)` | 计划读写 |
 | `runPlanningPhase({llm, tools, session, messages, systemText})` | 规划轮 |

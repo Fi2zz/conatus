@@ -24,7 +24,6 @@ export 'src/fs.dart'
         FsWriteOutcome,
         provideFileSystem;
 export 'src/fs_local.dart' show LocalFileSystem, provideFileSystemLocal;
-export 'src/fs_tools.dart' show ReadFileTool, provideFsTools;
 export 'src/loader.dart'
     show Loader, LoaderEntry, LoaderException, PluginFactory, provideLoader;
 export 'src/logger_console.dart'
