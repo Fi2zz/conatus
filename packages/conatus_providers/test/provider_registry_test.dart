@@ -111,6 +111,22 @@ void main() {
     expect(registry.profiles.map((ProviderProfile p) => p.name), <String>['a']);
   });
 
+  test('内置默认：两个 Plan 提供商带文档模型清单', () {
+    final ProviderProfile coding = kDefaultProviders
+        .firstWhere((ProviderProfile p) => p.name == 'volcengine-coding-plan');
+    expect(coding.baseUrl, 'https://ark.cn-beijing.volces.com/api/coding/v3');
+    expect(coding.models, contains('ark-code-latest'));
+    expect(coding.models, contains('deepseek-v4-pro'));
+    expect(coding.models, contains('kimi-k3'));
+
+    final ProviderProfile agent = kDefaultProviders
+        .firstWhere((ProviderProfile p) => p.name == 'ark-agent-plan');
+    expect(agent.baseUrl, 'https://ark.cn-beijing.volces.com/api/plan/v3');
+    expect(agent.models, contains('deepseek-v4-1-flash'));
+    expect(agent.models, contains('doubao-seed-2-0-lite-260215'));
+    expect(agent.models, contains('minimax-m3'));
+  });
+
   test('导入合并进注册表', () async {
     final ProviderRegistry registry = ProviderRegistry(
       store: store,
