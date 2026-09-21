@@ -1,0 +1,28 @@
+name: conatus_ontology
+description: >-
+  conatus 的自进化本体层：显式、版本化的语义本体（Term / Mapping / Constraint /
+  Evidence），从执行轨迹持续进化——接地构建、TypedEdits 局部更新、
+  backbone-conditional 配对评估门控、人类可回滚。
+version: 0.16.0
+repository: https://github.com/Fi2zz/conatus
+issue_tracker: https://github.com/Fi2zz/conatus/issues
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+dependencies:
+  conatus_agent: ^0.16.0
+  conatus_core: ^0.16.0
+  conatus_foundation: ^0.16.0
+  conatus_llm: ^0.16.0
+
+dev_dependencies:
+  lints: ^4.0.0
+  test: ^1.25.0
+
+topics:
+  - plugin
+  - llm
+  - agent
