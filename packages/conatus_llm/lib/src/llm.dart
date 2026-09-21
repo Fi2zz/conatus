@@ -43,9 +43,25 @@ class LlmToolCall {
   String toString() => 'LlmToolCall($name, $arguments)';
 }
 
+/// 聊天消息携带的图片（多模态输入）。
+class LlmImage {
+  const LlmImage({required this.mimeType, required this.base64Data});
+
+  /// 图片 MIME 类型，如 `image/png`。
+  final String mimeType;
+
+  /// 图片字节的 base64 编码（不含 data URL 前缀）。
+  final String base64Data;
+
+  /// data URL 形式，供 Chat Completions 的 `image_url` 与 Responses 的
+  /// `input_image` 共用。
+  String get dataUrl => 'data:$mimeType;base64,$base64Data';
+}
+
 /// 聊天消息。
 ///
 /// * 普通消息：`LlmMessage('user', '你好')`；
+/// * 携带图片：`LlmMessage('user', '看这张图', images: [LlmImage(...)])`；
 /// * 助手工具调用：`LlmMessage('assistant', '', toolCalls: [...])`；
 /// * 工具结果：`LlmMessage('tool', '结果', toolCallId: 'call_1')`。
 class LlmMessage {
@@ -55,6 +71,7 @@ class LlmMessage {
     this.toolCalls = const <LlmToolCall>[],
     this.toolCallId,
     this.cacheable = false,
+    this.images = const <LlmImage>[],
   });
 
   final String role; // system / user / assistant / tool
@@ -73,9 +90,21 @@ class LlmMessage {
   /// 前缀与缓存度量。
   final bool cacheable;
 
+  /// 消息携带的图片；为空时消息退化为纯文本。
+  final List<LlmImage> images;
+
   Map<String, dynamic> toJson() => <String, dynamic>{
         'role': role,
-        'content': content,
+        'content': images.isEmpty
+            ? content
+            : <Map<String, dynamic>>[
+                <String, dynamic>{'type': 'text', 'text': content},
+                for (final LlmImage image in images)
+                  <String, dynamic>{
+                    'type': 'image_url',
+                    'image_url': <String, String>{'url': image.dataUrl},
+                  },
+              ],
         if (toolCallId != null) 'tool_call_id': toolCallId,
         if (toolCalls.isNotEmpty)
           'tool_calls': <Map<String, dynamic>>[

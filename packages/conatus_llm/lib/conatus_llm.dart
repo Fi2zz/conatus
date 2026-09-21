@@ -3,6 +3,7 @@ export 'src/llm.dart'
         FallbackLlm,
         LlmApiStyle,
         LlmException,
+        LlmImage,
         LlmMessage,
         LlmProvider,
         LlmReasoningDelta,

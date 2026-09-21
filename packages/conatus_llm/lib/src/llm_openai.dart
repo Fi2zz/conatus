@@ -185,6 +185,11 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
           'type': assistant ? 'output_text' : 'input_text',
           'text': message.content,
         },
+        for (final LlmImage image in message.images)
+          <String, String>{
+            'type': 'input_image',
+            'image_url': image.dataUrl,
+          },
       ],
     };
   }
