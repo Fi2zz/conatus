@@ -3,14 +3,22 @@ library;
 
 import 'dart:async';
 
-import 'package:conatus_foundation/conatus_foundation.dart';
+import 'package:conatus_agent/conatus_agent.dart';
+import 'package:conatus_core/conatus_core.dart';
+import 'package:conatus_foundation/conatus_foundation.dart' hide MemoryStore;
+import 'package:conatus_llm/conatus_llm.dart';
 
 import '../builder/source.dart';
 import '../evolver/evaluator.dart';
 import '../evolver/evolver.dart';
+import '../evolver/paired_evaluator.dart';
 import '../ontology/layer.dart';
+import '../store/database_store.dart';
+import '../store/memory_store.dart';
+import '../store/store.dart';
 import 'browse.dart';
 import 'resolve.dart';
+import 'service_default.dart';
 
 /// 本体事件（发布/拒绝的变更流）。
 sealed class OntologyEvent {
@@ -76,4 +84,74 @@ abstract class OntologyService {
 
   /// 释放资源。
   void dispose();
+}
+
+/// 装配本体服务；显式参数优先，缺省从上下文取服务。
+///
+/// 缺省依赖：`llm` / `approval` / `telemetry` / `database`（服务键
+/// `llm` / `approval` / `telemetry` / `database`）。`evaluator` 缺省时
+/// 仅 browse / resolve / build 可用，evolve / publish 抛 StateError。
+OntologyService provideOntology(
+  Context ctx, {
+  OntologyService? ontology,
+  OntologyStore? store,
+  LlmProvider? llm,
+  Evaluator? evaluator,
+  List<BackboneConfig>? backbones,
+  List<EvalCase> evalCases = const <EvalCase>[],
+  Approval? approval,
+  Telemetry? telemetry,
+  Database? database,
+}) {
+  final OntologyService? provided = ontology ?? ctx.get<OntologyService>('ontology');
+  if (provided != null) return provided;
+  if (ctx.has('ontology')) {
+    throw StateError('ontology 服务已注册但类型不符');
+  }
+
+  final LlmProvider? resolvedLlm = llm ?? ctx.get<LlmProvider>('llm');
+  if (resolvedLlm == null) {
+    throw StateError('缺少 llm 服务，请先 provideLlm 或传入 llm');
+  }
+  final Approval? resolvedApproval = approval ?? ctx.get<Approval>('approval');
+  final Telemetry? resolvedTelemetry =
+      telemetry ?? ctx.get<Telemetry>('telemetry');
+  final Database? resolvedDatabase = database ?? ctx.get<Database>('database');
+  final OntologyStore resolvedStore = store ??
+      (resolvedDatabase != null
+          ? DatabaseStore(database: resolvedDatabase)
+          : MemoryStore());
+  final List<BackboneConfig> resolvedBackbones = backbones ??
+      const <BackboneConfig>[
+        BackboneConfig(provider: 'default', model: 'default'),
+      ];
+  final Evaluator? resolvedEvaluator =
+      evaluator ?? ctx.get<Evaluator>('evaluator');
+
+  final PairedEvaluator pairedEvaluator = PairedEvaluator(
+    backbones: resolvedBackbones,
+    resolver: (BackboneConfig backbone) {
+      final Evaluator? target = resolvedEvaluator;
+      if (target == null) {
+        throw StateError('缺少 evaluator，无法评估本体候选');
+      }
+      return target;
+    },
+  );
+
+  final OntologyService service = DefaultOntologyService(
+    llm: resolvedLlm,
+    store: resolvedStore,
+    pairedEvaluator: pairedEvaluator,
+    evalCases: evalCases,
+    approval: resolvedApproval,
+    telemetry: resolvedTelemetry,
+  );
+  ctx.provide('ontology', service);
+  return service;
+}
+
+/// 上下文访问器。
+extension OntologyContext on Context {
+  OntologyService get ontology => require<OntologyService>('ontology');
 }
