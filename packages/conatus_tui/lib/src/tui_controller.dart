@@ -19,6 +19,7 @@ import 'package:conatus_team/conatus_team.dart';
 import 'package:conatus_tts/conatus_tts.dart';
 
 import 'ask_user_tool.dart';
+import 'at_ref.dart';
 import 'team_snapshot.dart';
 import 'team_subscription.dart';
 import 'transcript.dart';
@@ -206,6 +207,9 @@ class ConatusTuiController implements TuiUserPromptHost {
   void dispose() => _unbind();
 
   /// 处理一行输入：斜杠命令本地处理，其余进对话链路。
+  ///
+  /// 非斜杠行先经 [expandAtRefs] 展开 `@<路径>` 文件引用（fs 服务不可用时
+  /// 原样发送），再提交给 Agent Loop。
   Future<void> handleLine(String raw) async {
     final String line = raw.trim();
     if (line.isEmpty) {
@@ -219,7 +223,7 @@ class ConatusTuiController implements TuiUserPromptHost {
       await _handleCommand(command, arg);
       return;
     }
-    await submit(line);
+    await submit(await expandAtRefs(line, fs: _app.get<FileSystem>('fs')));
   }
 
   /// 打断在飞轮次（Esc / barge-in）：立即提示，盘上记录保留。

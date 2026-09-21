@@ -20,6 +20,7 @@ export 'src/ask_user_tool.dart'
         kAskUserPurposePermissionMode,
         kAskUserTimeout,
         kAskUserToolName;
+export 'src/at_ref.dart' show expandAtRefs, kAtRefMaxBytes, kAtRefMaxCount;
 export 'src/team_snapshot.dart';
 export 'src/team_subscription.dart';
 export 'src/team_views.dart';
