@@ -245,6 +245,29 @@ void main() {
     dir.deleteSync(recursive: true);
   });
 
+  test('/plan 打开面板，面板 Enter 切换状态', () async {
+    final (ConatusTuiController controller, Context app, Directory dir) =
+        await _build();
+
+    await controller.handleLine('/plan');
+    expect(controller.planPrompt.open, isTrue);
+    expect(controller.planPrompt.active, isFalse);
+
+    await controller.confirmPlanPanel();
+    expect(controller.planPrompt.active, isTrue);
+    expect(
+      controller.transcript.messages.last.text,
+      contains('已进入 Plan Mode'),
+    );
+
+    await controller.confirmPlanPanel();
+    expect(controller.planPrompt.active, isFalse);
+    controller.planPrompt.close();
+    expect(controller.planPrompt.open, isFalse);
+    app.dispose();
+    dir.deleteSync(recursive: true);
+  });
+
   test('provider 浮层：默认选中当前项，移动越界钳制', () {
     final TuiProviderPrompt prompt = TuiProviderPrompt();
     prompt.show(<TuiProviderItem>[

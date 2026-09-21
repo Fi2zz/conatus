@@ -33,6 +33,7 @@ import 'tui_model.dart';
 import 'tui_options.dart';
 import 'tui_permission.dart';
 import 'tui_permission_gate.dart';
+import 'tui_plan.dart';
 import 'tui_provider.dart';
 import 'tui_session_picker.dart';
 import 'tui_skill_command.dart';
@@ -131,6 +132,9 @@ class ConatusTuiController implements TuiUserPromptHost {
 
   /// 模型选择浮层（`/model`）。
   late final TuiModelPrompt modelPrompt = TuiModelPrompt(onChanged: _refresh);
+
+  /// Plan Mode 面板浮层（`/plan`）。
+  late final TuiPlanPrompt planPrompt = TuiPlanPrompt(onChanged: _refresh);
 
   /// 表单浮层（导入 registry）。
   late final TuiFormPrompt formPrompt = TuiFormPrompt(onChanged: _refresh);
@@ -392,7 +396,7 @@ class ConatusTuiController implements TuiUserPromptHost {
       case 'provider':
         await _handleProvider(arg);
       case 'plan':
-        _togglePlanMode();
+        _openPlanPanel();
       case 'goal':
         await _handleGoal(arg);
       case 'cron':
@@ -469,6 +473,9 @@ class ConatusTuiController implements TuiUserPromptHost {
 
   /// 确认模型浮层选中项（根组件按键调用）。
   Future<void> confirmModelItem() => _confirmModelItem();
+
+  /// Plan 面板 Enter：切换 Plan Mode 并刷新面板（根组件按键调用）。
+  Future<void> confirmPlanPanel() => _confirmPlanPanel();
 
   /// `/plan`：进入 / 退出 Plan Mode（先规划、经 exit_plan_mode 提交后执行）。
   void _togglePlanMode() {

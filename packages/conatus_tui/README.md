@@ -44,7 +44,8 @@ dart run packages/conatus_tui/example/deepseek_demo.dart \
   memory / compaction / reflection，工具调用与结果实时回显到记录区。
 - **斜杠命令**：输入 `/` 弹出命令菜单（`↑↓` 选择、`Enter` 运行、`Tab` 补全；
   最多显示 6 行，超出滚动，底部 `(当前/总数)` 计数）：
-  `/help` `/new` `/session <id>` `/sessions` `/tools` `/model [名字]` `/provider [子命令]` `/remember <内容>` `/forget <id 或 关键字>` `/telemetry` `/clear` `/exit`。
+  `/help` `/new` `/session <id>` `/sessions` `/tools` `/model` `/provider` `/plan` `/remember <内容>` `/forget <id 或 关键字>` `/telemetry` `/clear` `/exit`。
+  `/model` 与 `/provider`、`/plan` 都是浮层面板：菜单 `Enter` 直接进入。
 - **提供商管理**：`/provider` 打开列表浮层（`↑↓` 选择、`Enter` 切换、`D` 删除、
   `Esc` 取消，末项 `[ Add New Platform ]` 导入）；`/provider add` 直接开导入表单
   （Registry URL + Bearer token），`/provider <名字>` / `/provider remove <名字>`

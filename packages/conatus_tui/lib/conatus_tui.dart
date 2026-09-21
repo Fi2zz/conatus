@@ -53,6 +53,8 @@ export 'src/tui_permission_gate.dart'
         kPlanApprove,
         kPlanReject,
         kTuiDecisionTimeout;
+export 'src/tui_plan.dart';
+export 'src/tui_plan_view.dart';
 export 'src/tui_provider.dart';
 export 'src/tui_provider_view.dart';
 export 'src/tui_session_picker.dart';

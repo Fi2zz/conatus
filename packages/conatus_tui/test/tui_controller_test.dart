@@ -223,17 +223,23 @@ void main() {
     app.dispose();
   });
 
-  test('/plan 切换 Plan Mode 并给出提示', () async {
+  test('/plan 打开面板，面板 Enter 切换 Plan Mode 并给出提示', () async {
     final (ConatusTuiController controller, Context app) = await _build(
       const <LlmResult>[],
     );
 
     await controller.handleLine('/plan');
+    expect(controller.planPrompt.open, isTrue);
+    expect(controller.planPrompt.active, isFalse);
+
+    await controller.confirmPlanPanel();
+    expect(controller.planPrompt.active, isTrue);
     expect(controller.transcript.messages.last.text, contains('已进入 Plan Mode'));
     expect(
         controller.transcript.messages.last.text, contains('exit_plan_mode'));
 
-    await controller.handleLine('/plan');
+    await controller.confirmPlanPanel();
+    expect(controller.planPrompt.active, isFalse);
     expect(controller.transcript.messages.last.text, contains('已退出 Plan Mode'));
     app.dispose();
   });
@@ -254,11 +260,12 @@ void main() {
     expect((await callDanger()).isError, isFalse);
 
     await controller.handleLine('/plan');
+    await controller.confirmPlanPanel();
     final ToolResult blocked = await callDanger();
     expect(blocked.isError, isTrue);
     expect(blocked.error!.code, 'PLAN_MODE_BLOCKED');
 
-    await controller.handleLine('/plan');
+    await controller.confirmPlanPanel();
     expect((await callDanger()).isError, isFalse);
     app.dispose();
   });

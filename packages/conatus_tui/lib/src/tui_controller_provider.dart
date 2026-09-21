@@ -30,6 +30,35 @@ extension _ProviderCommands on ConatusTuiController {
     }
   }
 
+  /// `/plan`：打开 Plan Mode 面板（状态 + 当前计划；面板 Enter 切换）。
+  void _openPlanPanel() {
+    final PlanMode? planMode = _planMode;
+    final Session? session = _session;
+    if (planMode == null || session == null) {
+      transcript.add(TuiRole.system, 'Plan Mode 不可用：会话尚未绑定。');
+      return;
+    }
+    planPrompt.show(
+      active: planMode.state == PlanModeState.active,
+      plan: readPlan(session),
+    );
+  }
+
+  /// 面板 Enter：切换 Plan Mode 并刷新面板。
+  Future<void> _confirmPlanPanel() async {
+    final PlanMode? planMode = _planMode;
+    final Session? session = _session;
+    if (planMode == null || session == null) {
+      return;
+    }
+    _togglePlanMode();
+    planPrompt.refresh(
+      active: planMode.state == PlanModeState.active,
+      plan: readPlan(session),
+    );
+    _refresh();
+  }
+
   /// `/model [名字]`：查看 / 切换当前提供商的模型。
   ///
   /// 装配了注册表时用它的模型清单；否则委托宿主的 [onModelCommand] 钩子。

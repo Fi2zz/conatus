@@ -23,6 +23,8 @@ import 'tui_form_view.dart';
 import 'tui_message.dart';
 import 'tui_model.dart';
 import 'tui_model_view.dart';
+import 'tui_plan.dart';
+import 'tui_plan_view.dart';
 import 'tui_provider.dart';
 import 'tui_provider_view.dart';
 import 'tui_session_picker_view.dart';
@@ -156,6 +158,9 @@ class _AgentTuiState extends State<AgentTui> {
     if (_onProviderKey(event)) {
       return true;
     }
+    if (_onPlanKey(event)) {
+      return true;
+    }
     if (!_menu.open) {
       return false;
     }
@@ -197,6 +202,23 @@ class _AgentTuiState extends State<AgentTui> {
       form.cancel();
     } else {
       return false; // 其余按键交给字段输入框。
+    }
+    _refresh();
+    return true;
+  }
+
+  /// Plan 面板按键：Enter 进入/退出、Esc 关闭；未打开返回 false。
+  bool _onPlanKey(KeyboardEvent event) {
+    final TuiPlanPrompt prompt = _controller.planPrompt;
+    if (!prompt.open) {
+      return false;
+    }
+    if (event.logicalKey == LogicalKey.enter) {
+      unawaited(_controller.confirmPlanPanel());
+    } else if (event.logicalKey == LogicalKey.escape) {
+      prompt.close();
+    } else {
+      return false;
     }
     _refresh();
     return true;
@@ -390,6 +412,9 @@ class _AgentTuiState extends State<AgentTui> {
     if (_onProviderKey(event)) {
       return true;
     }
+    if (_onPlanKey(event)) {
+      return true;
+    }
     if (_controller.picker.open) {
       if (event.logicalKey == LogicalKey.arrowUp) {
         _controller.movePicker(-1);
@@ -426,6 +451,10 @@ class _AgentTuiState extends State<AgentTui> {
       }
       if (_controller.modelPrompt.open) {
         _controller.modelPrompt.close();
+        return true;
+      }
+      if (_controller.planPrompt.open) {
+        _controller.planPrompt.close();
         return true;
       }
       if (_controller.transcript.closeHelp()) {
@@ -582,6 +611,9 @@ class _AgentTuiState extends State<AgentTui> {
         prompt: _controller.modelPrompt,
         onKeyEvent: _onModelKey,
       );
+    }
+    if (_controller.planPrompt.open) {
+      return TuiPlanView(prompt: _controller.planPrompt);
     }
     return null;
   }
