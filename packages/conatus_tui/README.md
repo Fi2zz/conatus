@@ -49,7 +49,9 @@ dart run packages/conatus_tui/example/deepseek_demo.dart \
   （Registry URL + Bearer token），`/provider <名字>` / `/provider remove <名字>`
   免浮层直达。注册表来自 `conatus_providers`（`<baseDir>/providers.json`），
   `ConatusTuiRuntime.create(providers: false)` 可关闭。
-- **模型切换**：`/model` 查看 / 切换当前提供商的模型（清单来自 provider 配置）；
+- **模型切换**：`/model` 打开模型选择浮层（`type to search` 过滤、`Tab` 切换
+  提供商、`↑↓` 选择、`Enter` 确认、`Esc` 取消，当前项带 `← 当前`；超过 8 条
+  折叠为「还有 N 个」）；`/model <名字>` 免浮层直达。清单来自 provider 配置；
   未装配注册表时退回宿主的 `onModelCommand` 钩子。切换即替换根上下文 `'llm'`
   服务（`ConatusTuiRuntime.switchLlm`）并调 `ConatusTuiController.rebind()` 重绑
   会话（历史保留、有在途轮次时不动）。

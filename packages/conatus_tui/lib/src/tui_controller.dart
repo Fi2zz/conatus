@@ -29,6 +29,7 @@ import 'tui_commands.dart';
 import 'tui_form.dart';
 import 'tui_help.dart';
 import 'tui_message.dart';
+import 'tui_model.dart';
 import 'tui_options.dart';
 import 'tui_permission.dart';
 import 'tui_permission_gate.dart';
@@ -127,6 +128,9 @@ class ConatusTuiController implements TuiUserPromptHost {
   /// provider 管理浮层（`/provider`）。
   late final TuiProviderPrompt providerPrompt =
       TuiProviderPrompt(onChanged: _refresh);
+
+  /// 模型选择浮层（`/model`）。
+  late final TuiModelPrompt modelPrompt = TuiModelPrompt(onChanged: _refresh);
 
   /// 表单浮层（导入 registry）。
   late final TuiFormPrompt formPrompt = TuiFormPrompt(onChanged: _refresh);
@@ -462,6 +466,9 @@ class ConatusTuiController implements TuiUserPromptHost {
 
   /// 删除 provider 浮层选中项（根组件按键调用）。
   Future<void> deleteSelectedProvider() => _deleteSelectedProvider();
+
+  /// 确认模型浮层选中项（根组件按键调用）。
+  Future<void> confirmModelItem() => _confirmModelItem();
 
   /// `/plan`：进入 / 退出 Plan Mode（先规划、经 exit_plan_mode 提交后执行）。
   void _togglePlanMode() {

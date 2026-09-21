@@ -39,6 +39,8 @@ export 'src/tui_form.dart';
 export 'src/tui_form_view.dart';
 export 'src/tui_help.dart';
 export 'src/tui_message.dart';
+export 'src/tui_model.dart';
+export 'src/tui_model_view.dart';
 export 'src/tui_options.dart';
 export 'src/tui_permission.dart';
 export 'src/tui_permission_gate.dart'

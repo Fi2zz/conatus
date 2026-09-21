@@ -21,6 +21,8 @@ import 'tui_controller.dart';
 import 'tui_form.dart';
 import 'tui_form_view.dart';
 import 'tui_message.dart';
+import 'tui_model.dart';
+import 'tui_model_view.dart';
 import 'tui_provider.dart';
 import 'tui_provider_view.dart';
 import 'tui_session_picker_view.dart';
@@ -148,6 +150,9 @@ class _AgentTuiState extends State<AgentTui> {
     if (_onFormKey(event)) {
       return true;
     }
+    if (_onModelKey(event)) {
+      return true;
+    }
     if (_onProviderKey(event)) {
       return true;
     }
@@ -192,6 +197,29 @@ class _AgentTuiState extends State<AgentTui> {
       form.cancel();
     } else {
       return false; // 其余按键交给字段输入框。
+    }
+    _refresh();
+    return true;
+  }
+
+  /// 模型浮层按键：Tab 切提供商、↑↓ 选择、Enter 确认、Esc 关闭。
+  bool _onModelKey(KeyboardEvent event) {
+    final TuiModelPrompt prompt = _controller.modelPrompt;
+    if (!prompt.open) {
+      return false;
+    }
+    if (event.logicalKey == LogicalKey.tab) {
+      prompt.toggleProvider();
+    } else if (event.logicalKey == LogicalKey.arrowUp) {
+      prompt.move(-1);
+    } else if (event.logicalKey == LogicalKey.arrowDown) {
+      prompt.move(1);
+    } else if (event.logicalKey == LogicalKey.enter) {
+      unawaited(_controller.confirmModelItem());
+    } else if (event.logicalKey == LogicalKey.escape) {
+      prompt.close();
+    } else {
+      return false; // 其余按键交给搜索框（type to search）。
     }
     _refresh();
     return true;
@@ -356,6 +384,9 @@ class _AgentTuiState extends State<AgentTui> {
     if (_onFormKey(event)) {
       return true;
     }
+    if (_onModelKey(event)) {
+      return true;
+    }
     if (_onProviderKey(event)) {
       return true;
     }
@@ -391,6 +422,10 @@ class _AgentTuiState extends State<AgentTui> {
       }
       if (_controller.providerPrompt.open) {
         _controller.providerPrompt.close();
+        return true;
+      }
+      if (_controller.modelPrompt.open) {
+        _controller.modelPrompt.close();
         return true;
       }
       if (_controller.transcript.closeHelp()) {
@@ -464,7 +499,9 @@ class _AgentTuiState extends State<AgentTui> {
   @override
   Component build(BuildContext context) {
     return Focusable(
-      focused: true,
+      // 带输入框的浮层（表单 / 模型搜索）打开时让出焦点，由浮层内的
+      // TextField 接收字符与按键（其 onKeyEvent 即浮层按键处理）。
+      focused: !_controller.modelPrompt.open && !_controller.formPrompt.open,
       onKeyEvent: _onKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -489,7 +526,8 @@ class _AgentTuiState extends State<AgentTui> {
             focused: !_controller.picker.open &&
                 !_controller.choice.open &&
                 !_controller.providerPrompt.open &&
-                !_controller.formPrompt.open,
+                !_controller.formPrompt.open &&
+                !_controller.modelPrompt.open,
             busy: _controller.busy,
             onSubmitted: (_) => _submit(),
             onKeyEvent: _onInputKey,
@@ -533,6 +571,12 @@ class _AgentTuiState extends State<AgentTui> {
       return TuiProviderView(
         items: _controller.providerPrompt.items,
         selected: _controller.providerPrompt.index,
+      );
+    }
+    if (_controller.modelPrompt.open) {
+      return TuiModelView(
+        prompt: _controller.modelPrompt,
+        onKeyEvent: _onModelKey,
       );
     }
     return null;

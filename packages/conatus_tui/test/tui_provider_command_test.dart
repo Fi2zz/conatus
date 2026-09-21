@@ -68,7 +68,7 @@ Future<(ConatusTuiController, Context, Directory)> _build({
     sessions: sessions,
     name: 'test',
     initialSession: 's1',
-    modelLabel: 'initial',
+    modelLabel: 'a-small',
     onExit: () {},
   );
   await controller.start();
@@ -138,19 +138,85 @@ void main() {
     dir.deleteSync(recursive: true);
   });
 
-  test('/model 用当前提供商的模型清单', () async {
+  test('/model 打开模型浮层，Enter 切换选中模型', () async {
     final (ConatusTuiController controller, Context app, Directory dir) =
         await _build();
     final List<String> swapped = <String>[];
-    controller.switchLlm = (FallbackLlm llm) =>
-        swapped.add(llm.providers.first.name);
+    controller.switchLlm =
+        (FallbackLlm llm) => swapped.add(llm.providers.first.name);
 
     await controller.handleLine('/model');
-    expect(controller.transcript.messages.last.text, contains('a-small'));
 
-    await controller.handleLine('/model a-large');
+    expect(controller.modelPrompt.open, isTrue);
+    expect(
+      controller.modelPrompt.matches.map((TuiModelItem m) => m.model),
+      <String>['a-small', 'a-large', 'b-small', 'b-large'],
+    );
+    expect(controller.modelPrompt.selected?.current, isTrue);
+
+    controller.modelPrompt.move(1);
+    await controller.confirmModelItem();
+
     expect(swapped, <String>['a']);
     expect(controller.modelLabel, 'a-large');
+    expect(controller.modelPrompt.open, isFalse);
+    expect(controller.transcript.messages.last.text, contains('已切换到 a'));
+    app.dispose();
+    dir.deleteSync(recursive: true);
+  });
+
+  test('模型浮层：搜索过滤与 Tab 切提供商', () async {
+    final (ConatusTuiController controller, Context app, Directory dir) =
+        await _build();
+    await controller.handleLine('/model');
+    final TuiModelPrompt prompt = controller.modelPrompt;
+
+    prompt.setQuery('b-');
+    expect(
+      prompt.matches.map((TuiModelItem m) => m.model),
+      <String>['b-small', 'b-large'],
+    );
+
+    prompt.setQuery('');
+    prompt.toggleProvider();
+    expect(prompt.providerFilter, 'a');
+    expect(
+      prompt.matches.map((TuiModelItem m) => m.model),
+      <String>['a-small', 'a-large'],
+    );
+    prompt.toggleProvider();
+    expect(prompt.providerFilter, 'b');
+    prompt.toggleProvider();
+    expect(prompt.providerFilter, isNull);
+    app.dispose();
+    dir.deleteSync(recursive: true);
+  });
+
+  test('模型浮层：窗口滚动跟随选中', () {
+    final TuiModelPrompt prompt = TuiModelPrompt();
+    prompt.show(<TuiModelItem>[
+      for (int i = 0; i < 20; i++)
+        TuiModelItem(provider: 'p', model: 'm$i'),
+    ]);
+
+    expect(prompt.windowStart, 0);
+    prompt.move(15);
+    expect(prompt.index, 15);
+    expect(prompt.windowStart, 11);
+  });
+
+  test('/model <名字> 直接切换（免浮层）', () async {
+    final (ConatusTuiController controller, Context app, Directory dir) =
+        await _build();
+    final List<String> swapped = <String>[];
+    controller.switchLlm =
+        (FallbackLlm llm) => swapped.add(llm.providers.first.name);
+
+    await controller.handleLine('/model a-large');
+
+    expect(swapped, <String>['a']);
+    expect(controller.modelLabel, 'a-large');
+    expect(controller.modelPrompt.open, isFalse);
 
     await controller.handleLine('/model nope');
     expect(controller.transcript.messages.last.text, contains('未知模型'));

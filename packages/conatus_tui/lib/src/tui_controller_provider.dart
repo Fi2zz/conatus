@@ -51,12 +51,11 @@ extension _ProviderCommands on ConatusTuiController {
   }
 
   Future<void> _handleModelOf(ProviderRegistry registry, String arg) async {
-    final ProviderProfile provider = registry.current!;
     if (arg.isEmpty) {
-      transcript.add(TuiRole.system, '当前提供商：${provider.name}\n'
-          '可用模型：${_modelListText(provider)}\n切换：/model <名字>');
+      modelPrompt.show(modelItems(registry));
       return;
     }
+    final ProviderProfile provider = registry.current!;
     if (!provider.models.contains(arg)) {
       transcript.add(
           TuiRole.system, '未知模型：$arg\n可用模型：${_modelListText(provider)}');
@@ -64,6 +63,31 @@ extension _ProviderCommands on ConatusTuiController {
     }
     transcript.add(
         TuiRole.system, await _applyLlm(registry, provider.name, model: arg));
+  }
+
+  /// 浮层候选：各 provider 的模型展开（当前 provider + 当前模型带标记）。
+  List<TuiModelItem> modelItems(ProviderRegistry registry) => <TuiModelItem>[
+        for (final ProviderProfile profile in registry.profiles)
+          for (final String model in profile.models)
+            TuiModelItem(
+              provider: profile.name,
+              model: model,
+              current: profile.name == registry.currentName &&
+                  model == modelLabel,
+            ),
+      ];
+
+  /// 确认模型浮层选中项：切到该提供商 + 模型。
+  Future<void> _confirmModelItem() async {
+    final ProviderRegistry? registry = _app.providers;
+    final TuiModelItem? item = modelPrompt.selected;
+    if (registry == null || item == null) {
+      return;
+    }
+    modelPrompt.close();
+    await registry.select(item.provider);
+    transcript.add(TuiRole.system,
+        await _applyLlm(registry, item.provider, model: item.model));
   }
 
   /// 浮层列表项（末项为新增入口）。
