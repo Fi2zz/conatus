@@ -492,7 +492,12 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
 
   void _requireKey() {
     if (apiKey.isEmpty) {
-      throw LlmException(name, '缺少 API Key');
+      throw LlmException(
+        name,
+        credentialKey.isEmpty
+            ? '缺少 API Key'
+            : '缺少 API Key（凭据键：$credentialKey 未配置）',
+      );
     }
   }
 

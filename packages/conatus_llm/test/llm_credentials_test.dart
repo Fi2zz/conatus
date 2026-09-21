@@ -162,7 +162,14 @@ void main() {
       client: recorder.client,
     );
 
-    await expectLater(provider.chat(messages), throwsA(isA<LlmException>()));
+    await expectLater(
+      provider.chat(messages),
+      throwsA(isA<LlmException>().having(
+        (LlmException e) => e.message,
+        'message',
+        contains('PATH'),
+      )),
+    );
     expect(recorder.authorizations, isEmpty);
 
     provider.close();
