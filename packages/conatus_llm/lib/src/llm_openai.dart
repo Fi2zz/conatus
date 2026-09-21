@@ -18,6 +18,9 @@ import 'package:conatus_credentials/conatus_credentials.dart';
 import 'package:http/http.dart' as http;
 import 'llm.dart';
 
+/// LLM 请求的默认 User-Agent。
+const String kDefaultLlmUserAgent = 'ConatusCode/0.16';
+
 /// 处理 OpenAI 兼容端点的公共逻辑。
 abstract class _OpenAiCompatibleProvider implements LlmProvider {
   _OpenAiCompatibleProvider({
@@ -26,6 +29,7 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
     required this.model,
     required this.credentialKey,
     this.apiStyle = LlmApiStyle.chat,
+    this.userAgent = kDefaultLlmUserAgent,
     http.Client? client,
     Credentials? credentials,
     this.timeout = const Duration(seconds: 60),
@@ -43,6 +47,9 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
   final String baseUrl;
   final String model;
   final LlmApiStyle apiStyle;
+
+  /// 请求携带的 User-Agent（可伪装成其他 harness 客户端）。
+  final String userAgent;
   final Duration timeout;
 
   /// HTTP client。Key 轮换只改 [apiKey]，而 `_headers` 每次请求重算，因此
@@ -79,6 +86,7 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
   Map<String, String> get _headers => <String, String>{
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $apiKey',
+        'User-Agent': userAgent,
       };
 
   // ═══════════════════════════════════════════════════════════════
@@ -611,6 +619,7 @@ class DoubaoProvider extends _OpenAiCompatibleProvider {
     String? baseUrl,
     String? model,
     super.apiStyle,
+    super.userAgent,
     super.client,
     super.credentials,
     super.credentialKey = 'ARK_API_KEY',
@@ -640,6 +649,7 @@ class DeepSeekProvider extends _OpenAiCompatibleProvider {
     String? baseUrl,
     String? model,
     super.apiStyle,
+    super.userAgent,
     super.client,
     super.credentials,
     super.credentialKey = 'DEEPSEEK_API_KEY',
@@ -670,6 +680,7 @@ class OpenAiCompatibleProvider extends _OpenAiCompatibleProvider {
     super.credentialKey = '',
     super.apiKey,
     super.apiStyle,
+    super.userAgent,
     super.client,
     super.credentials,
     super.timeout,

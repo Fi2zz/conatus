@@ -13,4 +13,8 @@ export 'src/llm.dart'
         LlmToolCall,
         provideLlm;
 export 'src/llm_openai.dart'
-    show DeepSeekProvider, DoubaoProvider, OpenAiCompatibleProvider;
+    show
+        DeepSeekProvider,
+        DoubaoProvider,
+        OpenAiCompatibleProvider,
+        kDefaultLlmUserAgent;

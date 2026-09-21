@@ -27,6 +27,25 @@ void main() {
     expect(parsed.single.defaultModel, 'm1');
   });
 
+  test('userAgent 字段随 JSON 往返', () {
+    final ProviderProfile parsed = parseProviderRegistry(jsonEncode(<Map<String, Object?>>[
+      <String, Object?>{
+        'name': 'dsh',
+        'baseUrl': 'https://api.deepseek.example/v1',
+        'userAgent': 'dsh/0.1.2',
+      },
+    ])).single;
+    expect(parsed.userAgent, 'dsh/0.1.2');
+    expect(parsed.toJson()['userAgent'], 'dsh/0.1.2');
+
+    final ProviderProfile plain = parseProviderRegistry(jsonEncode(
+        <Map<String, Object?>>[
+          <String, Object?>{'name': 'p', 'baseUrl': 'https://p'},
+        ])).single;
+    expect(plain.userAgent, '');
+    expect(plain.toJson().containsKey('userAgent'), isFalse);
+  });
+
   test('解析顶层数组', () {
     final List<ProviderProfile> parsed =
         parseProviderRegistry(jsonEncode(<Map<String, Object?>>[

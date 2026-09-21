@@ -131,6 +131,7 @@ class ProviderRegistry {
       model: resolvedModel,
       credentialKey: profile.credentialKey,
       apiStyle: profile.apiStyle,
+      userAgent: profile.userAgent.isEmpty ? kDefaultLlmUserAgent : profile.userAgent,
       credentials: _credentials,
     );
   }

@@ -15,6 +15,7 @@ class ProviderProfile {
     this.models = const <String>[],
     this.apiStyle = LlmApiStyle.chat,
     this.description = '',
+    this.userAgent = '',
   });
 
   /// 从 JSON 反序列化；缺 `name` / `baseUrl` 时抛 [FormatException]。
@@ -36,6 +37,7 @@ class ProviderProfile {
       apiStyle:
           json['apiStyle'] == 'responses' ? LlmApiStyle.responses : LlmApiStyle.chat,
       description: json['description'] as String? ?? '',
+      userAgent: json['userAgent'] as String? ?? '',
     );
   }
 
@@ -57,6 +59,10 @@ class ProviderProfile {
   /// 列表里展示的补充说明（可空）。
   final String description;
 
+  /// 请求携带的 User-Agent（空串用默认 `ConatusCode/0.16`；可伪装成其他
+  /// harness 客户端，如 dsh）。
+  final String userAgent;
+
   /// 默认模型；无清单返回 `null`。
   String? get defaultModel => models.isEmpty ? null : models.first;
 
@@ -68,5 +74,6 @@ class ProviderProfile {
         if (models.isNotEmpty) 'models': models,
         'apiStyle': apiStyle.name,
         if (description.isNotEmpty) 'description': description,
+        if (userAgent.isNotEmpty) 'userAgent': userAgent,
       };
 }

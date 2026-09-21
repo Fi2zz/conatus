@@ -20,8 +20,10 @@ final LlmProvider? llm = registry.buildLlm(registry.currentName ?? '');
 ## 概念
 
 - **`ProviderProfile`**：`name` / `baseUrl` / `credentialKey` / `models` /
-  `apiStyle`（chat / responses）。**密钥不进配置**：`credentialKey` 指向环境变量
-  或 `conatus_credentials` 里的键名，由 LLM provider 构造期解析。
+  `apiStyle`（chat / responses）/ `userAgent`。**密钥不进配置**：`credentialKey`
+  指向环境变量或 `conatus_credentials` 里的键名，由 LLM provider 构造期解析；
+  `userAgent` 可空，缺省 `ConatusCode/0.16`，可设成其他 harness 客户端的 UA
+  （如 `dsh/0.1.2`）以通过 plan 端点的客户端校验。
 - **`ProviderRegistry`**（服务键 `'providers'`）：增删改查、当前选中、`load`
   落盘、`importRegistry` 合并、`buildLlm` 按 profile 构造提供商。
 - **持久化**：`.conatus/providers.json` → `{"current": "...", "providers": [...]}`；
