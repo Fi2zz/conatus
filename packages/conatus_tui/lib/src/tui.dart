@@ -8,6 +8,8 @@ import 'dart:io';
 
 import 'package:nocterm/nocterm.dart';
 
+import 'at_ref_menu.dart';
+import 'at_ref_menu_view.dart';
 import 'team_snapshot.dart';
 import 'team_views.dart';
 import 'tui_choice.dart';
@@ -44,6 +46,8 @@ class _AgentTuiState extends State<AgentTui> {
   final AutoScrollController _scroll = AutoScrollController();
   late final TuiCommandMenu _menu =
       TuiCommandMenu(commands: () => _controller.commands);
+  late final AtRefMenu _atMenu =
+      AtRefMenu(cwd: () => Directory.current.path);
   Timer? _spin;
   Timer? _exitTimer;
   int _tick = 0;
@@ -85,9 +89,14 @@ class _AgentTuiState extends State<AgentTui> {
     super.dispose();
   }
 
-  /// 输入变化：同步 `/` 菜单过滤并重绘。
+  /// 输入变化：同步 `/` 菜单与 `@` 文件补全并重绘。
   void _onInputChanged() {
     _menu.syncInput(_input.text);
+    final int cursor = _input.selection.baseOffset;
+    _atMenu.syncInput(
+      _input.text,
+      cursor: cursor < 0 ? _input.text.length : cursor,
+    );
     _refresh();
   }
 
@@ -129,6 +138,9 @@ class _AgentTuiState extends State<AgentTui> {
     if (_onChoiceKey(event)) {
       return true;
     }
+    if (_onAtMenuKey(event)) {
+      return true;
+    }
     if (!_menu.open) {
       return false;
     }
@@ -151,6 +163,42 @@ class _AgentTuiState extends State<AgentTui> {
       return true;
     }
     return false;
+  }
+
+  /// `@` 文件补全按键：↑↓ 移动、Tab/Enter 补全、Esc 关闭；未打开返回 false。
+  bool _onAtMenuKey(KeyboardEvent event) {
+    if (!_atMenu.open) {
+      return false;
+    }
+    if (event.logicalKey == LogicalKey.arrowUp) {
+      _atMenu.move(-1);
+    } else if (event.logicalKey == LogicalKey.arrowDown) {
+      _atMenu.move(1);
+    } else if (event.logicalKey == LogicalKey.tab ||
+        event.logicalKey == LogicalKey.enter) {
+      _completeAtRef();
+      return true;
+    } else if (event.logicalKey == LogicalKey.escape) {
+      _atMenu.close();
+    } else {
+      return false; // 其余按键交给输入框（继续打字）。
+    }
+    _refresh();
+    return true;
+  }
+
+  /// 把选中候选补进输入框：目录停在路径末尾（继续列举），文件追加空格收尾。
+  void _completeAtRef() {
+    final (String, int)? result =
+        _atMenu.complete(_input.text, cursor: _input.selection.baseOffset);
+    if (result == null) {
+      return;
+    }
+    final (String text, int cursor) = result;
+    _input.text = text;
+    _input.selection = TextSelection.collapsed(offset: cursor);
+    _atMenu.syncInput(text, cursor: cursor);
+    _refresh();
   }
 
   /// Tab：把选中命令补全到输入框，不立即执行（带参命令留一个空格）。
@@ -271,6 +319,11 @@ class _AgentTuiState extends State<AgentTui> {
         _refresh();
         return true;
       }
+      if (_atMenu.open) {
+        _atMenu.close();
+        _refresh();
+        return true;
+      }
       if (_controller.transcript.closeHelp()) {
         _refresh();
         return true;
@@ -359,6 +412,8 @@ class _AgentTuiState extends State<AgentTui> {
           ),
           if (_menu.open)
             TuiCommandMenuView(matches: _menu.matches, selected: _menu.index),
+          if (_atMenu.open)
+            AtRefMenuView(matches: _atMenu.matches, selected: _atMenu.index),
           TeamStatusBar(snapshot: _controller.teamSnapshot),
           TuiInputBar(
             controller: _input,

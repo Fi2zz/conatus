@@ -21,6 +21,8 @@ export 'src/ask_user_tool.dart'
         kAskUserTimeout,
         kAskUserToolName;
 export 'src/at_ref.dart' show expandAtRefs, kAtRefMaxBytes, kAtRefMaxCount;
+export 'src/at_ref_menu.dart';
+export 'src/at_ref_menu_view.dart';
 export 'src/team_snapshot.dart';
 export 'src/team_subscription.dart';
 export 'src/team_views.dart';

@@ -44,6 +44,10 @@ dart run packages/conatus_tui/example/deepseek_demo.dart \
   memory / compaction / reflection，工具调用与结果实时回显到记录区。
 - **斜杠命令**：输入 `/` 弹出命令菜单（`↑↓` 选择、`Enter` 运行、`Tab` 补全）：
   `/help` `/new` `/session <id>` `/sessions` `/tools` `/remember <内容>` `/forget <id 或 关键字>` `/telemetry` `/clear` `/exit`。
+- **@ 文件引用**：输入 `@` 弹出文件补全菜单（`↑↓` 选择、`Enter` / `Tab` 补全、
+  `Esc` 关闭；选中目录继续下钻），发送时把 `@<路径>` 展开为
+  `<file path="...">内容</file>` 块交给模型；文件不存在 / 单文件超 200KB 时
+  保留原文并提示，单行最多展开 8 个引用。
 - **会话选择面板**：`/sessions` 打开，`↑↓` 选择、`Enter` 切换、`Esc` 关闭；
   会话事件以 JSONL 持久化到 `.conatus/sessions`，重启后 `open` 即恢复历史。
 - **长记忆**：`.conatus/memory.json` 跨会话召回。
