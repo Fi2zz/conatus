@@ -4,17 +4,21 @@
 library;
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:conatus_llm/conatus_llm.dart';
 import 'package:nocterm/nocterm.dart';
 
 import 'at_ref_menu.dart';
 import 'at_ref_menu_view.dart';
 import 'team_snapshot.dart';
 import 'team_views.dart';
+import 'tui_attachment.dart';
 import 'tui_choice.dart';
 import 'tui_choice_view.dart';
 import 'tui_chrome.dart';
+import 'tui_clipboard_image.dart';
 import 'tui_command_menu_view.dart';
 import 'tui_commands.dart';
 import 'tui_controller.dart';
@@ -64,6 +68,7 @@ class _AgentTuiState extends State<AgentTui> {
   ViewMode _view = ViewMode.chat;
   String _selectedText = '';
   int _selectionEpoch = 0;
+  final List<TuiAttachment> _attachments = <TuiAttachment>[];
 
   @override
   void initState() {
@@ -124,20 +129,106 @@ class _AgentTuiState extends State<AgentTui> {
 
   void _submit() {
     final String text = _input.text;
-    if (text.trim().isEmpty) {
+    if (text.trim().isEmpty && _attachments.isEmpty) {
       return;
     }
     _input.clear();
-    unawaited(_controller.handleLine(text));
+    if (text.trim().startsWith('/')) {
+      unawaited(_controller.handleLine(text));
+      setState(() {});
+      return;
+    }
+    final List<TuiAttachment> attachments =
+        List<TuiAttachment>.of(_attachments);
+    _attachments.clear();
+    unawaited(_controller.handleLine(text, attachments: attachments));
     setState(() {});
+  }
+
+  /// Ctrl+V 粘贴分派：剪贴板有文本时先按文件路径识别（终端拖放 / 复制路径），
+  /// 识别不到交给输入框按普通文本插入；剪贴板无文本时尝试读系统剪贴板图片。
+  ///
+  /// bracketed paste 也会合成 Ctrl+V，其内容已写入剪贴板管理器，因此文本路径
+  /// 天然覆盖拖放与 Cmd+V；纯图片时终端什么都不发，只能靠用户按 Ctrl+V 触发
+  /// （此时剪贴板管理器为空，走图片通道）。
+  bool _onPasteKey(KeyboardEvent event) {
+    if (!event.matches(LogicalKey.keyV, ctrl: true)) {
+      return false;
+    }
+    final String? clipboard = ClipboardManager.paste();
+    if (clipboard != null && clipboard.isNotEmpty) {
+      final List<TuiAttachment> found =
+          extractPathAttachments(clipboard, Directory.current.path);
+      if (found.isNotEmpty) {
+        _addAttachments(found);
+        return true;
+      }
+      return false;
+    }
+    unawaited(_attachClipboardImage());
+    return true;
+  }
+
+  /// 登记附件；超出上限时截断并提示。
+  void _addAttachments(List<TuiAttachment> found) {
+    final int room = kAttachmentMaxCount - _attachments.length;
+    final List<TuiAttachment> accepted = found.take(room).toList();
+    if (accepted.length < found.length) {
+      _controller.transcript.add(
+        TuiRole.system,
+        '附件已达上限（$kAttachmentMaxCount 个），多余部分忽略。',
+      );
+    }
+    setState(() => _attachments.addAll(accepted));
+  }
+
+  /// 从系统剪贴板读图片并登记为附件（macOS）。
+  Future<void> _attachClipboardImage() async {
+    final LlmImage? image = await readClipboardImage();
+    if (!mounted) return;
+    if (image == null) {
+      _controller.transcript.add(
+        TuiRole.system,
+        '剪贴板中没有图片（复制截图后按 Ctrl+V 粘贴）。',
+      );
+      _refresh();
+      return;
+    }
+    try {
+      final File file = await _saveTempImage(image);
+      _addAttachments(<TuiAttachment>[
+        TuiAttachment(path: file.path, mimeType: image.mimeType),
+      ]);
+    } catch (error) {
+      _controller.transcript.add(TuiRole.system, '保存剪贴板图片失败：$error');
+      _refresh();
+    }
+  }
+
+  /// 剪贴板图片落盘临时文件（base64 随会话事件持久化，文件仅用于屏上标识）。
+  Future<File> _saveTempImage(LlmImage image) {
+    final String name =
+        'conatus-paste-${DateTime.now().microsecondsSinceEpoch}.png';
+    final File file = File('${Directory.systemTemp.path}/$name');
+    return file.writeAsBytes(base64Decode(image.base64Data));
   }
 
   /// 输入框按键拦截：`/` 菜单打开时用 ↑↓ 选择、Enter 运行、Tab 补全；
   /// Esc 一律返回 false 冒泡，由根组件 `_onKey` 统一处理（关闭面板/视图、打断轮次）。
-  /// Ctrl+T 视图切换、Ctrl+C/Alt+C 复制/打断/退出，先于文本域消费。
+  /// Ctrl+T 视图切换、Ctrl+C/Alt+C 复制/打断/退出，Ctrl+V 粘贴（路径/图片），
+  /// 均先于文本域消费。
   bool _onInputKey(KeyboardEvent event) {
     if (event.matches(LogicalKey.keyT, ctrl: true)) {
       _toggleView();
+      return true;
+    }
+    if (event.logicalKey == LogicalKey.backspace &&
+        _input.text.isEmpty &&
+        _attachments.isNotEmpty) {
+      setState(_attachments.removeLast);
+      return true;
+    }
+    if (_onPasteKey(event)) {
       return true;
     }
     if (_onCopyKey(event)) {
@@ -594,6 +685,7 @@ class _AgentTuiState extends State<AgentTui> {
             busy: _controller.busy,
             onSubmitted: (_) => _submit(),
             onKeyEvent: _onInputKey,
+            attachments: _attachments,
           ),
           TuiStatusBar(
             pickerOpen: _controller.picker.open,

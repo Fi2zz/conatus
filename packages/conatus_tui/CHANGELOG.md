@@ -4,6 +4,11 @@
 
 ## [未发布]
 
+- 输入栏支持粘贴图片/文件：Ctrl+V 读系统剪贴板图片（macOS，经 osascript），
+  粘贴文本中的文件路径（终端拖放 / `file://` URL）识别为附件；附件以 chip
+  展示在输入栏上方（Backspace 可移除），提交时图片转 `LlmImage` 随消息发给
+  模型、文本文件内联为 `<file>` 块。新增 `tui_attachment` / `tui_clipboard_image`
+
 - 依赖新增 `conatus_compaction`：压缩服务（`provideCompaction`）由该包提供，
   装配时改从新包导入。
 - 多智能体协作 UI（HANDOFF-12）：

@@ -24,6 +24,7 @@ import 'at_ref.dart';
 import 'team_snapshot.dart';
 import 'team_subscription.dart';
 import 'transcript.dart';
+import 'tui_attachment.dart';
 import 'tui_choice.dart';
 import 'tui_commands.dart';
 import 'tui_form.dart';
@@ -258,8 +259,11 @@ class ConatusTuiController implements TuiUserPromptHost {
   /// 处理一行输入：斜杠命令本地处理，其余进对话链路。
   ///
   /// 非斜杠行先经 [expandAtRefs] 展开 `@<路径>` 文件引用（fs 服务不可用时
-  /// 原样发送），再提交给 Agent Loop。
-  Future<void> handleLine(String raw) async {
+  /// 原样发送），再连同 [attachments] 提交给 Agent Loop。
+  Future<void> handleLine(
+    String raw, {
+    List<TuiAttachment> attachments = const <TuiAttachment>[],
+  }) async {
     final String line = raw.trim();
     if (line.isEmpty) {
       return;
@@ -272,7 +276,10 @@ class ConatusTuiController implements TuiUserPromptHost {
       await _handleCommand(command, arg);
       return;
     }
-    await submit(await expandAtRefs(line, fs: _app.get<FileSystem>('fs')));
+    await submit(
+      await expandAtRefs(line, fs: _app.get<FileSystem>('fs')),
+      attachments: attachments,
+    );
   }
 
   /// 打断在飞轮次（Esc / barge-in）：立即提示，盘上记录保留。
@@ -290,8 +297,11 @@ class ConatusTuiController implements TuiUserPromptHost {
     _refresh();
   }
 
-  /// 提交一轮对话。
-  Future<void> submit(String text) async {
+  /// 提交一轮对话；[attachments] 为粘贴/拖放登记的附件（图片 + 文本文件）。
+  Future<void> submit(
+    String text, {
+    List<TuiAttachment> attachments = const <TuiAttachment>[],
+  }) async {
     if (busy) {
       transcript.add(TuiRole.system, '正在回复，请稍候（Esc 可打断）。');
       _refresh();
@@ -303,6 +313,15 @@ class ConatusTuiController implements TuiUserPromptHost {
       _refresh();
       return;
     }
+    List<LlmImage> images = const <LlmImage>[];
+    String messageText = text;
+    if (attachments.isNotEmpty) {
+      final AttachmentMaterialization? payload =
+          await _materializeAttachments(attachments);
+      if (payload == null) return;
+      images = payload.images;
+      messageText = payload.inlineText + text;
+    }
     final AgentCancel cancel = AgentCancel();
     _cancel = cancel;
     busy = true;
@@ -310,7 +329,8 @@ class ConatusTuiController implements TuiUserPromptHost {
     bool turnOk = true;
     String reply = '';
     try {
-      final AgentTurn turn = await agent.run(text, cancel: cancel);
+      final AgentTurn turn =
+          await agent.run(messageText, cancel: cancel, images: images);
       reply = turn.reply;
     } on AgentCancelled {
       turnOk = false;
@@ -329,6 +349,19 @@ class ConatusTuiController implements TuiUserPromptHost {
       busy = false;
       await _afterTurn();
       _refresh();
+    }
+  }
+
+  /// 附件物化：图片转 [LlmImage]、文本文件转 `<file>` 块；失败提示并返回 null。
+  Future<AttachmentMaterialization?> _materializeAttachments(
+    List<TuiAttachment> attachments,
+  ) async {
+    try {
+      return await materializeAttachments(attachments);
+    } catch (error) {
+      transcript.add(TuiRole.system, '附件读取失败：$error');
+      _refresh();
+      return null;
     }
   }
 

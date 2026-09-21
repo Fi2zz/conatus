@@ -61,7 +61,7 @@ class Transcript {
     final Object? data = event.data;
     switch (event.type) {
       case kUserMessageEvent:
-        add(TuiRole.user, collapseSkillPrompt(_text(data)));
+        add(TuiRole.user, '${collapseSkillPrompt(_text(data))}${_imageMarker(data)}');
       case kAssistantMessageEvent:
         final String text = _text(data);
         if (text.trim().isNotEmpty) {
@@ -97,6 +97,13 @@ class Transcript {
   static List<LlmToolCall> _toolCalls(Object? data) {
     if (data is Map) return toolCallsFromJson(data['toolCalls']);
     return const <LlmToolCall>[];
+  }
+
+  /// 用户消息携带图片时追加的屏上标记（如 ` [图片 ×2]`）。
+  static String _imageMarker(Object? data) {
+    if (data is! Map) return '';
+    final int count = imagesFromJson(data['images']).length;
+    return count > 0 ? ' [图片 ×$count]' : '';
   }
 
   static String _preview(Object? data) {
