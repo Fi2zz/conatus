@@ -53,6 +53,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
+      controller.transcript.add(TuiRole.user, 'hello');
+      await tester.pump();
+
       final Future<String?> pending = controller.choice.ask(const TuiChoiceRequest(
         title: '用什么权限模式？',
         choices: <TuiChoice>[
@@ -67,6 +70,11 @@ void main() {
       expect(tester.terminalState, containsText('只读自动放行。'));
       expect(tester.terminalState, containsText('当前'));
       expect(tester.terminalState, containsText('选择'));
+      // 浮层只在底部：消息区不被替换（transcript 里仍有历史消息可渲染）。
+      expect(
+        controller.transcript.messages.map((TuiMessage m) => m.text),
+        contains('hello'),
+      );
 
       controller.choice.cancel();
       await pending;

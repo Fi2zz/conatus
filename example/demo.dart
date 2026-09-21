@@ -32,8 +32,16 @@ class _DemoModel implements LlmProvider {
         ],
       );
     }
-    final LlmMessage tool =
-        messages.lastWhere((LlmMessage m) => m.role == 'tool');
+    final List<LlmMessage> toolMessages =
+        messages.where((LlmMessage m) => m.role == 'tool').toList();
+    if (toolMessages.isEmpty) {
+      return const LlmResult(
+        content: '未能获取到工具返回结果，无法回答当前问题。',
+        provider: 'demo',
+        model: 'demo-1',
+      );
+    }
+    final LlmMessage tool = toolMessages.last;
     return LlmResult(
       content: '现在是 ${tool.content}。',
       provider: 'demo',
@@ -116,13 +124,17 @@ Future<void> main() async {
     namer: deterministicSkillNamer,
   );
   print('沉淀技能：${skill?.name}（${skill?.description}）');
-  final ToolResult skillResult = await app.tools.call(
-    const ToolCall(
-      name: 'skill_get_time_echo',
-      arguments: <String, Object?>{'text': '报时完成'},
-    ),
-  );
-  print('技能执行结果：${skillResult.content}');
+  if (skill != null) {
+    final ToolResult skillResult = await app.tools.call(
+      const ToolCall(
+        name: 'skill_get_time_echo',
+        arguments: <String, Object?>{'text': '报时完成'},
+      ),
+    );
+    print('技能执行结果：${skillResult.content}');
+  } else {
+    print('技能提取未完成，跳过技能调用演示');
+  }
 
   // ── 4. 快照与恢复 ───────────────────────────────────────────
   print('\n=== 4. Persistence & Recovery ===');

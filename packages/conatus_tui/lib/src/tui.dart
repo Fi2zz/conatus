@@ -545,6 +545,36 @@ class _AgentTuiState extends State<AgentTui> {
                 ? _body()
                 : TeamView(snapshot: _controller.teamSnapshot),
           ),
+          // 交互浮层一律贴在输入栏上方（小面板），消息区保持可见。
+          if (_controller.choice.open)
+            TuiChoiceView(
+              request: _controller.choice.request!,
+              selected: _controller.choice.index,
+            ),
+          if (_controller.picker.open)
+            SessionPickerView(
+              sessions: _controller.picker.list,
+              currentId: _controller.sessionId,
+              selected: _controller.picker.index,
+            ),
+          if (_controller.formPrompt.open)
+            TuiFormView(
+              request: _controller.formPrompt.request!,
+              index: _controller.formPrompt.index,
+              onKeyEvent: _onFormKey,
+            ),
+          if (_controller.providerPrompt.open)
+            TuiProviderView(
+              items: _controller.providerPrompt.items,
+              selected: _controller.providerPrompt.index,
+            ),
+          if (_controller.modelPrompt.open)
+            TuiModelView(
+              prompt: _controller.modelPrompt,
+              onKeyEvent: _onModelKey,
+            ),
+          if (_controller.planPrompt.open)
+            TuiPlanView(prompt: _controller.planPrompt),
           if (_menu.open)
             TuiCommandMenuView(
               matches: _menu.matches,
@@ -580,44 +610,6 @@ class _AgentTuiState extends State<AgentTui> {
   }
 
   /// 浮层优先渲染：选项 / 会话面板 / 表单 / provider；无浮层返回 `null`。
-  Component? _overlay() {
-    final TuiChoiceRequest? request =
-        _controller.choice.open ? _controller.choice.request : null;
-    if (request != null) {
-      return TuiChoiceView(request: request, selected: _controller.choice.index);
-    }
-    if (_controller.picker.open) {
-      return SessionPickerView(
-        sessions: _controller.picker.list,
-        currentId: _controller.sessionId,
-        selected: _controller.picker.index,
-      );
-    }
-    if (_controller.formPrompt.open) {
-      return TuiFormView(
-        request: _controller.formPrompt.request!,
-        index: _controller.formPrompt.index,
-        onKeyEvent: _onFormKey,
-      );
-    }
-    if (_controller.providerPrompt.open) {
-      return TuiProviderView(
-        items: _controller.providerPrompt.items,
-        selected: _controller.providerPrompt.index,
-      );
-    }
-    if (_controller.modelPrompt.open) {
-      return TuiModelView(
-        prompt: _controller.modelPrompt,
-        onKeyEvent: _onModelKey,
-      );
-    }
-    if (_controller.planPrompt.open) {
-      return TuiPlanView(prompt: _controller.planPrompt);
-    }
-    return null;
-  }
-
   Component _body() {
     if (!_controller.ready) {
       return const Center(
@@ -626,10 +618,6 @@ class _AgentTuiState extends State<AgentTui> {
           style: TextStyle(color: Colors.gray),
         ),
       );
-    }
-    final Component? overlay = _overlay();
-    if (overlay != null) {
-      return overlay;
     }
     final List<TuiMessage> messages = _controller.transcript.messages;
     final bool loading = _controller.busy;

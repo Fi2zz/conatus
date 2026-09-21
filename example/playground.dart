@@ -5,13 +5,20 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:conatus/conatus.dart';
 import 'package:conatus_coding/conatus_coding.dart';
 import 'package:conatus_fs_tools/conatus_fs_tools.dart';
 import 'package:conatus_tui/conatus_tui.dart';
 
+String newSessionId() {
+  final String millis = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
+  final String rand = Random().nextInt(0x100000).toRadixString(36);
+  return 'tui-$millis-$rand';
+}
+
 Future<void> main(List<String> args) async {
-  final TuiOptions options = TuiOptions.parse(args);
+  final TuiOptions options = TuiOptions.parse(args, sessionId: newSessionId());
   if (options.helpRequested) {
     stdout.write(kPlaygroundUsage);
     return;
@@ -22,7 +29,8 @@ Future<void> main(List<String> args) async {
   // 是否已配置 Key：providers.json 里任一 provider 带了 apiKey（推荐，一次
   // 配置永久生效），或凭据服务（缺省环境变量）命中其 credentialKey。
   final ProviderSnapshot snapshot = ProviderStore(
-    path: '$cwd${Platform.pathSeparator}.conatus${Platform.pathSeparator}providers.json',
+    path:
+        '$cwd${Platform.pathSeparator}.conatus${Platform.pathSeparator}providers.json',
   ).load();
   final bool configured = snapshot.providers.any((ProviderProfile p) =>
       p.apiKey.isNotEmpty || envCredentials.get(p.credentialKey) != null);
@@ -34,10 +42,10 @@ Future<void> main(List<String> args) async {
   // 有 Key 时由提供商注册表（`.conatus/providers.json`）的当前 provider 构造
   // LLM（--model 覆盖其默认模型名），/provider 与 /model 命令据此工作。
   final ConatusTuiRuntime runtime = await ConatusTuiRuntime.create(
-    llm: configured ? null : FallbackLlm(<LlmProvider>[_OfflineProvider()]),
-    model: model,
-    modelLabel: configured ? null : '离线 Demo',
-  );
+      llm: configured ? null : FallbackLlm(<LlmProvider>[_OfflineProvider()]),
+      model: model,
+      modelLabel: configured ? null : '离线 Demo',
+      maxSteps: 200);
   final Context app = runtime.app;
   provideCodingForPlayground(app, cwd: cwd);
   app
