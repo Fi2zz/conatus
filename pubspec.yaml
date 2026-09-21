@@ -15,6 +15,7 @@ workspace:
   - packages/conatus_alerting
   - packages/conatus_asr
   - packages/conatus_browser_use
+  - packages/conatus_coding
   - packages/conatus_compaction
   - packages/conatus_computer_use
   - packages/conatus_core
@@ -55,6 +56,7 @@ dependencies:
 dev_dependencies:
   conatus_alerting: ^0.16.0
   conatus_browser_use: ^0.16.0
+  conatus_coding: ^0.16.0
   conatus_fs_tools: ^0.16.0
   conatus_intent: ^0.16.0
   conatus_observability: ^0.16.0
