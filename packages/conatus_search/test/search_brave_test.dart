@@ -19,7 +19,7 @@ void main() {
                 <String, Object?>{
                   'title': 'T',
                   'url': 'https://b.com',
-                  'description': 'D',
+                  'description': 'Hello <strong>world</strong> &amp; more',
                 },
               ],
             },
@@ -34,7 +34,7 @@ void main() {
     expect(provider.name, 'brave');
     expect(results.single.title, 'T');
     expect(results.single.url, 'https://b.com');
-    expect(results.single.snippet, 'D');
+    expect(results.single.snippet, 'Hello world & more');
     expect(captured!.headers['x-subscription-token'], 'brave-secret');
     expect(captured!.url.path, '/res/v1/web/search');
     expect(captured!.url.queryParameters['q'], '天气');

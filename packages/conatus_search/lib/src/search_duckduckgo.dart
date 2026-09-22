@@ -6,6 +6,7 @@
 library;
 
 import 'package:http/http.dart' as http;
+import 'search_markup.dart';
 import 'search_types.dart';
 
 /// 常见的浏览器 UA，降低被拦概率。
@@ -24,7 +25,6 @@ final RegExp _snippetRe = RegExp(
   caseSensitive: false,
 );
 final RegExp _hrefRe = RegExp(r'href="([^"]*)"', caseSensitive: false);
-final RegExp _tagRe = RegExp(r'<[^>]+>');
 
 /// DuckDuckGo provider。
 class DuckDuckGoSearchProvider implements SearchProvider {
@@ -62,10 +62,10 @@ List<SearchResult> parseDuckDuckGoHtml(String html, {int limit = 5}) {
     final RegExpMatch anchor = anchors[i];
     final String href = _hrefRe.firstMatch(anchor.group(0)!)?.group(1) ?? '';
     final String url = _decodeHref(href);
-    final String title = _plainText(anchor.group(1) ?? '');
+    final String title = stripMarkup(anchor.group(1) ?? '');
     if (url.isEmpty || title.isEmpty) continue;
     final String snippet =
-        i < snippets.length ? _plainText(snippets[i].group(1) ?? '') : '';
+        i < snippets.length ? stripMarkup(snippets[i].group(1) ?? '') : '';
     results.add(SearchResult(title: title, url: url, snippet: snippet));
   }
   return results;
@@ -78,13 +78,3 @@ String _decodeHref(String href) {
   final String? real = uri?.queryParameters['uddg'];
   return real ?? absolute;
 }
-
-String _plainText(String html) => html
-    .replaceAll(_tagRe, '')
-    .replaceAll('&amp;', '&')
-    .replaceAll('&lt;', '<')
-    .replaceAll('&gt;', '>')
-    .replaceAll('&quot;', '"')
-    .replaceAll('&#39;', "'")
-    .replaceAll('&nbsp;', ' ')
-    .trim();

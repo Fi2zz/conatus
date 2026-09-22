@@ -4,6 +4,7 @@ library;
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'search_http.dart';
+import 'search_markup.dart';
 import 'search_types.dart';
 
 /// Brave Search API Key 的凭据键名。
@@ -71,7 +72,7 @@ class BraveSearchProvider implements SearchProvider {
           SearchResult(
             title: item['title'] as String? ?? '',
             url: item['url'] as String? ?? '',
-            snippet: item['description'] as String? ?? '',
+            snippet: stripMarkup(item['description'] as String? ?? ''),
           ),
     ];
   }
