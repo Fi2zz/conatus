@@ -100,6 +100,31 @@ void main() {
       expect(event.data['isError'], isFalse);
       ctx.dispose();
     });
+
+    test('工具返回 ToolResult.failure → 发 tool.failed', () async {
+      final Context ctx = Context.root();
+      final InMemoryTelemetry telemetry = InMemoryTelemetry();
+      provideTelemetry(ctx, telemetry: telemetry);
+      final ToolRegistry tools = provideTools(ctx);
+      tools.fn(
+        'web_search',
+        handler: (ToolContext c) async => ToolResult.failure(
+          '无法联网：所有搜索源都不可用。',
+          error: const ToolError('SEARCH_UNAVAILABLE', 'boom'),
+        ),
+      );
+      instrumentTools(ctx, telemetry: telemetry);
+
+      await tools.call(const ToolCall(name: 'web_search'));
+
+      expect(
+          telemetry.recent.map((TelemetryEvent e) => e.name),
+          <String>['tool.called', 'tool.failed']);
+      final TelemetryEvent failed = telemetry.recent.last;
+      expect(failed.data['tool'], 'web_search');
+      expect(failed.data['error'], 'boom');
+      ctx.dispose();
+    });
   });
 
   group('TelemetryLlmProvider', () {

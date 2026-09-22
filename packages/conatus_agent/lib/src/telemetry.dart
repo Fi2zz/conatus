@@ -118,6 +118,10 @@ Telemetry provideTelemetry(Context ctx, {Telemetry? telemetry}) {
 }
 
 /// 在工具表上挂埋点中间件（`tool.called` / `tool.failed`）。返回撤销函数。
+///
+/// 每次调用都发 `tool.called`（带 `isError`）；失败时**额外**发一条
+/// `tool.failed`——返回错误结果（[ToolResult.failure]）与执行体抛异常都算失败，
+/// 两条路径各自只发一次。
 Disposer instrumentTools(Context ctx,
     {Telemetry? telemetry, ToolRegistry? tools}) {
   final Telemetry sink = telemetry ?? ctx.telemetry;
@@ -133,6 +137,13 @@ Disposer instrumentTools(Context ctx,
               'ms': watch.elapsedMilliseconds,
               'args': call.arguments,
             }));
+            if (result.isError) {
+              sink.emit(TelemetryEvent('tool.failed', data: <String, Object?>{
+                'tool': call.name,
+                'ms': watch.elapsedMilliseconds,
+                'error': result.error?.message ?? result.content,
+              }));
+            }
             return result;
           } catch (error) {
             sink.emit(TelemetryEvent('tool.failed', data: <String, Object?>{
