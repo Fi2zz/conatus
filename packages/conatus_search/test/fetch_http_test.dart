@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:conatus_search/conatus_search.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -56,6 +58,50 @@ void main() {
 
     await expectLater(
       fetcher.fetch('https://e.com'),
+      throwsA(isA<FetchException>()),
+    );
+  });
+
+  test('连接失败抛 FetchException 并带上原因', () async {
+    final HttpFetcher fetcher = HttpFetcher(
+      client: MockClient((http.Request request) async =>
+          throw http.ClientException('connection refused')),
+    );
+
+    await expectLater(
+      fetcher.fetch('https://e.com'),
+      throwsA(isA<FetchException>().having(
+        (FetchException e) => e.message,
+        'message',
+        contains('connection refused'),
+      )),
+    );
+  });
+
+  test('socket 失败抛 FetchException', () async {
+    final HttpFetcher fetcher = HttpFetcher(
+      client: MockClient((http.Request request) async =>
+          throw const SocketException('host unreachable')),
+    );
+
+    await expectLater(
+      fetcher.fetch('https://e.com'),
+      throwsA(isA<FetchException>().having(
+        (FetchException e) => e.message,
+        'message',
+        contains('host unreachable'),
+      )),
+    );
+  });
+
+  test('非法 URL 抛 FetchException', () async {
+    final HttpFetcher fetcher = HttpFetcher(
+      client:
+          MockClient((http.Request request) async => http.Response('ok', 200)),
+    );
+
+    await expectLater(
+      fetcher.fetch('not a url'),
       throwsA(isA<FetchException>()),
     );
   });

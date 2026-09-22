@@ -2,10 +2,14 @@
 library;
 
 import 'dart:async';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'fetcher.dart';
 
 /// 用 `http` 包直连的抓取器。
+///
+/// 非法链接、超时、连接失败与非 200 响应都归一成 [FetchException]，调用方只需
+/// 捕获这一种异常。
 class HttpFetcher implements WebFetcher {
   HttpFetcher({
     http.Client? client,
@@ -19,11 +23,19 @@ class HttpFetcher implements WebFetcher {
 
   @override
   Future<FetchedPage> fetch(String url, {int maxChars = 20000}) async {
+    final Uri? uri = Uri.tryParse(url);
+    if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
+      throw FetchException('仅支持 http/https 链接："$url"');
+    }
     final http.Response response;
     try {
-      response = await _client.get(Uri.parse(url)).timeout(timeout);
+      response = await _client.get(uri).timeout(timeout);
     } on TimeoutException {
       throw FetchException('请求超时（${timeout.inSeconds}s）');
+    } on http.ClientException catch (error) {
+      throw FetchException('抓取失败：${error.message}');
+    } on SocketException catch (error) {
+      throw FetchException('抓取失败：${error.message}');
     }
     if (response.statusCode != 200) {
       throw FetchException('HTTP ${response.statusCode}');
