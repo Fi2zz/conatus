@@ -4,6 +4,21 @@
 
 ## [未发布]
 
+`conatus_tui` / `conatus_fs_tools` / `conatus_coding` 三个包并入 `conatus_code`，
+父仓库不再包含它们：
+
+- 三个包的实现与测试移入 `packages/conatus_code`，公开入口为其 `lib/tui.dart` /
+  `lib/fs_tools.dart` / `lib/coding.dart`；根 `pubspec.yaml` 的 `dev_dependencies`
+  不再列出这三个包，`nocterm` 也随之下移（只剩 `conatus_code` 使用）
+- `example/playground.dart` 随包下沉到 `packages/conatus_code/example/`，import
+  改指新入口；`example/main.dart` 改用 `ctx.tools.fn` 内联注册最小 `read_file`，
+  不再依赖已删除的 `conatus_fs_tools`
+- `conatus_agent` 移除对 `conatus_fs_tools` 的 dev 依赖，其驱逐测试改为经 `'fs'`
+  接缝直读落盘文件
+- 根包新增 dev 依赖 `conatus_code`（workspace 内仍解析到本地成员）：装配级测试
+  `test/integration/multi_agent_review_test.dart` 用到的 TUI 侧类型
+  `TeamSnapshot` / `TeamSubscription` 改从 `package:conatus_code/tui.dart` 取
+
 仓库接入 `conatus_code` 子模块（终端编码智能体，独立仓库），`workspace` 改用
 `packages/*` glob，SDK 下界随之抬到 `^3.11.0`：
 

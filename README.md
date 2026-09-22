@@ -13,8 +13,10 @@
 需显式依赖，见下方「实验性包」小节。
 
 `packages/conatus_code` 是独立的**子模块**（[Fi2zz/conatus_code](https://github.com/Fi2zz/conatus_code)）：
-基于本仓库构建的终端编码智能体，不在下表内、不进伞包。不开发它时无需拉取 ——
-根 `pubspec.yaml` 的 `workspace` 用 glob，没有 `pubspec.yaml` 的目录会被跳过。
+基于本仓库构建的终端编码智能体，不在下表内、不进伞包；根包只在
+`dev_dependencies` 里以 git 源引用它（装配级测试用到其 TUI 侧类型），workspace
+内该依赖解析到本地成员。不开发它时无需拉取 —— 根 `pubspec.yaml` 的 `workspace`
+用 glob，没有 `pubspec.yaml` 的目录会被跳过。
 
 要开发它，先拉取子模块并安装 workspace filter：
 
@@ -50,7 +52,10 @@ tool/setup_code_filter.sh
 | [`conatus_compaction`](packages/conatus_compaction) | 压缩能力缝：滚动摘要契约 + `compaction/*` 日志事件 + 工具配对平衡切点 | `conatus_core`、`conatus_foundation` |
 | [`conatus_agent`](packages/conatus_agent) | Agent Loop 与产品化：plan / sub-agent / reflection / telemetry / eval / approval / skill / recovery | `conatus_compaction`、`conatus_core`、`conatus_foundation`、`conatus_llm` |
 | [`conatus_tasks`](packages/conatus_tasks) | 任务中心（Task Center）：Agent Loop / sub-agent / shell / schedule 运行时任务追踪（任务树 + `task/changed` 持久化 + `list_tasks` / `cancel_task` 工具） | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_schedule` |
-| [`conatus_tui`](packages/conatus_tui) | 基于 [nocterm](https://pub.dev/packages/nocterm) 的文本 TUI：对话 + 工具闭环、斜杠命令（含 `/skill:<技能名>` 直接调用技能）、会话选择面板、选项浮层与权限模式（再导出 nocterm，调用方无需另装） | `conatus_agent`、`conatus_compaction`、`conatus_cron`、`conatus_llm`、`conatus_schedule`、`conatus_search`、`conatus_skill`、`nocterm` |
+
+> 文本 TUI、文件系统工具与编码工具原为 `conatus_tui` / `conatus_fs_tools` /
+> `conatus_coding` 三个包，现已并入 `conatus_code` 子模块：其 `lib/tui.dart` /
+> `lib/fs_tools.dart` / `lib/coding.dart` 即对应入口。
 
 ### 实验性包（不进伞包，`publish_to: none`）
 
@@ -59,7 +64,6 @@ tool/setup_code_filter.sh
 | `conatus_alerting` | 告警：订阅遥测事件流，声明式规则判定后主动通知 | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_tts`、`http` | [README](packages/conatus_alerting/README.md) |
 | `conatus_browser_use` | 浏览器操作：经 MCP 接 Playwright / Chrome DevTools，检查与交互网页 | `conatus_agent`、`conatus_core`、`conatus_credentials`、`conatus_foundation`、`conatus_mcp`、`conatus_tasks` | [README](packages/conatus_browser_use/README.md) |
 | `conatus_computer_use` | 桌面操作：经 MCP 接 Cua Driver，截屏 / 鼠标 / 键盘 | `conatus_agent`、`conatus_core`、`conatus_credentials`、`conatus_foundation`、`conatus_mcp`、`conatus_tasks` | [README](packages/conatus_computer_use/README.md) |
-| `conatus_fs_tools` | 文件系统工具：`read_file` / `write_file` / `edit_file` / `rg` / `glob`，对齐 DSH `dsh-tool-fs` | `conatus_agent`、`conatus_core`、`conatus_foundation`、`glob` | [README](packages/conatus_fs_tools/README.md) |
 | `conatus_intent` | 意图路由：正则 + 向量本地匹配，命中走确定性动作，未命中落回 Agent Loop | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_intent/README.md) |
 | `conatus_observability` | 可观测性导出器：span 语义 + 从 Session Log 派生 trace | `conatus_agent`、`conatus_foundation` | [README](packages/conatus_observability/README.md) |
 | `conatus_team` | 多智能体协作：任务板（DAG + CAS）+ 成员运行时 + 协作模式 | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_team/README.md) |
@@ -80,7 +84,7 @@ conatus_skill ──▶ conatus_foundation
 conatus_asr ────▶ conatus_foundation
 conatus_tts ────▶ conatus_core
 conatus_tasks ──▶ conatus_agent
-conatus_tui ────▶ conatus_agent、conatus_compaction、conatus_cron、conatus_schedule、conatus_search、conatus_skill
+conatus_code ───▶ conatus_agent、conatus_compaction、conatus_cron、conatus_schedule、conatus_search、conatus_skill
 conatus_observability ▶ conatus_agent
 conatus_alerting ────▶ conatus_agent、conatus_tts、conatus_foundation
 conatus_browser_use ─▶ conatus_mcp、conatus_tasks、conatus_credentials、conatus_foundation
@@ -600,7 +604,7 @@ await fs.editText(target, const FsEditRequest(oldString: 'hello', newString: 'hi
 
 - 写入守卫：`FsCreateIfAbsent`（已存在 → `FS_NOT_OBSERVED`）/ `FsReplaceIfVersion`（版本不符 → `FS_STALE_VERSION`）；
 - 错误统一由 `FsError` 携带 `FsErrorCode`（`FS_NOT_FOUND` / `FS_NOT_TEXT` / `FS_AMBIGUOUS_EDIT` …），便于上层按码分支；
-- `provideFsTools(app)`（`conatus_fs_tools` 包）注册 `read_file` / `write_file` / `edit_file` / `rg` / `glob` 把 fs 暴露给模型；`provideToolResultEviction` 落盘的大结果即由 `read_file` 读回。
+- `provideFsTools(app)`（`conatus_code` 的 `lib/fs_tools.dart` 入口）注册 `read_file` / `write_file` / `edit_file` / `rg` / `glob` 把 fs 暴露给模型；`provideToolResultEviction` 落盘的大结果即由 `read_file` 读回。
 
 ### `tool-result-eviction` — 大结果落盘
 
@@ -738,7 +742,7 @@ await provideSkillFilesystem(app);   // 发现 .conatus/skills 等目录并监�
 （单 `parent`、整条覆盖），且挂载点要显式作用域化——多个作用域共用一份
 `SystemPrompt` / `ToolRegistry` 时，段名与工具名不换会在装配处抛 `StateError`。
 
-斜杠调用在 TUI 侧：`conatus_tui` 把每个技能投影成 `/skill:<技能名> [补充要求]` 命令，
+斜杠调用在 TUI 侧：`conatus_code` 的 TUI 把每个技能投影成 `/skill:<技能名> [补充要求]` 命令，
 `disable-model-invocation` 的技能也能由此手动触发（见其 README 的「技能直接调用」）。
 本包本身只有模型侧入口。
 
@@ -844,11 +848,11 @@ provideCronRuntime(
 ```
 
 - [CronStorage] 是抽象端口（本地 [JsonCronStorage]、数据库、远程 KV 均可接入）；
-  `configTasks` 可声明静态任务（运行时不可增删改）；`conatus_tui` 已默认接上
+  `configTasks` 可声明静态任务（运行时不可增删改）；`conatus_code` 的 TUI 已默认接上
   （任务与历史落在 `<baseDir>/cron-tasks.json` / `cron-history.jsonl`）
 - 运行历史 JSONL 封顶 500，`finishRun` 推进 `delivered` → `completed` / `failed`
-  并截断摘要到 300 字符；conatus_tui 用 `systemCronNotifier()` 提供 macOS / Linux
-  系统通知（cron 包只定义抽象 `CronNotifier` 端口）
+  并截断摘要到 300 字符；conatus_code 的 TUI 用 `systemCronNotifier()` 提供
+  macOS / Linux 系统通知（cron 包只定义抽象 `CronNotifier` 端口）
 - 模型工具：`cron_list` / `cron_add` / `cron_update` / `cron_remove` /
   `cron_history`
 
@@ -959,7 +963,7 @@ ctx.effect(() => provideTimePrompt(app));          // 随上下文卸载撤销
   有锚点，那是一条独立分支；
 - 与段一样可撤销：`ctx.effect(() => provideTimePrompt(app))`。
 
-精确到秒的时间工具由装配方提供（`conatus_tui` 已内置，见其 `tui_app.dart`）：
+精确到秒的时间工具由装配方提供（`conatus_code` 的 TUI 已内置，见其 `tui_app.dart`）：
 
 ```dart
 app.effect(() => app.tools.fn(
@@ -974,7 +978,7 @@ app.effect(() => app.tools.fn(
 ```
 
 锚点行为由 `packages/conatus_foundation/test/time_context_test.dart` 与装配级端到端
-`packages/conatus_tui/test/tui_runtime_assembly_test.dart`（断言模型实际收到的 system
+`packages/conatus_code/test/tui/tui_runtime_assembly_test.dart`（断言模型实际收到的 system
 含 `[当前时间]`）守住。
 
 ### `compaction` — 会话滚动摘要
@@ -1823,7 +1827,7 @@ bash tool/version.sh 0.16.0     # 统一升版：改 version 行 + 同步所有�
 
 漏改任何一处，`dart pub get` 会在 workspace 内解析阶段直接失败（不会悄悄发出去）。
 
-发布按依赖顺序进行（依赖在前）；15 个可发布包如下，7 个实验性包
+发布按依赖顺序进行（依赖在前）；14 个可发布包如下，7 个实验性包
 （`conatus_alerting` / `conatus_browser_use` / `conatus_computer_use` /
 `conatus_intent` / `conatus_observability` / `conatus_team` / `conatus_workflow`）
 是 `publish_to: none`，不在发布之列：
@@ -1832,7 +1836,7 @@ bash tool/version.sh 0.16.0     # 统一升版：改 version 行 + 同步所有�
 for p in conatus_core conatus_foundation conatus_compaction conatus_cron \
          conatus_credentials conatus_llm conatus_mcp conatus_schedule \
          conatus_search conatus_skill conatus_asr conatus_tts conatus_agent \
-         conatus_tasks conatus_tui; do
+         conatus_tasks; do
   dart pub publish -C "packages/$p"
 done
 dart pub publish            # 最后发布伞包 conatus

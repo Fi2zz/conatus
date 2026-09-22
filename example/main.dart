@@ -15,7 +15,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:conatus/conatus.dart';
-import 'package:conatus_fs_tools/conatus_fs_tools.dart';
 
 Future<void> main() async {
   final app = Context.root(name: 'app');
@@ -38,7 +37,24 @@ Future<void> main() async {
 
   // fs 能力缝 + read_file 工具 + 大结果驱逐（超阈值落盘，模型按路径读回）。
   provideFileSystemLocal(app);
-  provideFsTools(app);
+  app.effect(() => app.tools.fn(
+        'read_file',
+        description: '读取文件内容',
+        params: <ParamSpec>[
+          ParamSpec.string('path', required: true, description: '文件路径'),
+        ],
+        pathParams: <String>['path'],
+        handler: (ToolContext ctx) async {
+          final FileSystem fs = app.require<FileSystem>('fs');
+          try {
+            final FsTarget target = await fs.resolve(ctx.str('path'));
+            return ToolResult.success(await fs.readText(target));
+          } on FsError catch (e) {
+            return ToolResult.failure(e.message,
+                error: ToolError(e.code.code, e.message));
+          }
+        },
+      ));
   provideToolResultEviction(app);
 
   provideLlm(app, llm: defaultFallbackLlm(credentials: EnvCredentials()));

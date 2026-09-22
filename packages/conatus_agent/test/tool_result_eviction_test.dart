@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:conatus_agent/conatus_agent.dart';
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
-import 'package:conatus_fs_tools/conatus_fs_tools.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -46,15 +45,9 @@ void main() {
     expect(File(path).existsSync(), isTrue);
     expect(File(path).readAsStringSync(), big);
 
-    // read_file 能读回完整内容（直接用工具，绕过注册表再次驱逐）。
-    final ReadFileTool reader =
-        ReadFileTool(fs: ctx.require<FileSystem>('fs'), maxChars: 10000);
-    final ToolResult read = await reader.call(
-      ToolContext(ToolCall(
-          name: 'read_file',
-          arguments: <String, Object?>{'path': path, 'with_line_numbers': false})),
-    );
-    expect(read.content, big);
+    // 落盘文件可完整读回（fs 接缝直读，绕过注册表再次驱逐）。
+    final FileSystem fs = ctx.require<FileSystem>('fs');
+    expect(await fs.readText(await fs.resolve(path)), big);
   });
 
   test('未超阈值不改动结果', () async {
