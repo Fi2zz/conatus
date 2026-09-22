@@ -55,5 +55,17 @@ void main() {
 
       await expectLater(provider.search('q'), throwsA(isA<SearchException>()));
     });
+
+    test('超时抛 SearchException', () async {
+      final DuckDuckGoSearchProvider provider = DuckDuckGoSearchProvider(
+        timeout: const Duration(milliseconds: 10),
+        client: MockClient((http.Request request) async {
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+          return http.Response(_html, 200);
+        }),
+      );
+
+      await expectLater(provider.search('q'), throwsA(isA<SearchException>()));
+    });
   });
 }

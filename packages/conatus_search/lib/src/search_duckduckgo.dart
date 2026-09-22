@@ -6,6 +6,7 @@
 library;
 
 import 'package:http/http.dart' as http;
+import 'search_http.dart';
 import 'search_markup.dart';
 import 'search_types.dart';
 
@@ -28,9 +29,15 @@ final RegExp _hrefRe = RegExp(r'href="([^"]*)"', caseSensitive: false);
 
 /// DuckDuckGo provider。
 class DuckDuckGoSearchProvider implements SearchProvider {
-  DuckDuckGoSearchProvider({http.Client? client, Uri? endpoint})
-      : _client = client ?? http.Client(),
+  DuckDuckGoSearchProvider({
+    http.Client? client,
+    Uri? endpoint,
+    this.timeout = const Duration(seconds: 15),
+  })  : _client = client ?? http.Client(),
         _endpoint = endpoint ?? Uri.parse('https://html.duckduckgo.com/html/');
+
+  /// 单次查询超时。
+  final Duration timeout;
 
   final http.Client _client;
   final Uri _endpoint;
@@ -42,9 +49,13 @@ class DuckDuckGoSearchProvider implements SearchProvider {
   Future<List<SearchResult>> search(String query, {int limit = 5}) async {
     final Uri uri =
         _endpoint.replace(queryParameters: <String, String>{'q': query});
-    final http.Response response = await _client.get(
-      uri,
-      headers: <String, String>{'user-agent': _userAgent},
+    final http.Response response = await sendWithTimeout(
+      _client.get(
+        uri,
+        headers: <String, String>{'user-agent': _userAgent},
+      ),
+      timeout: timeout,
+      provider: name,
     );
     if (response.statusCode != 200) {
       throw SearchException('duckduckgo HTTP ${response.statusCode}');

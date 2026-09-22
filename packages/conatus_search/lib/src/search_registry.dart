@@ -92,7 +92,7 @@ SearchProvider _createBrave(String apiKey, SearchProviderDeps deps) =>
     );
 
 SearchProvider _createDuckDuckGo(String apiKey, SearchProviderDeps deps) =>
-    DuckDuckGoSearchProvider(client: deps.client);
+    DuckDuckGoSearchProvider(client: deps.client, timeout: deps.timeout);
 
 /// 装配期状态：某个源是否可用及原因。
 class SearchSourceStatus {
@@ -119,7 +119,7 @@ class SearchProviderSet {
   /// 按 order 顺序构造出的 provider。
   final List<SearchProvider> providers;
 
-  /// 与 [providers] 同序的状态列表（含被跳过的源）。
+  /// 与传入的 `order` 同序的状态列表（含被跳过的源）。
   final List<SearchSourceStatus> statuses;
 }
 

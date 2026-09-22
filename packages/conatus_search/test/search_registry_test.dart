@@ -15,6 +15,7 @@ void main() {
 
     expect(set.providers.map((SearchProvider p) => p.name),
         <String>['tavily', 'duckduckgo']);
+    expect((set.providers.first as TavilySearchProvider).apiKey, 't');
     expect(
       set.statuses.map((SearchSourceStatus s) => '${s.name}:${s.available}'),
       <String>['tavily:true', 'exa:false', 'brave:false', 'duckduckgo:true'],
