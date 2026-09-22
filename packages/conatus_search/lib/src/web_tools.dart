@@ -14,6 +14,7 @@ import 'fetch/fetcher.dart';
 import 'fetch/firecrawl_fetcher.dart';
 import 'fetch/http_fetcher.dart';
 import 'search.dart';
+import 'search_registry.dart';
 
 /// 联网搜索工具。
 class WebSearchTool extends Tool {
@@ -44,8 +45,15 @@ class WebSearchTool extends Tool {
   Future<ToolResult> call(ToolContext ctx) async {
     final String query = ctx.str('query');
     final int limit = ctx.integer('limit') ?? defaultLimit;
-    final List<SearchResult> results =
-        await _search.search(query, limit: limit);
+    final List<SearchResult> results;
+    try {
+      results = await _search.search(query, limit: limit);
+    } on SearchException catch (error) {
+      return ToolResult.failure(
+        _unavailableMessage(error),
+        error: ToolError('SEARCH_UNAVAILABLE', error.message),
+      );
+    }
     if (results.isEmpty) {
       return ToolResult.success(
         '未找到与 "$query" 相关的结果',
@@ -66,6 +74,23 @@ class WebSearchTool extends Tool {
         for (final SearchResult result in results) result.toJson(),
       ],
     );
+  }
+
+  /// 明确告知模型「没有联网能力」，并列出没配好的源。
+  String _unavailableMessage(SearchException error) {
+    final StringBuffer buffer = StringBuffer('无法联网：所有搜索源都不可用。\n')
+      ..write(error.message);
+    final List<SearchSourceStatus> skipped = <SearchSourceStatus>[
+      for (final SearchSourceStatus status in _search.statuses)
+        if (!status.available) status,
+    ];
+    if (skipped.isEmpty) return buffer.toString();
+    buffer.write('\n未配置的搜索源：');
+    buffer.write(skipped
+        .map((SearchSourceStatus status) =>
+            '${status.name}（${status.reason}）')
+        .join('；'));
+    return buffer.toString();
   }
 }
 

@@ -19,6 +19,15 @@ class _StubProvider implements SearchProvider {
       results;
 }
 
+class _FailingProvider implements SearchProvider {
+  @override
+  String get name => 'failing';
+
+  @override
+  Future<List<SearchResult>> search(String query, {int limit = 5}) async =>
+      throw const SearchException('boom');
+}
+
 class _StubFetcher implements WebFetcher {
   _StubFetcher(this.page);
 
@@ -69,6 +78,38 @@ void main() {
           await tool.call(_context(<String, Object?>{'query': 'x'}));
 
       expect(result.content, contains('未找到'));
+    });
+
+    test('全部 provider 失败 → SEARCH_UNAVAILABLE 且列出未配置的源', () async {
+      final SearchService service = SearchService(
+        statuses: const <SearchSourceStatus>[
+          SearchSourceStatus(name: 'tavily', available: true),
+          SearchSourceStatus(
+              name: 'exa', available: false, reason: '缺少 EXA_API_KEY'),
+        ],
+      )..register(_FailingProvider());
+      final WebSearchTool tool = WebSearchTool(search: service);
+
+      final ToolResult result =
+          await tool.call(_context(<String, Object?>{'query': 'x'}));
+
+      expect(result.isError, isTrue);
+      expect(result.error!.code, 'SEARCH_UNAVAILABLE');
+      expect(result.content, contains('无法联网：所有搜索源都不可用。'));
+      expect(result.content, contains('boom'));
+      expect(result.content, contains('未配置的搜索源：exa（缺少 EXA_API_KEY）'));
+    });
+
+    test('没有不可用源时不追加未配置段落', () async {
+      final SearchService service = SearchService()
+        ..register(_FailingProvider());
+      final WebSearchTool tool = WebSearchTool(search: service);
+
+      final ToolResult result =
+          await tool.call(_context(<String, Object?>{'query': 'x'}));
+
+      expect(result.content, contains('无法联网'));
+      expect(result.content, isNot(contains('未配置的搜索源')));
     });
   });
 
