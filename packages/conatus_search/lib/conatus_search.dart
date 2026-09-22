@@ -1,3 +1,6 @@
+export 'src/fetch/fetcher.dart'
+    show FetchedFormat, FetchedPage, FetchException, WebFetcher;
+export 'src/fetch/http_fetcher.dart' show HttpFetcher, stripHtml;
 export 'src/search.dart' show SearchContext, SearchService, provideSearch;
 export 'src/search_brave.dart' show BraveSearchProvider, kBraveCredentialKey;
 export 'src/search_duckduckgo.dart'
@@ -18,5 +21,4 @@ export 'src/search_tavily.dart'
     show TavilySearchProvider, kTavilyCredentialKey;
 export 'src/search_types.dart'
     show SearchException, SearchProvider, SearchResult;
-export 'src/web_tools.dart'
-    show FetchUrlTool, WebSearchTool, provideWebTools, stripHtml;
+export 'src/web_tools.dart' show FetchUrlTool, WebSearchTool, provideWebTools;

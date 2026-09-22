@@ -8,6 +8,7 @@ library;
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:http/http.dart' as http;
+import 'fetch/http_fetcher.dart';
 import 'search.dart';
 
 /// 联网搜索工具。
@@ -113,24 +114,6 @@ class FetchUrlTool extends Tool {
       value: <String, Object?>{'url': raw, 'status': response.statusCode},
     );
   }
-}
-
-/// 去除 script/style 与标签，解码常见实体并压缩空白。
-String stripHtml(String html) {
-  final String withoutBlocks = html
-      .replaceAll(
-          RegExp(r'<script[\s\S]*?</script>', caseSensitive: false), ' ')
-      .replaceAll(RegExp(r'<style[\s\S]*?</style>', caseSensitive: false), ' ');
-  return withoutBlocks
-      .replaceAll(RegExp(r'<[^>]+>'), ' ')
-      .replaceAll('&amp;', '&')
-      .replaceAll('&lt;', '<')
-      .replaceAll('&gt;', '>')
-      .replaceAll('&quot;', '"')
-      .replaceAll('&#39;', "'")
-      .replaceAll('&nbsp;', ' ')
-      .replaceAll(RegExp(r'[ \t\r\n]+'), ' ')
-      .trim();
 }
 
 /// 把 web 工具注册到 `ctx.tools`，返回已注册的工具。
