@@ -11,7 +11,9 @@
 - 开发子模块时先 `git submodule update --init` 并执行 `tool/setup_code_filter.sh`：
   该脚本给子模块装一个 git clean/smudge filter，使 `pubspec.yaml` 里的
   `resolution: workspace` 在工作区生效（接入本地 workspace）、在 `git add` 时自动
-  注释掉（独立 clone 仍按 git 依赖解析）
+  注释掉（独立 clone 仍按 git 依赖解析）；同时生成一个本地
+  `pubspec_overrides.yaml` 清空子模块的 `dependency_overrides` —— workspace 禁止
+  override 成员包，而独立 clone 仍需要这些 override 把 conatus 各包统一到 git 源
 
 `conatus_tui` 支持技能斜杠命令，并再导出 `nocterm`：
 

@@ -23,4 +23,14 @@ if grep -q '^# resolution: workspace$' "$code/pubspec.yaml"; then
   rm -f "$code/pubspec.yaml.bak"
 fi
 
-echo "已安装 conatus-workspace filter，$code/pubspec.yaml 处于 workspace 态"
+# workspace 禁止 override 成员包，用一个本地 overrides 文件清空 pubspec.yaml 的
+# dependency_overrides；独立 clone 没有该文件，override 照常生效。
+overrides="$code/pubspec_overrides.yaml"
+if [ ! -f "$overrides" ]; then
+  printf '%s\n' \
+    '# 由 tool/setup_code_filter.sh 生成，勿提交：清空 pubspec.yaml 的' \
+    '# dependency_overrides —— workspace 内禁止 override 成员包。' \
+    'dependency_overrides: {}' > "$overrides"
+fi
+
+echo "已安装 conatus-workspace filter，$code 处于 workspace 态"

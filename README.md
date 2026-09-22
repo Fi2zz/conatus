@@ -23,10 +23,15 @@ git submodule update --init
 tool/setup_code_filter.sh
 ```
 
-filter 让子模块 `pubspec.yaml` 里的 `resolution: workspace` 在工作区保持生效（本仓库
-的 pub workspace 因此把 conatus_code 当成员，依赖落到本地 `packages/*`，改框架对应用
-立即生效），`git add` 时又自动把它注释掉 —— 推送出去的内容仍让独立 clone 按 git 依赖
-解析。
+该脚本做两件事，都是为了让本地走 workspace、而推送出去的内容仍能被独立 clone 使用：
+
+- 给子模块装一个 git clean/smudge filter，让 `pubspec.yaml` 里的
+  `resolution: workspace` 在工作区保持生效（本仓库的 pub workspace 因此把
+  conatus_code 当成员，依赖落到本地 `packages/*`，改框架对应用立即生效），
+  `git add` 时又自动把它注释掉；
+- 生成一个本地 `pubspec_overrides.yaml`（已进 `.gitignore`），清空子模块
+  `pubspec.yaml` 的 `dependency_overrides` —— workspace 内禁止 override 成员包，
+  而独立 clone 仍需要这些 override 把 conatus 各包统一到 git 源。
 
 | 包 | 说明 | 依赖 |
 |----|------|------|
