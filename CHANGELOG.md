@@ -4,6 +4,22 @@
 
 ## [未发布]
 
+`conatus_search` 支持多 provider 搜索路由：
+
+- 新增 Tavily / Brave 搜索源与名字驱动的装配（`buildSearchProviders` /
+  `kDefaultSearchOrder`），凭据统一经 `conatus_credentials`；
+  `provideSearch` 的 `exaApiKey` 参数被 `order` + `credentials` 取代
+- 新增 `WebFetcher` 接缝与 Firecrawl 抓取后端，`fetch_url` 在有
+  `FIRECRAWL_API_KEY` 时返回 markdown
+- `web_search` 全失败时返回 `SEARCH_UNAVAILABLE`，文案明确「无法联网」并列出
+  未配置的源
+- `conatus_code` 的搜索装配改用凭据服务，`ConatusTuiRuntime.create` 不再有
+  `exaApiKey` 参数
+
+`conatus_agent` 的 `instrumentTools` 在 `ToolResult.isError` 时也发 `tool.failed`
+（此前只在执行体抛异常时发，导致 `conatus_alerting` 的 tool-failures 告警对优雅
+返回失败的工具失效）。
+
 `conatus_providers` 并入 `conatus_code`，父仓库不再包含它：
 
 - 实现与测试移入 `packages/conatus_code/lib/src/providers/` 与

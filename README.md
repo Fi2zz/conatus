@@ -529,13 +529,16 @@ await provideMcp(app, <McpServerConfig>[
 
 ### `search` — 搜索能力缝 + web 工具
 
-服务键 `'search'`（`ctx.search`）。多个 `SearchProvider` 顺序回退：默认
-DuckDuckGo（无需 Key），传 `exaApiKey` 时 Exa 优先。`provideWebTools` 把
-`web_search` / `fetch_url` 两个只读工具注册进 `ctx.tools`。
+服务键 `'search'`（`ctx.search`）。多个 `SearchProvider` 按名字顺序回退：内置
+`tavily` / `exa` / `brave` / `duckduckgo`（免 Key），缺凭据的源自动跳过；凭据统一
+经 `conatus_credentials` 解析。`provideWebTools` 把 `web_search` / `fetch_url`
+两个只读工具注册进 `ctx.tools`，`fetch_url` 在有 `FIRECRAWL_API_KEY` 时改走
+Firecrawl（返回 markdown）。
 
 ```dart
-provideSearch(app, exaApiKey: Platform.environment['EXA_API_KEY']);
-provideWebTools(app); // 注册 web_search / fetch_url
+final credentials = provideCredentials(app);
+provideSearch(app, credentials: credentials); // 顺序见 kDefaultSearchOrder
+provideWebTools(app, credentials: credentials);
 ```
 
 ### `asr` — 语音识别能力缝 + `transcribe_audio`
@@ -1461,7 +1464,7 @@ root.provide('x', 1);
 
 | 成员 | 说明 |
 |------|------|
-| `provideSearch(ctx, {search, providers, exaApiKey})` / `ctx.search` | 提供 `'search'` / 快捷访问 |
+| `provideSearch(ctx, {order, credentials, providers, search})` / `ctx.search` | 提供 `'search'` / 快捷访问；按 `order` 装配，缺凭据的源跳过 |
 | `register(SearchProvider) → Disposer` / `providers` / `get(name)` | provider 注册与查找 |
 | `search(query, {limit, provider}) → Future<List<SearchResult>>` | 顺序回退查询 |
 | `DuckDuckGoSearchProvider({client, endpoint})` / `ExaSearchProvider({apiKey, client, endpoint})` | 内置 provider |
