@@ -142,21 +142,34 @@ SearchProviderSet _resolveSearchProviders({
   }
   final Credentials? resolved = credentials ?? ctx.get<Credentials>('credentials');
   if (resolved == null) {
-    return SearchProviderSet(
-      providers: <SearchProvider>[DuckDuckGoSearchProvider(client: client)],
-      statuses: <SearchSourceStatus>[
-        for (final String name in order)
-          SearchSourceStatus(
-            name: name,
-            available: name == 'duckduckgo',
-            reason: name == 'duckduckgo' ? '' : '未提供凭据服务',
-          ),
-      ],
-    );
+    return _resolveKeylessProviders(order, client);
   }
   return buildSearchProviders(
     order: order,
     credentials: resolved,
     client: client,
   );
+}
+
+// REASON: 无凭据回退按 order 装配（只注册免 Key 的 duckduckgo），
+// 抽为 helper 守住 _resolveSearchProviders 的函数体行数约束。
+SearchProviderSet _resolveKeylessProviders(
+  List<String> order,
+  http.Client? client,
+) {
+  final List<SearchProvider> providers = <SearchProvider>[];
+  final List<SearchSourceStatus> statuses = <SearchSourceStatus>[];
+  for (final String name in order) {
+    if (name == 'duckduckgo') {
+      providers.add(DuckDuckGoSearchProvider(client: client));
+      statuses.add(SearchSourceStatus(name: name, available: true));
+    } else {
+      statuses.add(SearchSourceStatus(
+        name: name,
+        available: false,
+        reason: '未提供凭据服务',
+      ));
+    }
+  }
+  return SearchProviderSet(providers: providers, statuses: statuses);
 }

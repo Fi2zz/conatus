@@ -83,6 +83,19 @@ void main() {
       );
     });
 
+    test('无凭据且 order 不含 duckduckgo 时无可用 provider', () {
+      final Context ctx = Context.root();
+      addTearDown(ctx.dispose);
+      final SearchService service =
+          provideSearch(ctx, order: <String>['tavily', 'exa']);
+
+      expect(service.providers, isEmpty);
+      expect(
+        service.statuses.every((SearchSourceStatus s) => !s.available),
+        isTrue,
+      );
+    });
+
     test('显式 credentials 决定可用源与顺序', () {
       final Context ctx = Context.root();
       addTearDown(ctx.dispose);
