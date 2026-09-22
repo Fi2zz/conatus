@@ -7,9 +7,8 @@ export 'src/search.dart' show SearchContext, SearchService, provideSearch;
 export 'src/search_brave.dart' show BraveSearchProvider, kBraveCredentialKey;
 export 'src/search_duckduckgo.dart'
     show DuckDuckGoSearchProvider, parseDuckDuckGoHtml;
-export 'src/search_exa.dart' show ExaSearchProvider;
+export 'src/search_exa.dart' show ExaSearchProvider, kExaCredentialKey;
 export 'src/search_http.dart' show sendWithTimeout;
-export 'src/search_markup.dart' show stripMarkup;
 export 'src/search_registry.dart'
     show
         SearchProviderDeps,
