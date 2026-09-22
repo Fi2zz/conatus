@@ -13,6 +13,7 @@ resolution: workspace
 
 dependencies:
   conatus_core: ^0.16.0
+  conatus_credentials: ^0.16.0
   conatus_foundation: ^0.16.0
   http: ^1.2.0
 
