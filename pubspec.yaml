@@ -8,35 +8,12 @@ repository: https://github.com/Fi2zz/conatus
 issue_tracker: https://github.com/Fi2zz/conatus/issues
 
 environment:
-  sdk: ^3.6.0
+  sdk: ^3.11.0
 
+# glob 只纳入含 pubspec.yaml 的子目录，因此未拉取 conatus_code submodule 的
+# clone 也能正常 `dart pub get`。glob 语法需要语言版本 3.11 起。
 workspace:
-  - packages/conatus_agent
-  - packages/conatus_alerting
-  - packages/conatus_asr
-  - packages/conatus_browser_use
-  - packages/conatus_coding
-  - packages/conatus_compaction
-  - packages/conatus_computer_use
-  - packages/conatus_core
-  - packages/conatus_credentials
-  - packages/conatus_cron
-  - packages/conatus_foundation
-  - packages/conatus_fs_tools
-  - packages/conatus_intent
-  - packages/conatus_llm
-  - packages/conatus_mcp
-  - packages/conatus_observability
-  - packages/conatus_ontology
-  - packages/conatus_providers
-  - packages/conatus_schedule
-  - packages/conatus_search
-  - packages/conatus_skill
-  - packages/conatus_tasks
-  - packages/conatus_team
-  - packages/conatus_tts
-  - packages/conatus_tui
-  - packages/conatus_workflow
+  - packages/*
 
 dependencies:
   conatus_agent: ^0.16.0

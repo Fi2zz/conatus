@@ -4,6 +4,15 @@
 
 ## [未发布]
 
+仓库接入 `conatus_code` 子模块（终端编码智能体，独立仓库），`workspace` 改用
+`packages/*` glob，SDK 下界随之抬到 `^3.11.0`：
+
+- 未拉取子模块时 glob 自动跳过该目录，`dart pub get` 照常工作
+- 开发子模块时先 `git submodule update --init` 并执行 `tool/setup_code_filter.sh`：
+  该脚本给子模块装一个 git clean/smudge filter，使 `pubspec.yaml` 里的
+  `resolution: workspace` 在工作区生效（接入本地 workspace）、在 `git add` 时自动
+  注释掉（独立 clone 仍按 git 依赖解析）
+
 `conatus_tui` 支持技能斜杠命令，并再导出 `nocterm`：
 
 - 每个已发现的技能投影成 `/skill:<技能名> [补充要求]` 命令，进 `/` 菜单过滤与补全；

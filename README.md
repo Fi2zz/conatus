@@ -12,6 +12,22 @@
 仓库另有 7 个**实验性包**（`publish_to: none`，不导出到伞包，API 可能随时变更），
 需显式依赖，见下方「实验性包」小节。
 
+`packages/conatus_code` 是独立的**子模块**（[Fi2zz/conatus_code](https://github.com/Fi2zz/conatus_code)）：
+基于本仓库构建的终端编码智能体，不在下表内、不进伞包。不开发它时无需拉取 ——
+根 `pubspec.yaml` 的 `workspace` 用 glob，没有 `pubspec.yaml` 的目录会被跳过。
+
+要开发它，先拉取子模块并安装 workspace filter：
+
+```bash
+git submodule update --init
+tool/setup_code_filter.sh
+```
+
+filter 让子模块 `pubspec.yaml` 里的 `resolution: workspace` 在工作区保持生效（本仓库
+的 pub workspace 因此把 conatus_code 当成员，依赖落到本地 `packages/*`，改框架对应用
+立即生效），`git add` 时又自动把它注释掉 —— 推送出去的内容仍让独立 clone 按 git 依赖
+解析。
+
 | 包 | 说明 | 依赖 |
 |----|------|------|
 | [`conatus`](.) | 伞包（umbrella）：再导出以下全部，保持 `package:conatus/conatus.dart` 兼容 | 全部 |

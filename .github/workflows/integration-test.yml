@@ -14,6 +14,10 @@ jobs:
       - name: Run unit tests
         run: |
           dart test
-          for d in packages/*/; do (cd "$d" && dart test); done
+          # conatus_code 是 submodule，CI 不拉取；没有 pubspec.yaml 的目录跳过。
+          for d in packages/*/; do
+            [ -f "$d/pubspec.yaml" ] || continue
+            (cd "$d" && dart test)
+          done
       - name: Run integration tests
         run: dart test test/integration/ --reporter=expanded
