@@ -1,4 +1,5 @@
 import 'package:conatus_core/conatus_core.dart';
+import 'package:conatus_credentials/conatus_credentials.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_search/conatus_search.dart';
 import 'package:http/http.dart' as http;
@@ -16,6 +17,21 @@ class _StubProvider implements SearchProvider {
   @override
   Future<List<SearchResult>> search(String query, {int limit = 5}) async =>
       results;
+}
+
+class _StubFetcher implements WebFetcher {
+  _StubFetcher(this.page);
+
+  final FetchedPage page;
+
+  @override
+  Future<FetchedPage> fetch(String url, {int maxChars = 20000}) async => page;
+}
+
+class _FailingFetcher implements WebFetcher {
+  @override
+  Future<FetchedPage> fetch(String url, {int maxChars = 20000}) async =>
+      throw const FetchException('boom');
 }
 
 ToolContext _context(Map<String, Object?> args) =>
@@ -93,6 +109,36 @@ void main() {
 
       expect(result.error!.code, 'INVALID_URL');
     });
+
+    test('注入 WebFetcher 时走注入实现', () async {
+      final FetchUrlTool tool = FetchUrlTool(
+        fetcher: _StubFetcher(
+          const FetchedPage(
+            url: 'https://e.com',
+            content: '# 注入的正文',
+            format: FetchedFormat.markdown,
+          ),
+        ),
+      );
+
+      final ToolResult result =
+          await tool.call(_context(<String, Object?>{'url': 'https://e.com'}));
+
+      expect(result.content, '# 注入的正文');
+      expect((result.value! as Map<String, Object?>)['format'], 'markdown');
+    });
+
+    test('fetcher 抛 FetchException → FETCH_FAILED 且文案带“无法联网”', () async {
+      final FetchUrlTool tool = FetchUrlTool(fetcher: _FailingFetcher());
+
+      final ToolResult result =
+          await tool.call(_context(<String, Object?>{'url': 'https://e.com'}));
+
+      expect(result.isError, isTrue);
+      expect(result.error!.code, 'FETCH_FAILED');
+      expect(result.content, contains('无法联网'));
+      expect(result.content, contains('boom'));
+    });
   });
 
   test('stripHtml 去块、去标签、解码实体', () {
@@ -111,6 +157,36 @@ void main() {
       expect(tools.names, containsAll(<String>['web_search', 'fetch_url']));
       ctx.dispose();
       expect(tools.names, isEmpty);
+    });
+
+    test('有 FIRECRAWL_API_KEY 时 fetch_url 走 Firecrawl', () {
+      final Context ctx = Context.root();
+      addTearDown(ctx.dispose);
+      provideSearch(ctx);
+      provideTools(ctx);
+
+      final List<Tool> registered = provideWebTools(
+        ctx,
+        credentials: InMemoryCredentials(
+          initial: <String, String>{'FIRECRAWL_API_KEY': 'fc'},
+        ),
+      );
+
+      final FetchUrlTool fetch = registered.whereType<FetchUrlTool>().single;
+      expect(fetch.fetcher, isA<FirecrawlFetcher>());
+    });
+
+    test('无 Firecrawl Key 时 fetch_url 走 HttpFetcher', () {
+      final Context ctx = Context.root();
+      addTearDown(ctx.dispose);
+      provideSearch(ctx);
+      provideTools(ctx);
+
+      final List<Tool> registered =
+          provideWebTools(ctx, credentials: InMemoryCredentials());
+
+      final FetchUrlTool fetch = registered.whereType<FetchUrlTool>().single;
+      expect(fetch.fetcher, isA<HttpFetcher>());
     });
   });
 }

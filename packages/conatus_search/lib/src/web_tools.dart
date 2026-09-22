@@ -1,13 +1,17 @@
 /// web 工具：把搜索与抓取能力暴露给模型。
 ///
 /// [WebSearchTool] 走 `ctx.search`（provider 回退由 SearchService 负责）；
-/// [FetchUrlTool] 直接 GET 一个 URL 并返回纯文本。二者都是 [ToolRisk.low] 的
-/// 只读工具，用 [provideWebTools] 一次性注册到 `ctx.tools`。
+/// [FetchUrlTool] 经 [WebFetcher] 抓取正文（缺省裸 http，配了 Firecrawl Key 时
+/// 走 Firecrawl）。二者都是 [ToolRisk.low] 的只读工具，用 [provideWebTools]
+/// 一次性注册到 `ctx.tools`。
 library;
 
 import 'package:conatus_core/conatus_core.dart';
+import 'package:conatus_credentials/conatus_credentials.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:http/http.dart' as http;
+import 'fetch/fetcher.dart';
+import 'fetch/firecrawl_fetcher.dart';
 import 'fetch/http_fetcher.dart';
 import 'search.dart';
 
@@ -65,21 +69,27 @@ class WebSearchTool extends Tool {
   }
 }
 
-/// 抓取网页并返回纯文本。
+/// 抓取网页并返回正文。
 class FetchUrlTool extends Tool {
-  FetchUrlTool({http.Client? client, this.maxChars = 20000})
-      : _client = client ?? http.Client();
+  FetchUrlTool({
+    WebFetcher? fetcher,
+    http.Client? client,
+    this.maxChars = 20000,
+  }) : _fetcher = fetcher ?? HttpFetcher(client: client);
 
-  final http.Client _client;
+  final WebFetcher _fetcher;
 
-  /// 返回文本的最大字符数（超出截断）。
+  /// 返回正文的最大字符数（超出截断）。
   final int maxChars;
+
+  /// 当前使用的抓取后端（供测试与诊断）。
+  WebFetcher get fetcher => _fetcher;
 
   @override
   String get name => 'fetch_url';
 
   @override
-  String get description => '抓取一个网页并返回其纯文本内容。';
+  String get description => '抓取一个网页并返回其正文内容。';
 
   @override
   ToolRisk get riskLevel => ToolRisk.low;
@@ -99,38 +109,54 @@ class FetchUrlTool extends Tool {
         error: ToolError('INVALID_URL', 'unsupported url "$raw"'),
       );
     }
-    final http.Response response = await _client.get(uri);
-    if (response.statusCode != 200) {
+    final FetchedPage page;
+    try {
+      page = await _fetcher.fetch(raw, maxChars: maxChars);
+    } on FetchException catch (error) {
       return ToolResult.failure(
-        '抓取失败：HTTP ${response.statusCode}',
-        error: ToolError('FETCH_FAILED', 'HTTP ${response.statusCode}'),
+        '无法联网：抓取 $raw 失败。${error.message}',
+        error: ToolError('FETCH_FAILED', error.message),
       );
     }
-    final String text = stripHtml(response.body);
-    final String content =
-        text.length > maxChars ? text.substring(0, maxChars) : text;
     return ToolResult.success(
-      content,
-      value: <String, Object?>{'url': raw, 'status': response.statusCode},
+      page.content,
+      value: <String, Object?>{'url': page.url, 'format': page.format.name},
     );
   }
 }
 
 /// 把 web 工具注册到 `ctx.tools`，返回已注册的工具。
 ///
-/// [search] 缺省取上下文的 `'search'` 服务。
+/// [search] 缺省取上下文的 `'search'` 服务；[fetcher] 显式给出时优先，
+/// 否则有 `FIRECRAWL_API_KEY` 时用 [FirecrawlFetcher]，都没有则 [HttpFetcher]。
 List<Tool> provideWebTools(
   Context ctx, {
   SearchService? search,
+  WebFetcher? fetcher,
+  Credentials? credentials,
   http.Client? client,
 }) {
   final SearchService service = search ?? ctx.search;
   final List<Tool> registered = <Tool>[
     WebSearchTool(search: service),
-    FetchUrlTool(client: client),
+    FetchUrlTool(
+      fetcher: fetcher ?? _resolveFetcher(ctx, credentials, client),
+    ),
   ];
   for (final Tool tool in registered) {
     ctx.effect(() => ctx.tools.register(tool));
   }
   return registered;
+}
+
+WebFetcher _resolveFetcher(
+  Context ctx,
+  Credentials? credentials,
+  http.Client? client,
+) {
+  final Credentials? resolved =
+      credentials ?? ctx.get<Credentials>('credentials');
+  final Credential? key = resolved?.get(kFirecrawlCredentialKey);
+  if (key == null) return HttpFetcher(client: client);
+  return FirecrawlFetcher(apiKey: key.value, client: client);
 }
