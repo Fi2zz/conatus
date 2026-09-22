@@ -57,7 +57,25 @@ Future<void> main() async {
       ));
   provideToolResultEviction(app);
 
-  provideLlm(app, llm: defaultFallbackLlm(credentials: EnvCredentials()));
+  // 显式装配「豆包 → DeepSeek」回退链：框架不提供缺省回退，用哪个提供商由调用方
+  // 决定（Key 经凭据服务解析，缺省读环境变量）。
+  final Credentials credentials = EnvCredentials();
+  provideLlm(app, llm: FallbackLlm(<LlmProvider>[
+    OpenAiCompatibleProvider(
+      name: 'doubao',
+      baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
+      model: 'doubao-seed-1-8-251228',
+      credentialKey: 'ARK_API_KEY',
+      credentials: credentials,
+    ),
+    OpenAiCompatibleProvider(
+      name: 'deepseek',
+      baseUrl: 'https://api.deepseek.com',
+      model: 'deepseek-flash',
+      credentialKey: 'DEEPSEEK_API_KEY',
+      credentials: credentials,
+    ),
+  ]));
 
   // 工具失败时自省并重试（默认 onError）。
   provideReflection(app);

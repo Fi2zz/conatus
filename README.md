@@ -391,8 +391,7 @@ credentials.validate(<String>['ARK_API_KEY']);        // 缺失抛 CredentialsEx
 - OpenAI 兼容 provider 可传 `credentials` 与 `credentialKey`（如 `ARK_API_KEY`），
   解析顺序是「显式 `apiKey` → 凭据服务」，**不直接读环境变量**，并订阅 `changes`
   做运行时轮换——Header 每次请求重算，不重建 HTTP client；具体提供商
-  （`DoubaoProvider` / `DeepSeekProvider`）与默认回退链 `defaultFallbackLlm`
-  在 `conatus_providers`；
+  （`DoubaoProvider` / `DeepSeekProvider`）在 `conatus_code` 的 `lib/providers.dart`；
 - 不传 `credentials` 时行为与从前完全一致。
 
 ### `timer` — 定时器即可逆效应
@@ -1377,7 +1376,7 @@ root.provide('x', 1);
 | `chatStream(messages, {options, tools}) → Stream<LlmStreamEvent>` | 流式补全 |
 | `close()` | 释放底层 HTTP 客户端 |
 | `OpenAiCompatibleProvider({name, baseUrl, model, ...})` | 任意 OpenAI 兼容端点，`apiStyle` 默认 `chat` |
-| `FallbackLlm(providers)` | 顺序回退链；`defaultFallbackLlm()`（豆包 → DeepSeek）在 `conatus_providers` |
+| `FallbackLlm(providers)` | 顺序回退链；框架不提供缺省回退，由调用方装配（`conatus_code` 的 `lib/providers.dart` 有豆包 / DeepSeek 便捷类） |
 | `LlmTextDelta` / `LlmReasoningDelta` / `LlmStreamDone` | 流式事件：正文增量 / 思考增量 / 终态（用量、结束原因、累积的工具调用） |
 
 ### `Credentials`（`credentials`）

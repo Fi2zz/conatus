@@ -4,6 +4,19 @@
 
 ## [未发布]
 
+`conatus_providers` 并入 `conatus_code`，父仓库不再包含它：
+
+- 实现与测试移入 `packages/conatus_code/lib/src/providers/` 与
+  `packages/conatus_code/test/providers/`，公开入口为 `lib/providers.dart`；根
+  `pubspec.yaml` 的 `dependencies` 不再列出该包，`lib/conatus.dart` 不再再导出它
+  —— 伞包公开 API 因此收窄（`ProviderProfile` / `ProviderRegistry` /
+  `ProviderStore` / `provideProviders` / `kDefaultProviders` / `DoubaoProvider` /
+  `DeepSeekProvider` 等改由 `package:conatus_code/providers.dart` 提供）
+- 去掉缺省回退链 `defaultFallbackLlm`：`example/main.dart` 与
+  `example/voice_plan_mode.dart` 改为显式构造 `FallbackLlm`（豆包 → DeepSeek
+  两个 `OpenAiCompatibleProvider`），不再由框架兜底
+- `conatus_llm` 的注释与 README 同步改指 `conatus_code`
+
 `conatus_tui` / `conatus_fs_tools` / `conatus_coding` 三个包并入 `conatus_code`，
 父仓库不再包含它们：
 

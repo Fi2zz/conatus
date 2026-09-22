@@ -1,7 +1,7 @@
 /// 测试助手：以通用 `OpenAiCompatibleProvider` 复刻内置提供商的默认配置。
 ///
-/// `DoubaoProvider` / `DeepSeekProvider` 已迁往 `conatus_providers`（不能反向
-/// 依赖）；wire 层测试用这两个 helper 保持原默认端点 / 模型 / 凭据键。
+/// `DoubaoProvider` / `DeepSeekProvider` 在 `conatus_code`（不能反向依赖）；
+/// wire 层测试用这两个 helper 保持原默认端点 / 模型 / 凭据键。
 library;
 
 import 'package:conatus_credentials/conatus_credentials.dart';

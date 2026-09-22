@@ -34,7 +34,6 @@ export 'package:conatus_cron/conatus_cron.dart';
 export 'package:conatus_foundation/conatus_foundation.dart';
 export 'package:conatus_llm/conatus_llm.dart';
 export 'package:conatus_mcp/conatus_mcp.dart';
-export 'package:conatus_providers/conatus_providers.dart';
 export 'package:conatus_schedule/conatus_schedule.dart';
 export 'package:conatus_search/conatus_search.dart';
 export 'package:conatus_skill/conatus_skill.dart';

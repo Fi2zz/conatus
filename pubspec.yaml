@@ -25,7 +25,6 @@ dependencies:
   conatus_foundation: ^0.16.0
   conatus_llm: ^0.16.0
   conatus_mcp: ^0.16.0
-  conatus_providers: ^0.16.0
   conatus_schedule: ^0.16.0
   conatus_search: ^0.16.0
   conatus_skill: ^0.16.0

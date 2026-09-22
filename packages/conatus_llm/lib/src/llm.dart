@@ -319,8 +319,8 @@ class FallbackLlm implements LlmProvider {
 /// });
 /// ```
 Disposer provideLlm(Context ctx, {required FallbackLlm llm}) {
-  // 具体提供商（豆包 / DeepSeek 与默认回退链）在 conatus_providers：
-  // `defaultFallbackLlm(credentials: ...)`。
+  // 具体提供商（豆包 / DeepSeek）与回退链的装配在调用方：conatus_code 的
+  // `lib/providers.dart` 提供 `DoubaoProvider` / `DeepSeekProvider`。
   final FallbackLlm instance = llm;
   final Disposer disposer = ctx.provide('llm', instance);
   ctx.onDispose(instance.close);

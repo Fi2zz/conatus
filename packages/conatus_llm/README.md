@@ -5,8 +5,8 @@ conatus 的大模型接入：
 - `LlmProvider` 契约（非流式 `chat` / 流式 `chatStream`，均支持原生 function calling）
 - `FallbackLlm` 顺序回退链（任一提供商失败即尝试下一个）
 - `OpenAiCompatibleProvider`：任意 OpenAI 兼容端点的通用实现（`LlmApiStyle.chat`
-  与 `LlmApiStyle.responses`），本包**不含具体提供商**——豆包 / DeepSeek 与默认
-  回退链在 `conatus_providers`（`defaultFallbackLlm`）
+  与 `LlmApiStyle.responses`），本包**不含具体提供商**——豆包 / DeepSeek 的便捷类
+  在 `conatus_code`（`lib/providers.dart`）
 - Key 的解析：显式 `apiKey` → 注入的 `credentials`（`conatus_credentials`），
   **不直接读环境变量**；两者都没有时调用抛 `LlmException('缺少 API Key')`，
   并订阅 `changes` 做运行时轮换
