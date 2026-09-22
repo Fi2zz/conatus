@@ -1,12 +1,16 @@
 /// Exa 搜索 provider（需 API Key）：调用 Exa 的 REST 搜索接口。
 ///
-/// 仅在有 Key 时注册；[provideSearch] 会在 Key 非空时把它排在 DuckDuckGo 之前，
-/// 从而“有 Key 时优先”。
+/// 仅在有 Key 时装配；`buildSearchProviders` 按 [kDefaultSearchOrder] 决定它排
+/// 在哪个位置。
 library;
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'search_http.dart';
 import 'search_types.dart';
+
+/// Exa API Key 的凭据键名。
+const String kExaCredentialKey = 'EXA_API_KEY';
 
 /// Exa provider。
 class ExaSearchProvider implements SearchProvider {
@@ -14,11 +18,15 @@ class ExaSearchProvider implements SearchProvider {
     required this.apiKey,
     http.Client? client,
     Uri? endpoint,
+    this.timeout = const Duration(seconds: 15),
   })  : _client = client ?? http.Client(),
         _endpoint = endpoint ?? Uri.parse('https://api.exa.ai/search');
 
   /// Exa API Key。
   final String apiKey;
+
+  /// 单次查询超时。
+  final Duration timeout;
 
   final http.Client _client;
   final Uri _endpoint;
@@ -28,19 +36,23 @@ class ExaSearchProvider implements SearchProvider {
 
   @override
   Future<List<SearchResult>> search(String query, {int limit = 5}) async {
-    final http.Response response = await _client.post(
-      _endpoint,
-      headers: <String, String>{
-        'content-type': 'application/json',
-        'x-api-key': apiKey,
-      },
-      body: jsonEncode(<String, Object?>{
-        'query': query,
-        'numResults': limit,
-        'contents': <String, Object?>{
-          'text': <String, Object?>{'maxCharacters': 500},
+    final http.Response response = await sendWithTimeout(
+      _client.post(
+        _endpoint,
+        headers: <String, String>{
+          'content-type': 'application/json',
+          'x-api-key': apiKey,
         },
-      }),
+        body: jsonEncode(<String, Object?>{
+          'query': query,
+          'numResults': limit,
+          'contents': <String, Object?>{
+            'text': <String, Object?>{'maxCharacters': 500},
+          },
+        }),
+      ),
+      timeout: timeout,
+      provider: name,
     );
     if (response.statusCode != 200) {
       throw SearchException('exa HTTP ${response.statusCode}');
