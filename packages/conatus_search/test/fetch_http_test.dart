@@ -94,6 +94,22 @@ void main() {
     );
   });
 
+  test('TLS 握手失败抛 FetchException', () async {
+    final HttpFetcher fetcher = HttpFetcher(
+      client: MockClient((http.Request request) async =>
+          throw const HandshakeException('certificate verify failed')),
+    );
+
+    await expectLater(
+      fetcher.fetch('https://e.com'),
+      throwsA(isA<FetchException>().having(
+        (FetchException e) => e.message,
+        'message',
+        contains('certificate verify failed'),
+      )),
+    );
+  });
+
   test('非法 URL 抛 FetchException', () async {
     final HttpFetcher fetcher = HttpFetcher(
       client:
@@ -104,6 +120,21 @@ void main() {
       fetcher.fetch('not a url'),
       throwsA(isA<FetchException>()),
     );
+  });
+
+  test('缺主机名的 URL 抛 FetchException', () async {
+    final HttpFetcher fetcher = HttpFetcher();
+
+    for (final String url in <String>['http://', 'https:///x']) {
+      await expectLater(
+        fetcher.fetch(url),
+        throwsA(isA<FetchException>().having(
+          (FetchException e) => e.message,
+          'message',
+          contains('主机名'),
+        )),
+      );
+    }
   });
 
   test('stripHtml 去块、去标签、解码实体', () {

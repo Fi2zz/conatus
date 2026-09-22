@@ -8,8 +8,10 @@ import 'fetcher.dart';
 
 /// 用 `http` 包直连的抓取器。
 ///
-/// 非法链接、超时、连接失败与非 200 响应都归一成 [FetchException]，调用方只需
-/// 捕获这一种异常。
+/// 覆盖到的失败形态——缺主机名或非 http(s) 的链接、请求超时、非 200 响应、
+/// [http.ClientException]（DNS 与连接失败经 `IOClient` 归入此类）以及 `dart:io` 的
+/// [IOException] 系（含 TLS 握手失败）——都归一成 [FetchException]，调用方只需捕获
+/// 这一种异常。
 class HttpFetcher implements WebFetcher {
   HttpFetcher({
     http.Client? client,
@@ -24,8 +26,10 @@ class HttpFetcher implements WebFetcher {
   @override
   Future<FetchedPage> fetch(String url, {int maxChars = 20000}) async {
     final Uri? uri = Uri.tryParse(url);
-    if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
-      throw FetchException('仅支持 http/https 链接："$url"');
+    if (uri == null ||
+        (uri.scheme != 'http' && uri.scheme != 'https') ||
+        uri.host.isEmpty) {
+      throw FetchException('仅支持带主机名的 http/https 链接："$url"');
     }
     final http.Response response;
     try {
@@ -34,8 +38,8 @@ class HttpFetcher implements WebFetcher {
       throw FetchException('请求超时（${timeout.inSeconds}s）');
     } on http.ClientException catch (error) {
       throw FetchException('抓取失败：${error.message}');
-    } on SocketException catch (error) {
-      throw FetchException('抓取失败：${error.message}');
+    } on IOException catch (error) {
+      throw FetchException('抓取失败：$error');
     }
     if (response.statusCode != 200) {
       throw FetchException('HTTP ${response.statusCode}');
