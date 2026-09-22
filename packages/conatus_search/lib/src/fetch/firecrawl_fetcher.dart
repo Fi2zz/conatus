@@ -14,7 +14,8 @@ const String kFirecrawlCredentialKey = 'FIRECRAWL_API_KEY';
 ///
 /// 与 `HttpFetcher` 同一套失败语义——缺主机名或非 http(s) 的链接、请求超时、非 200
 /// 响应、[http.ClientException]（DNS 与连接失败）以及 `dart:io` 的 [IOException] 系
-/// （含 TLS 握手失败）——都归一成 [FetchException]，调用方只需捕获这一种异常。
+/// （含 TLS 握手失败）——都归一成 [FetchException]；200 但正文不是 JSON、或字段类型
+/// 不符（如 `markdown` 不是字符串）同样归一，调用方只需捕获这一种异常。
 class FirecrawlFetcher implements WebFetcher {
   FirecrawlFetcher({
     required this.apiKey,
@@ -78,10 +79,7 @@ class FirecrawlFetcher implements WebFetcher {
   }
 
   FetchedPage _parsePage(String url, String body, int maxChars) {
-    final Object? decoded = jsonDecode(body);
-    if (decoded is! Map<String, Object?>) {
-      throw const FetchException('Firecrawl 返回了非对象 JSON');
-    }
+    final Map<String, Object?> decoded = _decodePage(body);
     if (decoded['success'] == false) {
       throw FetchException('Firecrawl 抓取失败：${decoded['error'] ?? '未知原因'}');
     }
@@ -89,7 +87,7 @@ class FirecrawlFetcher implements WebFetcher {
     if (data is! Map<String, Object?>) {
       throw const FetchException('Firecrawl 响应缺少 data');
     }
-    final String markdown = data['markdown'] as String? ?? '';
+    final String markdown = _readMarkdown(data);
     return FetchedPage(
       url: url,
       content: markdown.length > maxChars
@@ -97,5 +95,32 @@ class FirecrawlFetcher implements WebFetcher {
           : markdown,
       format: FetchedFormat.markdown,
     );
+  }
+
+  Map<String, Object?> _decodePage(String body) {
+    final Object? decoded = _decodeJson(body);
+    if (decoded is! Map<String, Object?>) {
+      throw const FetchException('Firecrawl 返回了非对象 JSON');
+    }
+    return decoded;
+  }
+
+  Object? _decodeJson(String body) {
+    try {
+      return jsonDecode(body);
+    } on FormatException {
+      throw const FetchException('Firecrawl 返回了非 JSON 响应');
+    }
+  }
+
+  String _readMarkdown(Map<String, Object?> data) {
+    final Object? raw = data['markdown'];
+    if (raw == null) {
+      return '';
+    }
+    if (raw is! String) {
+      throw const FetchException('Firecrawl 返回了非字符串的 markdown');
+    }
+    return raw;
   }
 }

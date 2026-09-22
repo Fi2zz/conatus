@@ -212,6 +212,72 @@ void main() {
     );
   });
 
+  test('非 JSON 的 200 响应抛 FetchException', () async {
+    final FirecrawlFetcher fetcher = FirecrawlFetcher(
+      apiKey: 'k',
+      client: MockClient((http.Request request) async =>
+          http.Response('<html>not json</html>', 200)),
+    );
+
+    await expectLater(
+      fetcher.fetch('https://e.com'),
+      throwsA(isA<FetchException>().having(
+        (FetchException e) => e.message,
+        'message',
+        contains('非 JSON'),
+      )),
+    );
+  });
+
+  test('非对象 JSON 抛 FetchException', () async {
+    final FirecrawlFetcher fetcher = FirecrawlFetcher(
+      apiKey: 'k',
+      client: MockClient(
+          (http.Request request) async => http.Response('[1, 2]', 200)),
+    );
+
+    await expectLater(
+      fetcher.fetch('https://e.com'),
+      throwsA(isA<FetchException>().having(
+        (FetchException e) => e.message,
+        'message',
+        contains('非对象'),
+      )),
+    );
+  });
+
+  test('markdown 不是字符串时抛 FetchException', () async {
+    final FirecrawlFetcher fetcher = FirecrawlFetcher(
+      apiKey: 'k',
+      client: MockClient((http.Request request) async => http.Response(
+            '{"success": true, "data": {"markdown": 123}}',
+            200,
+          )),
+    );
+
+    await expectLater(
+      fetcher.fetch('https://e.com'),
+      throwsA(isA<FetchException>().having(
+        (FetchException e) => e.message,
+        'message',
+        contains('markdown'),
+      )),
+    );
+  });
+
+  test('markdown 缺失时返回空正文', () async {
+    final FirecrawlFetcher fetcher = FirecrawlFetcher(
+      apiKey: 'k',
+      client: MockClient((http.Request request) async =>
+          http.Response('{"success": true, "data": {}}', 200)),
+    );
+
+    final FetchedPage page = await fetcher.fetch('https://e.com');
+
+    expect(page.content, '');
+    expect(page.format, FetchedFormat.markdown);
+  });
+
   test('Firecrawl 凭据键名固定', () {
     expect(kFirecrawlCredentialKey, 'FIRECRAWL_API_KEY');
   });
