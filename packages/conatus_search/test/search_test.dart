@@ -1,4 +1,5 @@
 import 'package:conatus_core/conatus_core.dart';
+import 'package:conatus_credentials/conatus_credentials.dart';
 import 'package:conatus_search/conatus_search.dart';
 import 'package:test/test.dart';
 
@@ -68,7 +69,7 @@ void main() {
   });
 
   group('provideSearch / ctx.search', () {
-    test('默认只有 DuckDuckGo', () {
+    test('无凭据服务时只装配免 Key 的 DuckDuckGo', () {
       final Context ctx = Context.root();
       addTearDown(ctx.dispose);
       final SearchService service = provideSearch(ctx);
@@ -76,23 +77,66 @@ void main() {
       expect(service.providers.map((SearchProvider p) => p.name),
           <String>['duckduckgo']);
       expect(identical(ctx.search, service), isTrue);
+      expect(
+        service.statuses.firstWhere((SearchSourceStatus s) => s.name == 'exa').reason,
+        '未提供凭据服务',
+      );
     });
 
-    test('有 Exa Key 时 Exa 优先', () {
+    test('显式 credentials 决定可用源与顺序', () {
       final Context ctx = Context.root();
       addTearDown(ctx.dispose);
-      final SearchService service = provideSearch(ctx, exaApiKey: 'k');
+      final SearchService service = provideSearch(
+        ctx,
+        credentials: InMemoryCredentials(
+          initial: <String, String>{'EXA_API_KEY': 'e'},
+        ),
+      );
 
       expect(service.providers.map((SearchProvider p) => p.name),
           <String>['exa', 'duckduckgo']);
+      expect(
+        service.statuses.firstWhere((SearchSourceStatus s) => s.name == 'tavily').reason,
+        '缺少 TAVILY_API_KEY',
+      );
     });
 
-    test('显式 providers 按序注册，随上下文释放撤销', () {
+    test('缺省 credentials 取上下文已提供的凭据服务', () {
       final Context ctx = Context.root();
-      final SearchService service =
-          provideSearch(ctx, providers: <SearchProvider>[_FakeProvider('x')]);
+      addTearDown(ctx.dispose);
+      provideCredentials(
+        ctx,
+        credentials:
+            InMemoryCredentials(initial: <String, String>{'BRAVE_API_KEY': 'b'}),
+      );
+
+      final SearchService service = provideSearch(ctx);
+
+      expect(service.providers.map((SearchProvider p) => p.name),
+          <String>['brave', 'duckduckgo']);
+    });
+
+    test('order 覆盖默认顺序', () {
+      final Context ctx = Context.root();
+      addTearDown(ctx.dispose);
+      final SearchService service = provideSearch(
+        ctx,
+        order: <String>['duckduckgo'],
+        credentials:
+            InMemoryCredentials(initial: <String, String>{'EXA_API_KEY': 'e'}),
+      );
+
+      expect(service.providers.single.name, 'duckduckgo');
+    });
+
+    test('显式 providers 按序注册，忽略 order，statuses 为空', () {
+      final Context ctx = Context.root();
+      final SearchService service = provideSearch(ctx,
+          providers: <SearchProvider>[_FakeProvider('x')],
+          credentials: InMemoryCredentials());
 
       expect(service.providers.single.name, 'x');
+      expect(service.statuses, isEmpty);
       ctx.dispose();
       expect(service.providers, isEmpty);
     });
