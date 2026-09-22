@@ -129,6 +129,8 @@ class FetchUrlTool extends Tool {
 ///
 /// [search] 缺省取上下文的 `'search'` 服务；[fetcher] 显式给出时优先，
 /// 否则有 `FIRECRAWL_API_KEY` 时用 [FirecrawlFetcher]，都没有则 [HttpFetcher]。
+// REASON: 装配入口的参数聚合是既定形态（调用方是进程级 main / 测试），
+// 逐个拆开反而增加调用方负担。
 List<Tool> provideWebTools(
   Context ctx, {
   SearchService? search,
