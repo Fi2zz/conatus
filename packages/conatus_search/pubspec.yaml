@@ -1,7 +1,7 @@
 name: conatus_search
 description: >-
-  conatus 的搜索能力缝：可插拔 SearchProvider（DuckDuckGo / Exa）与
-  web_search / fetch_url 联网工具。
+  conatus 的搜索能力缝：可插拔 SearchProvider（Tavily / Exa / Brave /
+  DuckDuckGo）与 web_search / fetch_url 联网工具。
 version: 0.16.0
 repository: https://github.com/Fi2zz/conatus
 issue_tracker: https://github.com/Fi2zz/conatus/issues

@@ -42,7 +42,7 @@ tool/setup_code_filter.sh
 | [`conatus_foundation`](packages/conatus_foundation) | 基础设施插件：timer / logger / loader / tools / shell / fs / session / session-log / system-prompt / memory / database / ask-user | `conatus_core` |
 | [`conatus_credentials`](packages/conatus_credentials) | 凭据能力缝：环境变量 / 文件 / 内存 / Vault KV v2 / AWS Secrets Manager | `conatus_core`、`http` |
 | [`conatus_llm`](packages/conatus_llm) | 大模型接入（豆包 / DeepSeek，chat 与 responses 两种形态） | `conatus_core`、`conatus_credentials`、`http` |
-| [`conatus_search`](packages/conatus_search) | 搜索能力缝 + `web_search` / `fetch_url` | `conatus_core`、`conatus_foundation`、`http` |
+| [`conatus_search`](packages/conatus_search) | 搜索能力缝 + `web_search` / `fetch_url` | `conatus_core`、`conatus_credentials`、`conatus_foundation`、`http` |
 | [`conatus_skill`](packages/conatus_skill) | 技能加载：发现 `SKILL.md` 指令集、目录注入 system prompt、`skill` 工具按需取正文 | `conatus_core`、`conatus_foundation`、`yaml` |
 | [`conatus_asr`](packages/conatus_asr) | ASR 能力缝（豆包/火山流式识别）+ `transcribe_audio` + 可替换音频源 | `conatus_core`、`conatus_foundation` |
 | [`conatus_tts`](packages/conatus_tts) | TTS 能力缝（豆包/火山语音合成）+ 可替换音频输出接口 | `conatus_core`、`http` |
@@ -79,7 +79,7 @@ conatus ─▶ conatus_agent ─▶ conatus_llm ─▶ conatus_core
 conatus_mcp ────▶ conatus_foundation、conatus_credentials
 conatus_schedule ▶ conatus_foundation、timezone
 conatus_cron ────▶ conatus_foundation
-conatus_search ─▶ conatus_foundation
+conatus_search ─▶ conatus_credentials、conatus_foundation
 conatus_skill ──▶ conatus_foundation
 conatus_asr ────▶ conatus_foundation
 conatus_tts ────▶ conatus_core
@@ -1467,8 +1467,8 @@ root.provide('x', 1);
 | `provideSearch(ctx, {order, credentials, providers, search})` / `ctx.search` | 提供 `'search'` / 快捷访问；按 `order` 装配，缺凭据的源跳过 |
 | `register(SearchProvider) → Disposer` / `providers` / `get(name)` | provider 注册与查找 |
 | `search(query, {limit, provider}) → Future<List<SearchResult>>` | 顺序回退查询 |
-| `DuckDuckGoSearchProvider({client, endpoint})` / `ExaSearchProvider({apiKey, client, endpoint})` | 内置 provider |
-| `WebSearchTool({search, defaultLimit})` / `FetchUrlTool({client, maxChars})` / `provideWebTools(ctx, {...})` | web_search / fetch_url 工具 |
+| `TavilySearchProvider({apiKey, client, endpoint})` / `BraveSearchProvider({apiKey, client, endpoint})` / `DuckDuckGoSearchProvider({client, endpoint})` / `ExaSearchProvider({apiKey, client, endpoint})` / `SearchService({statuses})` | 内置 provider（名字见 `kSearchProviderSpecs`）/ 装配状态（哪些源可用、哪些被跳过及原因） |
+| `WebSearchTool({search, defaultLimit})` / `FetchUrlTool({fetcher, client, maxChars})` / `WebFetcher`（`HttpFetcher` / `FirecrawlFetcher`） / `provideWebTools(ctx, {search, fetcher, credentials, client})` | web_search / fetch_url 工具与抓取后端（配 `FIRECRAWL_API_KEY` 时走 Firecrawl，返回 markdown） |
 
 ### `AsrService`（`asr`）
 
