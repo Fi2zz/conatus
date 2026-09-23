@@ -141,6 +141,10 @@ bash tool/setup_code_filter.sh          # 子模块 workspace filter（开发 co
 
 ## 7. 开发约定
 
+**完成一项功能 / 更改 / 修复之后需要提交并推送**：任何改动收尾（测试通过、按需重建
+二进制）后，立即按「提交信息」规范提交到对应仓库，并 `git push` 到远端；子模块与父
+仓库按依赖顺序推送（先 conatus_code，再根仓库 gitlink）。
+
 ### 提交信息
 
 Conventional Commits + 中文描述 + scope：`feat(foundation): ...` / `fix(llm): ...` /
