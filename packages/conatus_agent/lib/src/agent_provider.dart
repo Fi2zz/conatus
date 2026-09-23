@@ -29,6 +29,7 @@ AgentLoop provideAgentLoop(
   Session? session,
   int maxSteps = 8,
   bool planning = false,
+  void Function(LlmStreamEvent event)? onStream,
 }) {
   final LlmProvider llm = ctx.require<LlmProvider>('llm');
   final ToolRegistry tools = ctx.require<ToolRegistry>('tools');
@@ -50,6 +51,7 @@ AgentLoop provideAgentLoop(
         router: ctx.get<Router>('router'),
         maxSteps: maxSteps,
         planning: planning,
+        onStream: onStream,
         onEvent: telemetry == null
             ? null
             : (String type, Map<String, Object?> data) =>

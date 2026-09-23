@@ -43,6 +43,7 @@ class AgentLoop {
     this.memoryLimit = 5,
     this.planning = false,
     this.defaultSystemPrompt = '你是一个可靠的助手。需要外部信息或操作时调用工具；否则直接回答。',
+    this.onStream,
   });
 
   /// 模型接入。
@@ -83,6 +84,10 @@ class AgentLoop {
 
   /// 未提供 [systemPrompt] 时的兜底人设。
   final String defaultSystemPrompt;
+
+  /// 流式增量回调：模型每产出一个事件（思考 / 正文 / 终态）即透传给宿主，
+  /// 供实时渲染；缺省 null 不透传（行为与纯非流式一致）。
+  final void Function(LlmStreamEvent event)? onStream;
 
   /// Goal 续行驱动器；非空时，一轮收口后按其决策自动续行（缺省 null，
   /// 不续行）。由 `provideGoal` 在 `goal` 与 `agentLoop` 齐备时后置挂载。
@@ -211,8 +216,18 @@ class AgentLoop {
           systemText: () => _systemText(userInput),
         );
       }
+      // 需要实时透传（onStream）时走流式端点；否则保持非流式 chat() 调用，
+      // 行为与纯 chat 一致（测试替身只实现 chat 时也不受影响）。
+      final void Function(LlmStreamEvent event)? streamOut = onStream;
       final LlmResult result = await _race(
-        llm.chat(messages, tools: tools.describe()),
+        streamOut == null
+            ? llm.chat(messages, tools: tools.describe())
+            : streamChatResult(
+                llm,
+                messages,
+                tools: tools.describe(),
+                onEvent: streamOut,
+              ),
         cancel,
       );
       usages.add(result.usage);
