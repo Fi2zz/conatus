@@ -12,20 +12,20 @@ conatus 的模型提供商配置目前分散在三套来源，Key 管理混乱�
 2. **`[credentials]` 表**（config.toml）——`ConfigCredentials` 读，模型与搜索 Key 混放；
 3. **环境变量**——`EnvCredentials` 优先于 `[credentials]` 表。
 
-用户诉求：**provider 定义（含 Key）统一收敛到 `~/.conatus-code/config.toml` 一个文件的 `[providers.<名字>]` 表**，让 Key 只有一个地方管。
+用户诉求：**provider 定义（含 Key）统一收敛到 `~/.nava/config.toml` 一个文件的 `[providers.<名字>]` 表**，让 Key 只有一个地方管。
 
 ## 决策记录
 
-| 决策点 | 结论 | 理由 |
-|---|---|---|
-| 收敛程度 | **全收敛**：`[providers.xxx]` 是 provider 唯一来源；`providers.json` 废弃、模型 Key 不再走 `[credentials]`/环境变量 | 用户明确要求统一 |
-| oauth | 字段**保留但不做调用**（解析记录，api_key 为空时提示） | conatus 无 OAuth2 基础设施，本期不做 |
-| 内置默认 | **无**：config 没写 `[providers]` 就没有 provider | 用户明确"没有内置情况" |
-| type 语义 | **→ 请求形态**：`openai`→chat、`kimi`→responses，都走现有 OpenAI 兼容客户端 | kimi 端点已确认 OpenAI 兼容 |
-| 非模型 Key | `[credentials]` 表**保留**，专放搜索等非模型 Key | 模型 Key 收敛后语义清晰 |
-| 当前 provider | `[llm] default_model = "provider/model"`（替代 `provider` + `model` 两个字段） | 一个字段同时定 provider 与默认模型 |
-| /provider 命令 | 退化为**只读展示** + `/model` 切换模型名 | 增删改直接编辑 config.toml，不在 Dart 里写回 TOML |
-| 实现路径 | **A. config 驱动注册表**：`ProviderRegistry` 保留为运行时抽象，数据源换成 config | 改动集中、可测；去掉注册表层需要重写 `/provider`/`buildLlm`/测试，不值 |
+| 决策点         | 结论                                                                                                                | 理由                                                                   |
+| -------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| 收敛程度       | **全收敛**：`[providers.xxx]` 是 provider 唯一来源；`providers.json` 废弃、模型 Key 不再走 `[credentials]`/环境变量 | 用户明确要求统一                                                       |
+| oauth          | 字段**保留但不做调用**（解析记录，api_key 为空时提示）                                                              | conatus 无 OAuth2 基础设施，本期不做                                   |
+| 内置默认       | **无**：config 没写 `[providers]` 就没有 provider                                                                   | 用户明确"没有内置情况"                                                 |
+| type 语义      | **→ 请求形态**：`openai`→chat、`kimi`→responses，都走现有 OpenAI 兼容客户端                                         | kimi 端点已确认 OpenAI 兼容                                            |
+| 非模型 Key     | `[credentials]` 表**保留**，专放搜索等非模型 Key                                                                    | 模型 Key 收敛后语义清晰                                                |
+| 当前 provider  | `[llm] default_model = "provider/model"`（替代 `provider` + `model` 两个字段）                                      | 一个字段同时定 provider 与默认模型                                     |
+| /provider 命令 | 退化为**只读展示** + `/model` 切换模型名                                                                            | 增删改直接编辑 config.toml，不在 Dart 里写回 TOML                      |
+| 实现路径       | **A. config 驱动注册表**：`ProviderRegistry` 保留为运行时抽象，数据源换成 config                                    | 改动集中、可测；去掉注册表层需要重写 `/provider`/`buildLlm`/测试，不值 |
 
 ## 架构
 
@@ -108,23 +108,23 @@ class ConatusCodeConfig {
 
 ### 移除项
 
-| 项 | 处理 |
-|---|---|
-| `lib/src/providers/provider_store.dart`（`ProviderStore` / `ProviderSnapshot`） | 删除（providers.json 读写） |
-| `lib/src/providers/provider_defaults.dart`（`kDefaultProviders`） | 删除（内置默认清单） |
-| `lib/src/providers/provider_import.dart`（registry 导入） | 删除（`/provider` 不再导入） |
-| `lib/src/providers/provider_registry.dart` | **保留**（`add`/`remove`/`select` 等可删，`profiles`/`byName`/`buildLlm`/`hasKey` 保留） |
-| `lib/src/providers/builtin_providers.dart`（`DoubaoProvider` / `DeepSeekProvider`） | **保留**（example 在用，作便捷类） |
-| `/provider` 命令的增删改查（`tui_controller_provider.dart`） | 移除，退化为只读展示（列表 + 当前项） |
+| 项                                                                                  | 处理                                                                                     |
+| ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `lib/src/providers/provider_store.dart`（`ProviderStore` / `ProviderSnapshot`）     | 删除（providers.json 读写）                                                              |
+| `lib/src/providers/provider_defaults.dart`（`kDefaultProviders`）                   | 删除（内置默认清单）                                                                     |
+| `lib/src/providers/provider_import.dart`（registry 导入）                           | 删除（`/provider` 不再导入）                                                             |
+| `lib/src/providers/provider_registry.dart`                                          | **保留**（`add`/`remove`/`select` 等可删，`profiles`/`byName`/`buildLlm`/`hasKey` 保留） |
+| `lib/src/providers/builtin_providers.dart`（`DoubaoProvider` / `DeepSeekProvider`） | **保留**（example 在用，作便捷类）                                                       |
+| `/provider` 命令的增删改查（`tui_controller_provider.dart`）                        | 移除，退化为只读展示（列表 + 当前项）                                                    |
 
 ### 错误处理
 
-| 场景 | 行为 |
-|---|---|
-| config 无 `[providers]` 或 `[llm] default_model` | 启动报错：`请在 config.toml 配置 [providers.xxx] 与 [llm] default_model` |
-| `default_model` 的 provider 名不在 `[providers]` | 报错：`未知提供商：<name>（config.toml [providers] 里没有）` |
-| provider 配了 oauth 但 `api_key` 为空 | 启动提示：`OAuth 未实现：请为 <name> 配置 api_key`（该 provider 不可用，其余照常） |
-| `type` 未知 | `ConfigException`（沿用现有报错格式） |
+| 场景                                             | 行为                                                                               |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| config 无 `[providers]` 或 `[llm] default_model` | 启动报错：`请在 config.toml 配置 [providers.xxx] 与 [llm] default_model`           |
+| `default_model` 的 provider 名不在 `[providers]` | 报错：`未知提供商：<name>（config.toml [providers] 里没有）`                       |
+| provider 配了 oauth 但 `api_key` 为空            | 启动提示：`OAuth 未实现：请为 <name> 配置 api_key`（该 provider 不可用，其余照常） |
+| `type` 未知                                      | `ConfigException`（沿用现有报错格式）                                              |
 
 ## 数据流
 
@@ -146,12 +146,12 @@ config.toml
 
 ## 测试计划
 
-| 文件 | 覆盖 |
-|---|---|
-| `test/config/config_loader_test.dart`（扩充） | `[providers.*]` 解析（含引号名字、type 映射、oauth 子表）、`default_model` 拆分、未知 type 报错 |
-| `test/tui/tui_provider_command_test.dart`（重写） | `/provider` 只读展示（列表 + 当前项）、`/model` 切模型名 |
-| `test/tui/tui_model_view_test.dart`（适配） | 装配从 config 构造、无 provider 报错 |
-| 删除 | `provider_store_test`（若有）、`provider_registry_test` 的增删改用例 |
+| 文件                                              | 覆盖                                                                                            |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `test/config/config_loader_test.dart`（扩充）     | `[providers.*]` 解析（含引号名字、type 映射、oauth 子表）、`default_model` 拆分、未知 type 报错 |
+| `test/tui/tui_provider_command_test.dart`（重写） | `/provider` 只读展示（列表 + 当前项）、`/model` 切模型名                                        |
+| `test/tui/tui_model_view_test.dart`（适配）       | 装配从 config 构造、无 provider 报错                                                            |
+| 删除                                              | `provider_store_test`（若有）、`provider_registry_test` 的增删改用例                            |
 
 ## 后续（不在本 spec 内）
 

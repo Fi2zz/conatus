@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 把 conatus 的模型提供商定义（含 Key）统一收敛到 `~/.conatus-code/config.toml` 的 `[providers.<名字>]` 表，废弃 `providers.json` 注册表与模型 Key 的 `[credentials]`/环境变量来源。
+**Goal:** 把 conatus 的模型提供商定义（含 Key）统一收敛到 `~/.nava/config.toml` 的 `[providers.<名字>]` 表，废弃 `providers.json` 注册表与模型 Key 的 `[credentials]`/环境变量来源。
 
 **Architecture:** config 层新增 `[providers.*]` 解析（`ProviderConfig`：`name`/`baseUrl`/`apiKey`/`type`/`oauthKey`）与 `[llm] default_model = "provider/model"`；`ProviderRegistry` 保留为运行时抽象但数据源换成 config（去掉 `ProviderStore` 持久化）；`/provider` 退化为只读展示。所有改动集中在 `packages/conatus_code` 子模块。
 
@@ -32,35 +32,37 @@
 
 ## 文件结构
 
-| 文件 | 职责 |
-|---|---|
-| `lib/src/config/config_schema.dart` | 新增 `ProviderType` / `ProviderConfig`；`LlmConfig` 改 `defaultModel`；`ConatusCodeConfig` 加 `providers` |
-| `lib/src/config/config_parser.dart` | 解析 `[providers.*]`（含引号键、type 映射、oauth 子表）与 `[llm] default_model` |
-| `lib/src/providers/provider_registry.dart` | 去掉 `ProviderStore`/增删改/导入，构造改为 `profiles`+`currentName` |
-| `lib/src/providers/providers_provider.dart` | `provideProviders` 改为接收 provider 列表 |
-| `lib/src/providers/provider_store.dart` | **删除** |
-| `lib/src/providers/provider_defaults.dart` | **删除** |
-| `lib/src/providers/provider_import.dart` | **删除** |
-| `lib/providers.dart` | barrel 收敛（去 store/import 导出） |
-| `lib/src/tui/tui_app.dart` | `create` 形参改造 + 装配 + oauth 提示 + 错误处理 |
-| `bin/conatus_code.dart` | `default_model` 拆分 + 传 `config.providers` |
-| `lib/src/tui/tui_controller_provider.dart` | `/provider` 只读展示 + `/model` 改模型名 |
-| `lib/src/tui/tui_provider.dart` | `TuiProviderItem` 去 `isAdd` |
-| `lib/src/tui/tui_provider_view.dart` | 按键提示文案去掉「D 删除」 |
-| `lib/src/tui/tui.dart` | `_onProviderKey` 去掉 D 删除分支 |
-| `example/playground.dart` | 去掉 `ProviderStore` 用法 |
-| `README.md` / `CHANGELOG.md` | 配置示例与变更记录 |
+| 文件                                        | 职责                                                                                                      |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `lib/src/config/config_schema.dart`         | 新增 `ProviderType` / `ProviderConfig`；`LlmConfig` 改 `defaultModel`；`ConatusCodeConfig` 加 `providers` |
+| `lib/src/config/config_parser.dart`         | 解析 `[providers.*]`（含引号键、type 映射、oauth 子表）与 `[llm] default_model`                           |
+| `lib/src/providers/provider_registry.dart`  | 去掉 `ProviderStore`/增删改/导入，构造改为 `profiles`+`currentName`                                       |
+| `lib/src/providers/providers_provider.dart` | `provideProviders` 改为接收 provider 列表                                                                 |
+| `lib/src/providers/provider_store.dart`     | **删除**                                                                                                  |
+| `lib/src/providers/provider_defaults.dart`  | **删除**                                                                                                  |
+| `lib/src/providers/provider_import.dart`    | **删除**                                                                                                  |
+| `lib/providers.dart`                        | barrel 收敛（去 store/import 导出）                                                                       |
+| `lib/src/tui/tui_app.dart`                  | `create` 形参改造 + 装配 + oauth 提示 + 错误处理                                                          |
+| `bin/conatus_code.dart`                     | `default_model` 拆分 + 传 `config.providers`                                                              |
+| `lib/src/tui/tui_controller_provider.dart`  | `/provider` 只读展示 + `/model` 改模型名                                                                  |
+| `lib/src/tui/tui_provider.dart`             | `TuiProviderItem` 去 `isAdd`                                                                              |
+| `lib/src/tui/tui_provider_view.dart`        | 按键提示文案去掉「D 删除」                                                                                |
+| `lib/src/tui/tui.dart`                      | `_onProviderKey` 去掉 D 删除分支                                                                          |
+| `example/playground.dart`                   | 去掉 `ProviderStore` 用法                                                                                 |
+| `README.md` / `CHANGELOG.md`                | 配置示例与变更记录                                                                                        |
 
 ---
 
 ## Task 1: config schema + parser（[providers.*] / default_model）
 
 **Files:**
+
 - Modify: `packages/conatus_code/lib/src/config/config_schema.dart`
 - Modify: `packages/conatus_code/lib/src/config/config_parser.dart`
 - Test: `packages/conatus_code/test/config/config_loader_test.dart`
 
 **Interfaces:**
+
 - Produces: `enum ProviderType { openai, kimi }`；`class ProviderConfig { final String name; final String baseUrl; final String apiKey; final ProviderType type; final String? oauthKey; }`；`LlmConfig({this.defaultModel})`；`ConatusCodeConfig.providers`（`List<ProviderConfig>`，按 TOML 书写顺序）。
 
 - [ ] **Step 1: 写失败测试**
@@ -284,11 +286,13 @@ git commit -m "feat(config): 新增 [providers.*] 表解析与 [llm] default_mod
 ## Task 2: ProviderRegistry 去 store + provideProviders 改造
 
 **Files:**
+
 - Modify: `packages/conatus_code/lib/src/providers/provider_registry.dart`
 - Modify: `packages/conatus_code/lib/src/providers/providers_provider.dart`
 - Test: `packages/conatus_code/test/providers/provider_registry_test.dart`
 
 **Interfaces:**
+
 - Consumes: `ProviderProfile`（`name`/`baseUrl`/`apiKey`/`apiStyle`，`conatus_llm` 的 `LlmApiStyle`）；`Credentials`。
 - Produces: `ProviderRegistry({List<ProviderProfile> profiles, String? currentName, Credentials? credentials})`（**不再有 `store`**；`load`/`add`/`remove`/`select`/`importRegistry` 全部移除）；`provideProviders(ctx, {required List<ProviderProfile> providers, String? currentName, Credentials? credentials})`。
 
@@ -513,6 +517,7 @@ git commit -m "refactor(providers): 注册表去掉持久化与增删改，数�
 ## Task 3: 删除 ProviderStore / provider_defaults / provider_import，收敛 barrel
 
 **Files:**
+
 - Delete: `packages/conatus_code/lib/src/providers/provider_store.dart`
 - Delete: `packages/conatus_code/lib/src/providers/provider_defaults.dart`
 - Delete: `packages/conatus_code/lib/src/providers/provider_import.dart`
@@ -530,7 +535,7 @@ git rm lib/src/providers/provider_store.dart lib/src/providers/provider_defaults
 ```dart
 /// conatus_code 的模型提供商管理：`ProviderProfile` 装配与只读注册表。
 ///
-/// 数据源是 `~/.conatus-code/config.toml` 的 `[providers.*]` 表（见
+/// 数据源是 `~/.nava/config.toml` 的 `[providers.*]` 表（见
 /// `lib/src/config/`）；本入口供 `/provider`（只读展示）与按 profile 构造
 /// OpenAI 兼容 `LlmProvider`。
 ///
@@ -562,11 +567,13 @@ git commit -m "refactor(providers): 删除 ProviderStore 与内置默认清单�
 ## Task 4: tui_app 装配 + bin 接线 + 错误处理
 
 **Files:**
+
 - Modify: `packages/conatus_code/lib/src/tui/tui_app.dart`
 - Modify: `packages/conatus_code/bin/conatus_code.dart`
 - Test: `packages/conatus_code/test/tui/tui_model_view_test.dart`（装配相关用例适配）
 
 **Interfaces:**
+
 - Consumes: `ProviderConfig` / `ProviderType`（Task 1）；`provideProviders(ctx, {providers, currentName, credentials})`（Task 2）。
 - Produces: `ConatusTuiRuntime.create({..., List<ProviderConfig>? providers, String? provider, String? model, ...})` —— `providers`（bool）与 `providersFile` 形参移除。
 
@@ -720,6 +727,7 @@ git commit -m "feat(tui): 装配改用 config 的 [providers] 列表，default_m
 ## Task 5: /provider 只读展示 + /model 改模型名
 
 **Files:**
+
 - Modify: `packages/conatus_code/lib/src/tui/tui_controller_provider.dart`
 - Modify: `packages/conatus_code/lib/src/tui/tui_provider.dart`
 - Modify: `packages/conatus_code/lib/src/tui/tui_provider_view.dart`
@@ -825,6 +833,7 @@ git commit -m "feat(tui): /provider 退化为只读展示，/model 直接切换�
 ## Task 6: example 适配 + 文档
 
 **Files:**
+
 - Modify: `packages/conatus_code/example/playground.dart`
 - Modify: `packages/conatus_code/README.md`
 - Modify: `packages/conatus_code/CHANGELOG.md`
@@ -879,7 +888,7 @@ workdir = "/path/to/project"
 ```markdown
 - provider 配置收敛到 config.toml：新增 `[providers.<名字>]` 表（`api_key` /
   `base_url` / `type` / 可选 `oauth` 子表）与 `[llm] default_model =
-  "provider/model"`；`providers.json` 不再读写，`[llm] provider` / `model`
+"provider/model"`；`providers.json` 不再读写，`[llm] provider` / `model`
   两个字段被 `default_model` 替代，模型 Key 不再走 `[credentials]`/环境变量
   （`[credentials]` 表保留给搜索等非模型 Key）
 - `/provider` 命令退化为只读展示；增删改直接编辑 config.toml
@@ -905,6 +914,7 @@ git commit -m "docs: 配置示例与变更记录更新到 [providers] 格式"
 ## Task 7: 重编 conatio + 端到端验证
 
 **Files:**
+
 - 无（产物 `dist/conatio` 不入库）
 
 - [ ] **Step 1: 重编**
@@ -930,6 +940,7 @@ Run: `cd /Users/fitz/REPO/conatus/packages/conatus_code && (./dist/conatio --con
 Expected: TUI 正常渲染（ansi 片段），无「未知提供商」报错。
 
 再验证三条错误路径（各 Run 一次同一命令，Expected: 进程退出非零 + 输出含对应文案）：
+
 - `default_model` 的 provider 名改成 `nope` → `未知提供商：nope（config.toml [providers] 里没有）`
 - 去掉整个 `[providers]` 段 → `未装配 LLM：请在 config.toml 配置 [providers.xxx] 与 [llm] default_model`
 - `arkcli-agent-plan` 的 `api_key` 留空且追加 `[providers.arkcli-agent-plan.oauth]` + `key = "oauth/x"` → 输出含 `OAuth 未实现：请为 arkcli-agent-plan 配置 api_key`（该 provider 不可用但 TUI 照常启动）
