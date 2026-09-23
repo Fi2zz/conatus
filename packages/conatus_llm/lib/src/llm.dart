@@ -199,20 +199,25 @@ final class LlmStreamDone extends LlmStreamEvent {
 ///
 /// 正文、思考（如 Kimi `reasoning_content`）与工具调用都从流式事件累积，
 /// 供依赖非流式 [LlmProvider.chat] 签名的调用方复用——实际 API 请求始终走
-/// 流式端点，思考过程不会丢失。
+/// 流式端点，思考过程不会丢失。[onEvent] 把每个流式事件透传给宿主（用于
+/// 实时渲染），可为空。
 Future<LlmResult> streamChatResult(
   LlmProvider provider,
   List<LlmMessage> messages, {
   Map<String, dynamic>? options,
   List<Map<String, dynamic>>? tools,
+  void Function(LlmStreamEvent event)? onEvent,
 }) async {
   final StringBuffer text = StringBuffer();
   final StringBuffer reasoning = StringBuffer();
   List<LlmToolCall> toolCalls = const <LlmToolCall>[];
   Map<String, dynamic> usage = const <String, dynamic>{};
   String model = '';
+  bool sawEvent = false;
   await for (final LlmStreamEvent event
       in provider.chatStream(messages, options: options, tools: tools)) {
+    sawEvent = true;
+    onEvent?.call(event);
     if (event is LlmTextDelta) {
       text.write(event.text);
     } else if (event is LlmReasoningDelta) {
@@ -222,6 +227,11 @@ Future<LlmResult> streamChatResult(
       usage = event.usage;
       model = event.model;
     }
+  }
+  // provider 的 chatStream 是空实现（如只实现 chat 的测试替身）：回退非流式
+  // 调用，行为与直接调 chat() 一致。
+  if (!sawEvent) {
+    return provider.chat(messages, options: options, tools: tools);
   }
   return LlmResult(
     content: text.toString(),
