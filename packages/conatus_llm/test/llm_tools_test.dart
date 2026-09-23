@@ -39,28 +39,15 @@ void main() {
         client: MockClient((http.Request request) async {
           captured = request;
           return http.Response(
-            jsonEncode(<String, Object?>{
-              'model': 'm',
-              'choices': <Object?>[
-                <String, Object?>{
-                  'message': <String, Object?>{
-                    'role': 'assistant',
-                    'content': '',
-                    'tool_calls': <Object?>[
-                      <String, Object?>{
-                        'id': 'call_1',
-                        'type': 'function',
-                        'function': <String, Object?>{
-                          'name': 'get_time',
-                          'arguments': '{"tz":"utc"}',
-                        },
-                      },
-                    ],
-                  },
-                },
-              ],
-            }),
+            'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1",'
+            '"type":"function","function":{"name":"get_time",'
+            '"arguments":"{\\"tz\\":\\"utc\\"}"}}]},'
+            '"finish_reason":"tool_calls"}]}\n\n'
+            'data: [DONE]\n\n',
             200,
+            headers: <String, String>{
+              'content-type': 'text/event-stream; charset=utf-8',
+            },
           );
         }),
       );
@@ -72,6 +59,7 @@ void main() {
 
       final Map<String, Object?> body =
           jsonDecode(captured!.body) as Map<String, Object?>;
+      expect(body['stream'], isTrue);
       final List<Object?> sentTools = body['tools']! as List<Object?>;
       expect((sentTools.single! as Map<String, Object?>)['type'], 'function');
       final Map<String, Object?> function = (sentTools.single!
@@ -93,18 +81,12 @@ void main() {
         client: MockClient((http.Request request) async {
           captured = request;
           return http.Response(
-            jsonEncode(<String, Object?>{
-              'model': 'm',
-              'choices': <Object?>[
-                <String, Object?>{
-                  'message': <String, Object?>{
-                    'role': 'assistant',
-                    'content': 'done'
-                  },
-                },
-              ],
-            }),
+            'data: {"choices":[{"delta":{"content":"done"},"finish_reason":"stop"}]}\n\n'
+            'data: [DONE]\n\n',
             200,
+            headers: <String, String>{
+              'content-type': 'text/event-stream; charset=utf-8',
+            },
           );
         }),
       );
@@ -142,18 +124,14 @@ void main() {
         client: MockClient((http.Request request) async {
           captured = request;
           return http.Response(
-            jsonEncode(<String, Object?>{
-              'model': 'm',
-              'output': <Object?>[
-                <String, Object?>{
-                  'type': 'function_call',
-                  'call_id': 'call_9',
-                  'name': 'get_time',
-                  'arguments': '{"x":1}',
-                },
-              ],
-            }),
+            'data: {"type":"response.output_item.added","output_index":0,'
+            '"item":{"id":"fc_1","type":"function_call","call_id":"call_9",'
+            '"name":"get_time","arguments":"{\\"x\\":1}"}}\n\n'
+            'data: {"type":"response.completed","response":{"status":"completed"}}\n\n',
             200,
+            headers: <String, String>{
+              'content-type': 'text/event-stream; charset=utf-8',
+            },
           );
         }),
       );
@@ -165,6 +143,7 @@ void main() {
 
       final Map<String, Object?> body =
           jsonDecode(captured!.body) as Map<String, Object?>;
+      expect(body['stream'], isTrue);
       final Map<String, Object?> tool =
           (body['tools']! as List<Object?>).single! as Map<String, Object?>;
       expect(tool['type'], 'function');
@@ -185,18 +164,13 @@ void main() {
         client: MockClient((http.Request request) async {
           captured = request;
           return http.Response(
-            jsonEncode(<String, Object?>{
-              'model': 'm',
-              'output': <Object?>[
-                <String, Object?>{
-                  'type': 'message',
-                  'content': <Object?>[
-                    <String, Object?>{'type': 'output_text', 'text': 'ok'},
-                  ],
-                },
-              ],
-            }),
+            'data: {"type":"response.output_text.delta","delta":"ok"}\n\n'
+            'data: {"type":"response.completed","response":{"status":"completed",'
+            '"usage":{"total_tokens":3}}}\n\n',
             200,
+            headers: <String, String>{
+              'content-type': 'text/event-stream; charset=utf-8',
+            },
           );
         }),
       );

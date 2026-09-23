@@ -9,29 +9,14 @@ import 'builtin_provider_helpers.dart';
 MockClient _okClient(String content, {String model = 'test-model'}) {
   return MockClient((http.Request request) async {
     return http.Response(
-      jsonEncode(<String, dynamic>{
-        'id': 'chatcmpl-test',
-        'object': 'chat.completion',
-        'model': model,
-        'choices': <dynamic>[
-          <String, dynamic>{
-            'index': 0,
-            'message': <String, dynamic>{
-              'role': 'assistant',
-              'content': content,
-            },
-            'finish_reason': 'stop',
-          },
-        ],
-        'usage': <String, dynamic>{
-          'prompt_tokens': 10,
-          'completion_tokens': 20,
-          'total_tokens': 30,
-        },
-      }),
+      'data: {"choices":[{"delta":{"role":"assistant","content":"$content"},'
+      '"finish_reason":"stop"}]}\n\n'
+      'data: {"choices":[],"usage":{"prompt_tokens":10,"completion_tokens":20,'
+      '"total_tokens":30}}\n\n'
+      'data: [DONE]\n\n',
       200,
       headers: <String, String>{
-        'content-type': 'application/json; charset=utf-8',
+        'content-type': 'text/event-stream; charset=utf-8',
       },
     );
   });
@@ -76,6 +61,29 @@ void main() {
         () => provider.chat(<LlmMessage>[const LlmMessage('user', 'hi')]),
         throwsA(isA<LlmException>()),
       );
+    });
+
+    test('chat 走流式且捕获思考过程 reasoning_content', () async {
+      final provider = doubaoProviderForTest(
+        apiKey: 'test-key',
+        client: _sseClient(
+          'data: {"choices":[{"delta":{"reasoning_content":"先想"}}]}\n\n'
+          'data: {"choices":[{"delta":{"reasoning_content":"再想"}}]}\n\n'
+          'data: {"choices":[{"delta":{"content":"回答"},"finish_reason":"stop"}]}\n\n'
+          'data: {"choices":[],"usage":{"total_tokens":3}}\n\n'
+          'data: [DONE]\n\n',
+        ),
+      );
+
+      final result = await provider.chat(<LlmMessage>[
+        const LlmMessage('user', 'hi'),
+      ]);
+
+      expect(result.content, '回答');
+      expect(result.reasoning, '先想再想');
+      expect(result.provider, 'doubao');
+      expect(result.model, 'doubao-seed-1-8-251228');
+      expect(result.usage['total_tokens'], 3);
     });
 
     test('非 200 响应抛 LlmException', () async {
@@ -169,7 +177,7 @@ void main() {
   });
 
   group('Responses 形态', () {
-    test('非流式：端点、载荷与解析', () async {
+    test('chat 走流式：端点、载荷与解析', () async {
       late http.Request captured;
       final provider = doubaoProviderForTest(
         apiKey: 'k',
@@ -177,26 +185,13 @@ void main() {
         client: MockClient((http.Request request) async {
           captured = request;
           return http.Response(
-            jsonEncode(<String, dynamic>{
-              'model': 'doubao-seed-1-8-251228',
-              'output': <dynamic>[
-                <String, dynamic>{
-                  'type': 'message',
-                  'role': 'assistant',
-                  'content': <dynamic>[
-                    <String, dynamic>{'type': 'output_text', 'text': '你好'},
-                  ],
-                },
-              ],
-              'usage': <String, dynamic>{
-                'input_tokens': 1,
-                'output_tokens': 2,
-                'total_tokens': 3,
-              },
-            }),
+            'data: {"type":"response.output_text.delta","delta":"你"}\n\n'
+            'data: {"type":"response.output_text.delta","delta":"好"}\n\n'
+            'data: {"type":"response.completed","response":{"status":"completed",'
+            '"usage":{"input_tokens":1,"output_tokens":2,"total_tokens":3}}}\n\n',
             200,
             headers: <String, String>{
-              'content-type': 'application/json; charset=utf-8',
+              'content-type': 'text/event-stream; charset=utf-8',
             },
           );
         }),
@@ -214,6 +209,7 @@ void main() {
       expect(captured.url.path, endsWith('/responses'));
 
       final body = jsonDecode(captured.body) as Map<String, dynamic>;
+      expect(body['stream'], isTrue);
       expect(body['store'], isFalse);
       expect(body.containsKey('messages'), isFalse);
       final input = body['input'] as List<dynamic>;

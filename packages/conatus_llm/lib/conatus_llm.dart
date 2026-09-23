@@ -12,6 +12,7 @@ export 'src/llm.dart'
         LlmStreamEvent,
         LlmTextDelta,
         LlmToolCall,
-        provideLlm;
+        provideLlm,
+        streamChatResult;
 export 'src/llm_openai.dart'
     show OpenAiCompatibleProvider, kDefaultLlmUserAgent;

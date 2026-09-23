@@ -4,6 +4,10 @@
 
 ## [未发布]
 
+- **LLM 调用统一走流式端点**：`OpenAiCompatibleProvider.chat()` 内部改为调用
+  `chatStream()` 累积成 `LlmResult`（新增顶层 `streamChatResult`），不再发非流式
+  请求；`LlmResult` 新增 `reasoning` 字段（Kimi 等模型的 `reasoning_content`），
+  思考过程不再丢失。`LlmStreamDone` 携带 `provider`/`model`。
 - `LlmMessage` 新增可选 `images` 字段（`LlmImage`：mimeType + base64），支持
   多模态输入；无图片时请求体保持原样（`content` 为字符串），有图片时 chat
   形态输出 `image_url` parts 数组，responses 形态追加 `input_image` 项

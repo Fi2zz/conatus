@@ -121,6 +121,7 @@ class LlmResult {
     required this.model,
     this.usage = const <String, dynamic>{},
     this.toolCalls = const <LlmToolCall>[],
+    this.reasoning = '',
   });
 
   final String content;
@@ -130,6 +131,9 @@ class LlmResult {
 
   /// 模型请求的工具调用；无工具调用时为空。
   final List<LlmToolCall> toolCalls;
+
+  /// 模型的思考过程（如 Kimi 的 `reasoning_content`）；模型未输出时为空串。
+  final String reasoning;
 
   @override
   String toString() => '[$provider/$model] $content';
@@ -168,6 +172,8 @@ final class LlmStreamDone extends LlmStreamEvent {
     this.usage = const <String, dynamic>{},
     this.finishReason,
     this.toolCalls = const <LlmToolCall>[],
+    this.provider = '',
+    this.model = '',
   });
 
   final Map<String, dynamic> usage;
@@ -178,9 +184,53 @@ final class LlmStreamDone extends LlmStreamEvent {
   /// 工具参数以 JSON 分片到达，须攒到流结束才能得到完整调用，故在终态一次性给出。
   final List<LlmToolCall> toolCalls;
 
+  /// 产出该流的提供商名（供 [streamChatResult] 还原 [LlmResult]）。
+  final String provider;
+
+  /// 产出该流的模型名；未知时为空串。
+  final String model;
+
   @override
   String toString() =>
       'LlmStreamDone($finishReason, ${toolCalls.length} toolCalls, $usage)';
+}
+
+/// 以流式方式调用 [provider]，把增量累积成一次 [LlmResult]。
+///
+/// 正文、思考（如 Kimi `reasoning_content`）与工具调用都从流式事件累积，
+/// 供依赖非流式 [LlmProvider.chat] 签名的调用方复用——实际 API 请求始终走
+/// 流式端点，思考过程不会丢失。
+Future<LlmResult> streamChatResult(
+  LlmProvider provider,
+  List<LlmMessage> messages, {
+  Map<String, dynamic>? options,
+  List<Map<String, dynamic>>? tools,
+}) async {
+  final StringBuffer text = StringBuffer();
+  final StringBuffer reasoning = StringBuffer();
+  List<LlmToolCall> toolCalls = const <LlmToolCall>[];
+  Map<String, dynamic> usage = const <String, dynamic>{};
+  String model = '';
+  await for (final LlmStreamEvent event
+      in provider.chatStream(messages, options: options, tools: tools)) {
+    if (event is LlmTextDelta) {
+      text.write(event.text);
+    } else if (event is LlmReasoningDelta) {
+      reasoning.write(event.text);
+    } else if (event is LlmStreamDone) {
+      toolCalls = event.toolCalls;
+      usage = event.usage;
+      model = event.model;
+    }
+  }
+  return LlmResult(
+    content: text.toString(),
+    provider: provider.name,
+    model: model,
+    usage: usage,
+    toolCalls: toolCalls,
+    reasoning: reasoning.toString(),
+  );
 }
 
 /// 大模型提供商抽象。

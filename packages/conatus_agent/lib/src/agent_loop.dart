@@ -230,6 +230,7 @@ class AgentLoop {
       );
       session?.append(kAssistantMessageEvent, data: <String, Object?>{
         'text': result.content,
+        'reasoning': result.reasoning,
         'toolCalls': toolCallsToJson(result.toolCalls),
       });
       for (final LlmToolCall call in result.toolCalls) {

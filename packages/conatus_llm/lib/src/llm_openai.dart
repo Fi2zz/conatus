@@ -195,7 +195,7 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // 非流式
+  // 非流式签名，实际走流式端点
   // ═══════════════════════════════════════════════════════════════
 
   @override
@@ -203,111 +203,8 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
     List<LlmMessage> messages, {
     Map<String, dynamic>? options,
     List<Map<String, dynamic>>? tools,
-  }) async {
-    _requireKey();
-    final http.Response response;
-    try {
-      response = await _client
-          .post(
-            _endpoint,
-            headers: _headers,
-            body: jsonEncode(
-              _body(messages, stream: false, options: options, tools: tools),
-            ),
-          )
-          .timeout(timeout);
-    } on TimeoutException {
-      throw LlmException(name, '请求超时（${timeout.inSeconds}s）');
-    } on SocketException catch (e) {
-      throw LlmException(name, '网络错误：${e.message}');
-    }
-
-    if (response.statusCode != 200) {
-      throw LlmException(name, response.body, response.statusCode);
-    }
-
-    final Map<String, dynamic> json =
-        jsonDecode(response.body) as Map<String, dynamic>;
-    return LlmResult(
-      content: _responses ? _responsesText(json) : _chatText(json),
-      provider: name,
-      model: (json['model'] as String?) ?? model,
-      usage: (json['usage'] as Map<String, dynamic>?) ?? <String, dynamic>{},
-      toolCalls: _responses ? _responsesToolCalls(json) : _chatToolCalls(json),
-    );
-  }
-
-  String _chatText(Map<String, dynamic> json) {
-    final Map<String, dynamic>? message = _chatMessage(json);
-    return (message?['content'] as String?) ?? '';
-  }
-
-  Map<String, dynamic>? _chatMessage(Map<String, dynamic> json) {
-    final List<dynamic>? choices = json['choices'] as List<dynamic>?;
-    if (choices == null || choices.isEmpty) {
-      throw LlmException(name, '响应中没有 choices 字段');
-    }
-    final Map<String, dynamic> first = choices.first as Map<String, dynamic>;
-    return (first['message'] as Map<String, dynamic>?) ?? <String, dynamic>{};
-  }
-
-  List<LlmToolCall> _chatToolCalls(Map<String, dynamic> json) {
-    final Object? raw = _chatMessage(json)?['tool_calls'];
-    if (raw is! List) return const <LlmToolCall>[];
-    final List<LlmToolCall> calls = <LlmToolCall>[];
-    for (final Object? item in raw) {
-      if (item is! Map) continue;
-      final Object? function = item['function'];
-      if (function is! Map) continue;
-      final Object? toolName = function['name'];
-      if (toolName is! String) continue;
-      calls.add(LlmToolCall(
-        id: '${item['id'] ?? ''}',
-        name: toolName,
-        arguments: _argumentsText(function['arguments']),
-      ));
-    }
-    return calls;
-  }
-
-  List<LlmToolCall> _responsesToolCalls(Map<String, dynamic> json) {
-    final List<LlmToolCall> calls = <LlmToolCall>[];
-    for (final Object? item
-        in json['output'] as List<dynamic>? ?? const <dynamic>[]) {
-      if (item is! Map<String, dynamic> || item['type'] != 'function_call') {
-        continue;
-      }
-      final Object? toolName = item['name'];
-      if (toolName is! String) continue;
-      calls.add(LlmToolCall(
-        id: '${item['call_id'] ?? item['id'] ?? ''}',
-        name: toolName,
-        arguments: _argumentsText(item['arguments']),
-      ));
-    }
-    return calls;
-  }
-
-  String _argumentsText(Object? arguments) {
-    if (arguments == null) return '{}';
-    if (arguments is String) return arguments.isEmpty ? '{}' : arguments;
-    return jsonEncode(arguments);
-  }
-
-  String _responsesText(Map<String, dynamic> json) {
-    final StringBuffer buffer = StringBuffer();
-    for (final dynamic item
-        in json['output'] as List<dynamic>? ?? const <dynamic>[]) {
-      if (item is! Map<String, dynamic> || item['type'] != 'message') continue;
-      for (final dynamic part
-          in item['content'] as List<dynamic>? ?? const <dynamic>[]) {
-        if (part is Map<String, dynamic> && part['type'] == 'output_text') {
-          buffer.write(part['text'] as String? ?? '');
-        }
-      }
-    }
-    return buffer.toString();
-  }
+  }) =>
+      streamChatResult(this, messages, options: options, tools: tools);
 
   // ═══════════════════════════════════════════════════════════════
   // 流式
@@ -349,6 +246,8 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
       }
     }
     yield LlmStreamDone(
+      provider: name,
+      model: model,
       usage: state.usage,
       finishReason: state.finishReason,
       toolCalls: state.buildToolCalls(),
