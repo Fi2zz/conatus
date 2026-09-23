@@ -107,3 +107,4 @@ export 'src/tools.dart'
         ToolsContext,
         parameterSchema,
         provideTools;
+export 'src/uuid.dart' show newUuidV4;

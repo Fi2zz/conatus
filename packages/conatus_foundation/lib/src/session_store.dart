@@ -9,6 +9,7 @@ import 'package:conatus_core/conatus_core.dart';
 import 'session.dart';
 import 'session_persistence.dart';
 import 'session_types.dart';
+import 'uuid.dart';
 
 /// 会话仓库：进程内持有活跃会话，并可选地持久化其事件。
 class SessionStore {
@@ -17,7 +18,6 @@ class SessionStore {
   final SessionPersistence? _persistence;
   final Map<String, Session> _sessions = <String, Session>{};
   final List<Future<void>> _writes = <Future<void>>[];
-  int _seq = 0;
 
   /// 落盘写入链：同一进程内的追加串行执行，避免同轮多次 append 并发写同一
   /// 文件（新会话首写时并发建目录）导致丢失事件。失败不毒化后续写入。
@@ -103,10 +103,7 @@ class SessionStore {
     session.onClose(() => _sessions.remove(session.id));
   }
 
-  String _nextId() {
-    _seq++;
-    return 'session-${DateTime.now().microsecondsSinceEpoch}-$_seq';
-  }
+  String _nextId() => 'session_${newUuidV4()}';
 }
 
 /// 将 [SessionStore] 作为 `'sessions'` 服务提供到上下文。

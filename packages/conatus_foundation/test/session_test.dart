@@ -76,6 +76,20 @@ void main() {
       expect(() => store.create(id: 'a'), throwsStateError);
     });
 
+    test('create 缺省 id 生成 session_<uuid>，两次互不相同', () {
+      final SessionStore store = SessionStore();
+
+      final Session first = store.create();
+      final Session second = store.create();
+
+      expect(
+        first.id,
+        matches(r'^session_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-'
+            r'[0-9a-f]{12}$'),
+      );
+      expect(first.id, isNot(second.id));
+    });
+
     test('close 从活跃集移除并关闭会话', () async {
       final SessionStore store = SessionStore();
       final Session session = store.create(id: 'a');
