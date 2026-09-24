@@ -33,7 +33,7 @@ run_command / run_tests / run_code、macOS 双层沙箱（Seatbelt + fs jail）�
 | 2 | **意图路由** | README 特性表宣传「⚡ 意图路由（高频命令零模型调用）」，但 `conatus_intent` 不在依赖、零 import——**文档与实现不符** | 接线（高频命令如「跑测试」「git 状态」直映射工具调用）或删 README 条目 |
 | 3 | **检查点 / 回滚（/rewind）** | 可逆效应是 conatus_core 核心卖点，nava 无用户可见的文件级 checkpoint/rewind（现仅 RecoveryService 会话快照）。差异化功能未利用 | 每轮前对工作区做轻量快照（git stash 式或 fs 快照），`/rewind` 回到指定轮次；与 EffectScope LIFO 语义对齐 |
 | 4 | **后台任务** | `[background]` 配置表已解析（`config_schema.dart:228` 注明「供未来执行器消费」），执行器未实现 | `run_command` 支持后台挂起 + 任务列表/取输出工具；可与 `conatus_tasks` 任务中心复用 |
-| 5 | **ASR 语音输入** | TTS 播报（VoiceReporter）已有，输入侧 `conatus_asr` 未接 | 输入框快捷键触发语音录入，转写后作为一轮输入 |
+| 5 | ~~ASR 语音输入~~（**暂缓**） | TTS 播报（VoiceReporter）已有，输入侧 `conatus_asr` 未接 | 已决定本期及近期不做；需时重新排期 |
 | 6 | **可观测性导出** | 仅 `InMemoryTelemetry`，`/telemetry` 只看最近 8 个事件名；`conatus_observability` 未接 | 按需接 OTLP/文件导出；`TeamCostSource` 注入点已预留（`team_subscription.dart:16`） |
 
 ### 二档：编码智能体标配、缺失

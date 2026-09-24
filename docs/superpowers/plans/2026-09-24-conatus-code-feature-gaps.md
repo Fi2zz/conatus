@@ -270,7 +270,7 @@
 |----|------|
 | Checkpoint/rewind（spec #3） | **先出专项设计**（快照策略、与 Plan Mode/审批/沙箱的交互） |
 | 后台任务执行器（spec #4） | `[background]` 配置已解析，设计任务生命周期 |
-| ASR 语音输入（spec #5） | 音频设备依赖，单元测试策略先行 |
+| ~~ASR 语音输入（spec #5）~~（**暂缓**，用户决定近期不做） | 音频设备依赖，单元测试策略先行 |
 | observability 导出（spec #6） | 选导出后端（OTLP/文件） |
 | `/commit`（spec #13） | 审批语义设计（staged diff → 提交信息） |
 | Hooks（spec #14） | config  schema 与中间件挂点设计 |
