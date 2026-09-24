@@ -44,6 +44,20 @@ class SessionStore {
     return session;
   }
 
+  /// 注册一个外部创建的会话（如 [Session.fork] 的产物）进仓库。
+  ///
+  /// 与 [create]（空会话）不同，本方法接收已带事件种子的会话，只接线
+  /// 持久化写入与关闭清理。同 id 已活跃抛 [StateError]。返回该会话。
+  Session adopt(Session session) {
+    final String id = session.id;
+    if (_sessions.containsKey(id)) {
+      throw StateError('会话 "$id" 已存在');
+    }
+    _attach(session);
+    _sessions[id] = session;
+    return session;
+  }
+
   /// 打开会话：已活跃则直接返回，否则从持久化载入事件作为种子。
   Future<Session> open(String id) async {
     final Session? active = _sessions[id];

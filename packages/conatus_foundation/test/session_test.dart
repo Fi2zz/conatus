@@ -99,6 +99,23 @@ void main() {
       expect(store.get('a'), isNull);
       expect(store.close('a'), isFalse);
     });
+
+    test('adopt 注册外部会话（fork 产物），重复 id 抛 StateError', () {
+      final SessionStore store = SessionStore();
+      final Session source = store.create(id: 'a');
+      source.append('user/message', data: <String, Object?>{'text': 'hi'});
+
+      final Session fork = source.fork(id: 'session_forked-1');
+      final Session adopted = store.adopt(fork);
+
+      expect(adopted, same(fork));
+      expect(store.get('session_forked-1'), same(fork));
+      expect(fork.events.length, 1); // 继承来源事件种子
+      expect(() => store.adopt(fork), throwsStateError);
+
+      // 收养后追加同样落盘（持久化接线生效）。
+      fork.append('assistant/message');
+    });
   });
 
   group('SessionStore — JSONL 持久化', () {
