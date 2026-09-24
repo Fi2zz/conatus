@@ -35,6 +35,17 @@ tool/setup_code_filter.sh
   `pubspec.yaml` 的 `dependency_overrides` —— workspace 内禁止 override 成员包，
   而独立 clone 仍需要这些 override 把 conatus 各包统一到 git 源。
 
+打包 conatus_code 二进制（`nava`）可在仓库根直接用 Makefile：
+
+```bash
+make            # 编译产出 packages/conatus_code/dist/nava
+make install    # 编译并软链 ~/bin/nava（已在 PATH）
+make clean      # 删除 packages/conatus_code/dist
+```
+
+产物路径可用 `OUTPUT` 覆盖（如 `make build OUTPUT=/tmp/nava`）；等价脚本是
+`packages/conatus_code/tool/build_binary.sh`。
+
 | 包 | 说明 | 依赖 |
 |----|------|------|
 | [`conatus`](.) | 伞包（umbrella）：再导出以下全部，保持 `package:conatus/conatus.dart` 兼容 | 全部 |
