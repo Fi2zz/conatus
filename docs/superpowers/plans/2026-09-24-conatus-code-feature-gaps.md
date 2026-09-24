@@ -2,6 +2,9 @@
 
 > **Status: 一期（M1–M5）已实施完毕，56 项任务全部勾选。** 后续项（checkpoint/rewind、
 > 后台任务、hooks 等）见 spec「后续另立计划」表，各自出计划后再开新轮次。
+>
+> **二期（2026-09-24）：checkpoint/rewind（spec #3）已实施完毕**
+> （`docs/superpowers/plans/2026-09-24-conatus-code-checkpoint-rewind.md`，19 项全勾）。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -268,7 +271,7 @@
 
 | 项 | 前置 |
 |----|------|
-| Checkpoint/rewind（spec #3） | **先出专项设计**（快照策略、与 Plan Mode/审批/沙箱的交互） |
+| ~~Checkpoint/rewind（spec #3）~~（**已实施** 2026-09-24，见专项 spec/plan） | 快照策略、与 Plan Mode/审批/沙箱的交互已在专项设计中定案 |
 | 后台任务执行器（spec #4） | `[background]` 配置已解析，设计任务生命周期 |
 | ~~ASR 语音输入（spec #5）~~（**暂缓**，用户决定近期不做） | 音频设备依赖，单元测试策略先行 |
 | observability 导出（spec #6） | 选导出后端（OTLP/文件） |
