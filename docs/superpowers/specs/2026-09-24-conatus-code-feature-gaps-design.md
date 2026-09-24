@@ -1,7 +1,7 @@
 # conatus_code（nava）功能缺口盘点 — 设计
 
 日期：2026-09-24
-状态：盘点完成，待排期（未确认实施范围）
+状态：一期已实施（M1–M5 完成，见实现计划）；后续项待排期
 范围：`packages/conatus_code` 子模块；涉及接线时触及框架包（`conatus_mcp` / `conatus_intent` / `conatus_asr` / `conatus_observability`）
 
 ## 背景

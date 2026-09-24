@@ -1,5 +1,8 @@
 # conatus_code 功能缺口补齐 Implementation Plan
 
+> **Status: 一期（M1–M5）已实施完毕，56 项任务全部勾选。** 后续项（checkpoint/rewind、
+> 后台任务、hooks 等）见 spec「后续另立计划」表，各自出计划后再开新轮次。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 按 spec 优先级补齐 nava 的五批功能：M1 MCP 接入、M2 Headless 非交互模式、M3 项目上下文文件（AGENTS.md）加载 + `/init`、M4 小命令批（`/compact` / `/cost` / `--version` / `--continue`）、M5 意图路由 README 失真修正。
@@ -69,31 +72,31 @@
 
 **Files:** Modify `config_schema.dart` / `config_parser.dart` / `config_writer.dart`；Test `test/config/config_mcp_test.dart`
 
-- [ ] `McpServerSpec`：`name` / `type`（`stdio` / `http` / `sse` 字符串）/ `command?` / `args` / `env` / `url?` / `headers`；`McpConfig.servers` 列表；`ConatusCodeConfig` 加 `mcp`（缺省空）。
-- [ ] `_readMcp()`：`readTable('mcp')` → `servers` 子表逐条解析；`type` 未知值抛 `ConfigException`；`stdio` 缺 `command`、`http`/`sse` 缺 `url` 抛 `ConfigException`（与 `McpServerConfig` 构造期校验同语义，提前到解析期）。
-- [ ] `env` / `headers` 值原样保留 `${KEY}` 文本（**解析期不替换**，替换在装配期经 Credentials）。
-- [ ] `config_writer` 模板加注释掉的示例段。
-- [ ] 测试：stdio/http/sse 三种合法解析；缺 command/url 报错；未知 type 报错；`env` 内联表解析；`${KEY}` 原样保留。
-- [ ] `dart analyze` + `dart test` 通过，子模块提交 `feat(code): config 解析 [mcp.servers.*]`。
+- [x] `McpServerSpec`：`name` / `type`（`stdio` / `http` / `sse` 字符串）/ `command?` / `args` / `env` / `url?` / `headers`；`McpConfig.servers` 列表；`ConatusCodeConfig` 加 `mcp`（缺省空）。
+- [x] `_readMcp()`：`readTable('mcp')` → `servers` 子表逐条解析；`type` 未知值抛 `ConfigException`；`stdio` 缺 `command`、`http`/`sse` 缺 `url` 抛 `ConfigException`（与 `McpServerConfig` 构造期校验同语义，提前到解析期）。
+- [x] `env` / `headers` 值原样保留 `${KEY}` 文本（**解析期不替换**，替换在装配期经 Credentials）。
+- [x] `config_writer` 模板加注释掉的示例段。
+- [x] 测试：stdio/http/sse 三种合法解析；缺 command/url 报错；未知 type 报错；`env` 内联表解析；`${KEY}` 原样保留。
+- [x] `dart analyze` + `dart test` 通过，子模块提交 `feat(code): config 解析 [mcp.servers.*]`。
 
 ### Task 2：装配（逐台挂载、失败跳过）
 
 **Files:** New `lib/src/mcp/mcp_assembly.dart`；Modify `tui_app.dart` / `bin/conatus_code.dart`；Test `test/mcp/mcp_assembly_test.dart`
 
-- [ ] `attachMcpServers(Context app, List<McpServerSpec> specs, Credentials credentials)`：空列表直接返回；首台前先 `provideMcp(app, const [])` 建 registry（拿 `'mcp'` 服务键），随后逐台 `registry.attach(ctx, McpClient(transport: ..., serverName: ...))`——传输按 spec.type 分派（`StdioTransport` / `HttpTransport` / `SseTransport`），`env`/`headers` 先过 `resolveCredentialPlaceholders`。
-- [ ] 单台 attach 抛错 → `stderr` 提示「MCP server <名> 连接失败，已跳过：<message>」，继续下一台（Review Focus #1/#2）。
-- [ ] `ConatusTuiRuntime.create` 加 `List<McpServerSpec>? mcpServers` 形参，在凭据装配之后、返回之前调用；bin 传 `config.mcp.servers`。
-- [ ] 测试：fake `McpTransport`（脚本化握手 + tools/list）挂两台，一台 attach 抛错 → registry 只有一台、stderr 有提示；`${KEY}` 经注入的 Credentials 解析。
-- [ ] `dart analyze` + `dart test` 通过，子模块提交 `feat(code): 装配 MCP server（逐台挂载、失败跳过）`。
+- [x] `attachMcpServers(Context app, List<McpServerSpec> specs, Credentials credentials)`：空列表直接返回；首台前先 `provideMcp(app, const [])` 建 registry（拿 `'mcp'` 服务键），随后逐台 `registry.attach(ctx, McpClient(transport: ..., serverName: ...))`——传输按 spec.type 分派（`StdioTransport` / `HttpTransport` / `SseTransport`），`env`/`headers` 先过 `resolveCredentialPlaceholders`。
+- [x] 单台 attach 抛错 → `stderr` 提示「MCP server <名> 连接失败，已跳过：<message>」，继续下一台（Review Focus #1/#2）。
+- [x] `ConatusTuiRuntime.create` 加 `List<McpServerSpec>? mcpServers` 形参，在凭据装配之后、返回之前调用；bin 传 `config.mcp.servers`。
+- [x] 测试：fake `McpTransport`（脚本化握手 + tools/list）挂两台，一台 attach 抛错 → registry 只有一台、stderr 有提示；`${KEY}` 经注入的 Credentials 解析。
+- [x] `dart analyze` + `dart test` 通过，子模块提交 `feat(code): 装配 MCP server（逐台挂载、失败跳过）`。
 
 ### Task 3：`/mcp` 命令 + 文档
 
 **Files:** Modify `tui_commands.dart` / `tui_controller.dart` / `README.md` / `CHANGELOG.md`；Test `test/tui/tui_mcp_command_test.dart`
 
-- [ ] `/mcp`：读 `'mcp'` 服务的 `McpRegistry`，列出每台 server（名 / 传输类型 / 已接入工具数）；无 server 时提示「未配置 MCP server（config.toml `[mcp.servers.*]`）」。
-- [ ] README「配置」节加 `[mcp.servers.*]` 示例与 `${KEY}` 占位符说明（强调 stdio 不走沙箱的受信前提）；CHANGELOG 记录。
-- [ ] 测试：装配两台 fake server 后 `/mcp` 输出包含两者。
-- [ ] `dart analyze` + `dart test` + `bash tool/build_binary.sh`，子模块提交 `feat(code): /mcp 命令与 MCP 文档`，父仓库提交 gitlink。
+- [x] `/mcp`：读 `'mcp'` 服务的 `McpRegistry`，列出每台 server（名 / 传输类型 / 已接入工具数）；无 server 时提示「未配置 MCP server（config.toml `[mcp.servers.*]`）」。
+- [x] README「配置」节加 `[mcp.servers.*]` 示例与 `${KEY}` 占位符说明（强调 stdio 不走沙箱的受信前提）；CHANGELOG 记录。
+- [x] 测试：装配两台 fake server 后 `/mcp` 输出包含两者。
+- [x] `dart analyze` + `dart test` + `bash tool/build_binary.sh`，子模块提交 `feat(code): /mcp 命令与 MCP 文档`，父仓库提交 gitlink。
 
 ---
 
@@ -127,30 +130,30 @@
 
 **Files:** Modify `tui_options.dart`；Test `test/tui/tui_options_print_test.dart`
 
-- [ ] `TuiOptions` 加 `print`（`String?`）与 `outputFormat`（`String`，缺省 `text`，只接受 `text`/`json`，其他值按 `text`）。
-- [ ] `-p` / `--print` 后无值或下一参数以 `-` 开头 → 视为未指定（与 `--session` 同风格）。
-- [ ] usage 文案补两行。
-- [ ] 测试：`-p` 正常取值、缺值、`--output-format json`、非法 format 回落 text。
-- [ ] `dart analyze` + `dart test` 通过，子模块提交 `feat(code): CLI 解析 -p/--print 与 --output-format`。
+- [x] `TuiOptions` 加 `print`（`String?`）与 `outputFormat`（`String`，缺省 `text`，只接受 `text`/`json`，其他值按 `text`）。
+- [x] `-p` / `--print` 后无值或下一参数以 `-` 开头 → 视为未指定（与 `--session` 同风格）。
+- [x] usage 文案补两行。
+- [x] 测试：`-p` 正常取值、缺值、`--output-format json`、非法 format 回落 text。
+- [x] `dart analyze` + `dart test` 通过，子模块提交 `feat(code): CLI 解析 -p/--print 与 --output-format`。
 
 ### Task 2：`create` 的 `interactive` 开关
 
 **Files:** Modify `tui_app.dart`；Test `test/tui/tui_runtime_assembly_test.dart`（补例）
 
-- [ ] `create` 加 `bool interactive = true`；false 时跳过：`TuiChoicePrompt` 提供、`provideApproval`、`AskUserTool` 注册（Review Focus #3）。
-- [ ] 其余装配（工具/沙箱/搜索/技能/MCP/压缩/记忆/cron）不变。
-- [ ] 测试：`interactive: false` 时 `app.get('approval') == null`、`tools.names` 不含 `ask_user`。
-- [ ] `dart analyze` + `dart test` 通过，子模块提交 `feat(code): 运行时装配加 interactive 开关`。
+- [x] `create` 加 `bool interactive = true`；false 时跳过：`TuiChoicePrompt` 提供、`provideApproval`、`AskUserTool` 注册（Review Focus #3）。
+- [x] 其余装配（工具/沙箱/搜索/技能/MCP/压缩/记忆/cron）不变。
+- [x] 测试：`interactive: false` 时 `app.get('approval') == null`、`tools.names` 不含 `ask_user`。
+- [x] `dart analyze` + `dart test` 通过，子模块提交 `feat(code): 运行时装配加 interactive 开关`。
 
 ### Task 3：headless 分支与输出
 
 **Files:** New `lib/src/headless/headless_runner.dart`；Modify `bin/conatus_code.dart`；Test `test/headless/headless_runner_test.dart`
 
-- [ ] `runHeadless`：`sessions.create()`（或 `--session` 指定时 `open`）→ 会话子上下文 `provideAgentLoop`（复用 `ConatusTuiController._bind` 的插件清单中 TUI 无关部分：plan/goal/schedule 不装，只装 Agent Loop 必需）→ `agent.run(prompt)` → 按 format 输出 → `sessions.flush()` + `runtime.dispose()`。
-- [ ] `AgentCancelled`/`LlmException`/其他异常 → stderr 中文提示 + 退出码 1；`ConfigException` 维持退出码 1 现状还是改 2——**改为 2**（决策表），bin 里 `exit(2)`。
-- [ ] 沙箱后端不可用时 stderr 提示照常、流程继续（Review Focus #4）。
-- [ ] 测试：fake `LlmProvider`（注册进 providers 或直传 `llm:`）跑通 text/json 两种输出；json 含 `reply`/`sessionId` 字段。
-- [ ] `dart analyze` + `dart test` + `bash tool/build_binary.sh`，子模块提交 `feat(code): headless 非交互模式（nava -p）`，父仓库提交 gitlink。
+- [x] `runHeadless`：`sessions.create()`（或 `--session` 指定时 `open`）→ 会话子上下文 `provideAgentLoop`（复用 `ConatusTuiController._bind` 的插件清单中 TUI 无关部分：plan/goal/schedule 不装，只装 Agent Loop 必需）→ `agent.run(prompt)` → 按 format 输出 → `sessions.flush()` + `runtime.dispose()`。
+- [x] `AgentCancelled`/`LlmException`/其他异常 → stderr 中文提示 + 退出码 1；`ConfigException` 维持退出码 1 现状还是改 2——**改为 2**（决策表），bin 里 `exit(2)`。
+- [x] 沙箱后端不可用时 stderr 提示照常、流程继续（Review Focus #4）。
+- [x] 测试：fake `LlmProvider`（注册进 providers 或直传 `llm:`）跑通 text/json 两种输出；json 含 `reply`/`sessionId` 字段。
+- [x] `dart analyze` + `dart test` + `bash tool/build_binary.sh`，子模块提交 `feat(code): headless 非交互模式（nava -p）`，父仓库提交 gitlink。
 
 ---
 
@@ -182,19 +185,19 @@
 
 **Files:** New `lib/src/tui/project_context.dart`；Modify `tui_app.dart` / `bin/conatus_code.dart`；Test `test/tui/project_context_test.dart`
 
-- [ ] `Future<String?> loadProjectContext(String workdir)`：依次试读 `<workdir>/AGENTS.md`、`<workdir>/NAVA.md`；都不存在返回 `null`；单文件超 16 KB 截断并标注；两段非空时拼 `AGENTS.md` 内容 + `\n\n` + NAVA.md 内容。
-- [ ] `create` 加 `String? workdir`；非空时调用并在有结果时注册 `PromptSection(name: 'project', text: () => content)`（persona/coding 段之后）。
-- [ ] 测试：两文件都没有 → null；只有 AGENTS.md；并存拼接；超限截断标注。
-- [ ] `dart analyze` + `dart test` 通过，子模块提交 `feat(code): 启动加载 AGENTS.md/NAVA.md 进 system prompt`。
+- [x] `Future<String?> loadProjectContext(String workdir)`：依次试读 `<workdir>/AGENTS.md`、`<workdir>/NAVA.md`；都不存在返回 `null`；单文件超 16 KB 截断并标注；两段非空时拼 `AGENTS.md` 内容 + `\n\n` + NAVA.md 内容。
+- [x] `create` 加 `String? workdir`；非空时调用并在有结果时注册 `PromptSection(name: 'project', text: () => content)`（persona/coding 段之后）。
+- [x] 测试：两文件都没有 → null；只有 AGENTS.md；并存拼接；超限截断标注。
+- [x] `dart analyze` + `dart test` 通过，子模块提交 `feat(code): 启动加载 AGENTS.md/NAVA.md 进 system prompt`。
 
 ### Task 2：`/init` 命令
 
 **Files:** Modify `tui_commands.dart` / `tui_controller.dart`；Test `test/tui/tui_init_command_test.dart`
 
-- [ ] `/init`：`submit` 固定提示词（「扫描当前仓库结构与关键文件，生成 AGENTS.md：项目概述、构建/测试命令、代码风格、边界注意事项，经 write_file 写入仓库根」），走正常轮次（审批照常）。
-- [ ] 已存在 AGENTS.md 时提示「已存在，将让模型更新它」再提交。
-- [ ] 测试：fake agent 下 `/init` 触发一轮且提示词含「AGENTS.md」。
-- [ ] `dart analyze` + `dart test` + `bash tool/build_binary.sh`，子模块提交 `feat(code): /init 生成项目 AGENTS.md`，父仓库提交 gitlink。
+- [x] `/init`：`submit` 固定提示词（「扫描当前仓库结构与关键文件，生成 AGENTS.md：项目概述、构建/测试命令、代码风格、边界注意事项，经 write_file 写入仓库根」），走正常轮次（审批照常）。
+- [x] 已存在 AGENTS.md 时提示「已存在，将让模型更新它」再提交。
+- [x] 测试：fake agent 下 `/init` 触发一轮且提示词含「AGENTS.md」。
+- [x] `dart analyze` + `dart test` + `bash tool/build_binary.sh`，子模块提交 `feat(code): /init 生成项目 AGENTS.md`，父仓库提交 gitlink。
 
 ---
 
@@ -219,45 +222,45 @@
 
 **Files:** Modify `tui_controller.dart` / `tui_commands.dart`；Test `test/tui/tui_compact_command_test.dart`
 
-- [ ] `_handleCompact([String? note])`：取 `'compaction'` 服务、当前 session、`'llm'`；调 `compactIfNeeded(session, (events, previous) => summarizeEvents(llm, events, previous), keepRecent: 20)`（手动强制口径 20，小于自动预算时也能折；`summarizeEvents` 若未从 conatus_agent 导出则先补导出）。
-- [ ] 返回 `null` → 提示「历史太短，无需压缩」（Review Focus #5）；否则提示「已压缩 <compacted> 条早期事件」。
-- [ ] 测试：fake compactor 返回 null / 非 null 两路径；命令表含 compact。
-- [ ] `dart analyze` + `dart test` 通过，子模块提交 `feat(code): /compact 手动压缩`。
+- [x] `_handleCompact([String? note])`：取 `'compaction'` 服务、当前 session、`'llm'`；调 `compactIfNeeded(session, (events, previous) => summarizeEvents(llm, events, previous), keepRecent: 20)`（手动强制口径 20，小于自动预算时也能折；`summarizeEvents` 若未从 conatus_agent 导出则先补导出）。
+- [x] 返回 `null` → 提示「历史太短，无需压缩」（Review Focus #5）；否则提示「已压缩 <compacted> 条早期事件」。
+- [x] 测试：fake compactor 返回 null / 非 null 两路径；命令表含 compact。
+- [x] `dart analyze` + `dart test` 通过，子模块提交 `feat(code): /compact 手动压缩`。
 
 ### Task 2：`/cost`
 
 **Files:** Modify `cost_tracker.dart` / `tui_controller.dart` / `tui_commands.dart`；Test `test/tui/tui_cost_command_test.dart`
 
-- [ ] `CostTrackerImpl` 加 `promptTokens` / `completionTokens` 只读 getter。
-- [ ] `/cost`：读 `'costTracker'`，输出「今日估算成本：$x.xxxx（输入 N / 输出 M token，粗略护栏口径，非计费）」；服务缺失提示不可用。
-- [ ] 测试：注入预置用量的 tracker，输出含金额与 token 数。
-- [ ] `dart analyze` + `dart test` 通过，子模块提交 `feat(code): /cost 展示今日估算成本`。
+- [x] `CostTrackerImpl` 加 `promptTokens` / `completionTokens` 只读 getter。
+- [x] `/cost`：读 `'costTracker'`，输出「今日估算成本：$x.xxxx（输入 N / 输出 M token，粗略护栏口径，非计费）」；服务缺失提示不可用。
+- [x] 测试：注入预置用量的 tracker，输出含金额与 token 数。
+- [x] `dart analyze` + `dart test` 通过，子模块提交 `feat(code): /cost 展示今日估算成本`。
 
 ### Task 3：`--version`
 
 **Files:** New `lib/src/version.dart`；Modify `tui_options.dart` / `bin/conatus_code.dart` / `tool/build_binary.sh`；Test `test/tui/tui_options_test.dart`（补例）
 
-- [ ] `const String navaVersion = String.fromEnvironment('NAVA_VERSION', defaultValue: 'dev');`
-- [ ] `build_binary.sh`：`version="$(grep '^version:' "$package_root/pubspec.yaml" | awk '{print $2}')"`，`dart compile exe ... -DNAVA_VERSION="$version"`。
-- [ ] `TuiOptions` 加 `versionRequested`；bin 里打印 `nava <version>` 后退出（`dart run` 下为 `dev`，Review Focus #8）。
-- [ ] 检查根仓库 `Makefile` 打包目标是否也走 `build_binary.sh`，不是则同步加 `-D`。
-- [ ] 测试：解析 `--version`；`dart analyze` + `dart test` 通过，子模块提交 `feat(code): --version 与编译期版本注入`。
+- [x] `const String navaVersion = String.fromEnvironment('NAVA_VERSION', defaultValue: 'dev');`
+- [x] `build_binary.sh`：`version="$(grep '^version:' "$package_root/pubspec.yaml" | awk '{print $2}')"`，`dart compile exe ... -DNAVA_VERSION="$version"`。
+- [x] `TuiOptions` 加 `versionRequested`；bin 里打印 `nava <version>` 后退出（`dart run` 下为 `dev`，Review Focus #8）。
+- [x] 检查根仓库 `Makefile` 打包目标是否也走 `build_binary.sh`，不是则同步加 `-D`。
+- [x] 测试：解析 `--version`；`dart analyze` + `dart test` 通过，子模块提交 `feat(code): --version 与编译期版本注入`。
 
 ### Task 4：`--continue`
 
 **Files:** New `lib/src/tui/recent_session.dart`；Modify `tui_options.dart` / `bin/conatus_code.dart`；Test `test/tui/recent_session_test.dart`
 
-- [ ] `Future<String?> findRecentSessionId(String sessionDir)`：列 `*.jsonl`，按文件 mtime 取最新且文件名（去扩展名）命中 `isCanonicalSessionId` 的；目录不存在/空 → `null`。
-- [ ] `TuiOptions` 加 `continueRequested`；bin：`--session` 优先，其次 `--continue` 解析（`null` 时 stderr 提示「没有历史会话，已新建」并走新建，Review Focus #6）。
-- [ ] 测试：临时目录造三个 jsonl（不同 mtime）取最新；空目录 → null；非 canonical 文件名跳过。
-- [ ] `dart analyze` + `dart test` + `bash tool/build_binary.sh`，子模块提交 `feat(code): --continue 恢复最近会话`，父仓库提交 gitlink。
+- [x] `Future<String?> findRecentSessionId(String sessionDir)`：列 `*.jsonl`，按文件 mtime 取最新且文件名（去扩展名）命中 `isCanonicalSessionId` 的；目录不存在/空 → `null`。
+- [x] `TuiOptions` 加 `continueRequested`；bin：`--session` 优先，其次 `--continue` 解析（`null` 时 stderr 提示「没有历史会话，已新建」并走新建，Review Focus #6）。
+- [x] 测试：临时目录造三个 jsonl（不同 mtime）取最新；空目录 → null；非 canonical 文件名跳过。
+- [x] `dart analyze` + `dart test` + `bash tool/build_binary.sh`，子模块提交 `feat(code): --continue 恢复最近会话`，父仓库提交 gitlink。
 
 ---
 
 ## M5：意图路由 README 失真修正（spec #2 文档部分）
 
-- [ ] 决策执行：README 特性表删除「⚡ 意图路由（高频命令零模型调用）」条目（接线 `conatus_intent` 另立计划评估，本期只做文档求真）。
-- [ ] 子模块提交 `docs(code): README 移除未接线的意图路由宣传`，父仓库提交 gitlink。
+- [x] 决策执行：README 特性表删除「⚡ 意图路由（高频命令零模型调用）」条目（接线 `conatus_intent` 另立计划评估，本期只做文档求真）。
+- [x] 子模块提交 `docs(code): README 移除未接线的意图路由宣传`，父仓库提交 gitlink。
 
 ---
 
