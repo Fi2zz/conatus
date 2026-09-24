@@ -46,10 +46,10 @@ run_command / run_tests / run_code、macOS 双层沙箱（Seatbelt + fs jail）�
 | 10 | **`/cost` / `/usage`** | `CostTrackerImpl` 持续累计 `todayCost`，无展示出口 | 斜杠命令读 `'costTracker'` 服务，展示今日成本/轮次/token 估算 |
 | 11 | **`--version`** | 无任何版本查询途径 | 编译期注入版本号（build_binary.sh 写入），`--version` 打印 |
 | 12 | **`--continue` / `--resume`** | 仅 `--session <session_uuid>` 精确恢复，无「恢复最近一次」 | SessionStore 按 mtime 取最近会话；`--continue` 恢复之 |
-| 13 | **Git 工作流** | 仅 `git_status` / `git_diff` 只读；无 `/commit`、无 commit/push 工具 | `/commit` 让模型基于 staged diff 写提交信息并提交（走审批）；push 保持经 run_command |
-| 14 | **Hooks** | 无用户自定义钩子（PreToolUse/PostToolUse/Stop 跑 shell） | config.toml `[hooks.*]`；挂工具中间件链与轮次收口点；效应系统天然支持注销 |
+| 13 | ~~**Git 工作流**~~（`/commit` **已实施** 2026-09-24） | 仅 `git_status` / `git_diff` 只读；无 `/commit`、无 commit/push 工具 | `/commit` 让模型基于 staged diff 写提交信息并提交（走审批）；push 保持经 run_command |
+| 14 | ~~**Hooks**~~（**已实施** 2026-09-24） | 无用户自定义钩子（PreToolUse/PostToolUse/Stop 跑 shell） | config.toml `[hooks.*]`；挂工具中间件链与轮次收口点；效应系统天然支持注销 |
 | 15 | ~~**消息排队**~~（**已实施** 2026-09-24） | busy 时输入被拒（「正在回复，请稍候」），不能排队追问 | 输入入队，当前轮收口后依次投递；Esc 打断时清空或保留可选 |
-| 16 | **`/doctor` 诊断** | 沙箱 probe、rg 定位、Key 检查分散存在，无集中命令 | 汇总：沙箱后端 smoke、rg 可用性、provider 连通、凭据脱敏展示、配置路径 |
+| 16 | ~~**`/doctor` 诊断**~~（**已实施** 2026-09-24） | 沙箱 probe、rg 定位、Key 检查分散存在，无集中命令 | 汇总：沙箱后端 smoke、rg 可用性、provider 连通、凭据脱敏展示、配置路径 |
 | 17 | **Linux/Windows 沙箱** | Layer 2 仅 macOS（README 已列已知边界） | Linux 评估 landlock/bwrap；Windows 降级策略。单独立项 |
 
 ### 三档：较小项
