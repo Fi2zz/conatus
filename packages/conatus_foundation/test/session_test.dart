@@ -131,6 +131,28 @@ void main() {
       if (dir.existsSync()) dir.deleteSync(recursive: true);
     });
 
+    test('adopt 的 fork 种子整体落盘，重开后历史完整', () async {
+      final SessionStore store = SessionStore(persistence: persistence);
+      final Session source = store.create(id: 's1');
+      source.append('user/message', data: <String, Object?>{'text': '第一轮'});
+      source.append('assistant/message', data: <String, Object?>{'text': '回答'});
+
+      final Session fork = source.fork(
+        fromEventId: source.events.last.id,
+        id: 'session_forked-1',
+      );
+      store.adopt(fork);
+      fork.append('user/message', data: <String, Object?>{'text': '回滚后追问'});
+      await store.flush();
+
+      final SessionStore reopened = SessionStore(persistence: persistence);
+      final Session loaded = await reopened.open('session_forked-1');
+
+      expect(loaded.length, 3); // 继承的 2 条 + 新追加 1 条
+      expect(loaded.events.first.type, 'user/message');
+      expect(loaded.events.last.type, 'user/message');
+    });
+
     test('追加落盘后可由新仓库 open 回来', () async {
       final SessionStore store = SessionStore(persistence: persistence);
       final Session session = store.create(id: 's1');

@@ -46,12 +46,22 @@ class SessionStore {
 
   /// 注册一个外部创建的会话（如 [Session.fork] 的产物）进仓库。
   ///
-  /// 与 [create]（空会话）不同，本方法接收已带事件种子的会话，只接线
-  /// 持久化写入与关闭清理。同 id 已活跃抛 [StateError]。返回该会话。
+  /// 与 [create]（空会话）不同，本方法接收已带事件种子的会话：若接有持久化，
+  /// 先把**全部种子事件**落盘（fork 的继承历史不能在重开时丢失），再接后续
+  /// 追加写入与关闭清理。同 id 已活跃抛 [StateError]。返回该会话。
   Session adopt(Session session) {
     final String id = session.id;
     if (_sessions.containsKey(id)) {
       throw StateError('会话 "$id" 已存在');
+    }
+    final SessionPersistence? persistence = _persistence;
+    if (persistence != null && session.events.isNotEmpty) {
+      for (final SessionEvent event in session.events) {
+        final Future<void> write =
+            _chain.then((_) => persistence.append(id, event));
+        _writes.add(write);
+        _chain = write.catchError((Object _) {});
+      }
     }
     _attach(session);
     _sessions[id] = session;
