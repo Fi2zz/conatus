@@ -272,12 +272,12 @@
 | 项 | 前置 |
 |----|------|
 | ~~Checkpoint/rewind（spec #3）~~（**已实施** 2026-09-24，见专项 spec/plan） | 快照策略、与 Plan Mode/审批/沙箱的交互已在专项设计中定案 |
-| 后台任务执行器（spec #4） | `[background]` 配置已解析，设计任务生命周期 |
+| ~~后台任务执行器（spec #4）~~（**已实施** 2026-09-24，三期） | `keep_alive_on_exit`（真 detach）与 conatus_tasks 深度接线另立 |
 | ~~ASR 语音输入（spec #5）~~（**暂缓**，用户决定近期不做） | 音频设备依赖，单元测试策略先行 |
 | observability 导出（spec #6） | 选导出后端（OTLP/文件） |
 | `/commit`（spec #13） | 审批语义设计（staged diff → 提交信息） |
 | Hooks（spec #14） | config  schema 与中间件挂点设计 |
-| 消息排队（spec #15） | TUI 输入状态机改动，与 Esc 打断交互 |
+| ~~消息排队（spec #15）~~（**已实施** 2026-09-24，三期） | TUI 输入状态机改动，与 Esc 打断交互 |
 | `/doctor`（spec #16） | 无前置，可随时插入 |
 | Linux/Windows 沙箱（spec #17） | 单独立项 |
 
