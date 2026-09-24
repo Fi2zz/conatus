@@ -1,7 +1,7 @@
 # nava checkpoint/rewind — 设计
 
 日期：2026-09-24
-状态：已实施（2026-09-24，见实现计划；v2 对话回滚待排期）
+状态：已实施（v1 文件回滚 + v2 对话回滚均已完成，见实现计划）
 范围：`packages/conatus_code` 子模块；v2 对话回滚可能触及 `conatus_foundation`（`SessionStore.adopt`，见下）
 
 ## 背景

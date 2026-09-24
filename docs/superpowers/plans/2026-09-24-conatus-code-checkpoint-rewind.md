@@ -109,7 +109,13 @@
 - 父仓库 `chore(code): 同步子模块 gitlink（checkpoint/rewind）` + push。
 - 更新 `docs/superpowers/plans/2026-09-24-conatus-code-feature-gaps.md` 的 spec #3 状态；HANDOFF-21 下一步表勾掉该项。
 
-## v2（本计划不覆盖，已文档化）
+## v2（2026-09-24 已实施，框架层两处 additive 改动）
 
-- 对话回滚：`Session.fork` + `SessionStore.adopt`（需 conatus_foundation 加 additive 方法）+ fork 会话 id 规范化。单独出设计/计划。
-- delta 快照优化（大工作区成本）；硬链接方案已否决（原地写共享 inode）。
+- 对话回滚：`/rewind` 同时把对话回到该轮之前。`Session.fork(fromEventId:
+  <检查点记录的 lastEventId>)` + 控制器切到 fork。框架层：
+  - `conatus_foundation` 新增 `SessionStore.adopt(Session)`（注册外部 fork 会话，
+    并把**继承种子整体落盘**，重开不丢历史）；
+  - fork 会话 id 用 `session_<uuid>`（`newUuidV4`），满足 `isCanonicalSessionId`，
+    可被 `--session` / `--continue` 恢复；切点为空（全新会话的 turn 0）时直接建
+    全新空会话。
+- delta 快照优化（大工作区成本）留待后续；硬链接方案已否决（原地写共享 inode）。
