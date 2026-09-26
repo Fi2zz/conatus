@@ -14,7 +14,7 @@
   ontology），`package:conatus/conatus.dart` 统一导出；`conatus_ontology` 的
   `MemoryStore` / `Constraint` 与 foundation / workflow 同名，伞包出口隐藏
   ontology 侧（直接依赖 ontology 包不受影响）
-- 子包间 76 条 `^0.16.0` 托管约束全部转为 path 依赖：git 消费场景下托管约束
+- 子包间 72 条 `^0.16.0` 托管约束全部转为 path 依赖：git 消费场景下托管约束
   会与根包的 path 源冲突导致求解失败，path 化是 git 源自洽的前提
 - 各 pubspec 的 `version:` 冻结在 0.16.0，版本演进由 git tag 承载；
   `tool/version.sh` 退役升版能力，改为冻结校验（并排除独立版本的
