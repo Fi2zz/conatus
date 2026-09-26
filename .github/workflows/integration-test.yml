@@ -21,3 +21,38 @@ jobs:
           done
       - name: Run integration tests
         run: dart test test/integration/ --reporter=expanded
+
+  # 消费链验证：模拟外部用户以 git 源依赖根包，防 path 依赖 / 导出链回归
+  # （全部包 publish_to: none 后，git 源是唯一分发通道，这条链断了等于断供）。
+  consumer-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+      - name: Consumer probe via git source
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/consumer/bin
+          cat > /tmp/consumer/pubspec.yaml <<EOF
+          name: consumer_probe
+          environment:
+            sdk: ^3.11.0
+          dependencies:
+            conatus:
+              git: {url: $GITHUB_WORKSPACE, ref: $GITHUB_SHA}
+          EOF
+          cat > /tmp/consumer/bin/probe.dart <<'DART'
+          import 'package:conatus/conatus.dart';
+          import 'package:conatus_agent/conatus_agent.dart' as agent;
+          import 'package:conatus_team/conatus_team.dart' as team;
+
+          void main() {
+            final Context ctx = Context.root();
+            ctx.dispose();
+            print('consumer ok: ${agent.provideAgentLoop} ${team.TeamVoice.noop}');
+          }
+          DART
+          cd /tmp/consumer
+          dart pub get
+          dart analyze
+          dart run bin/probe.dart
