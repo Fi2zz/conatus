@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
@@ -103,6 +104,38 @@ void main() {
 
       expect(result.exitCode, isNot(0));
       expect(result.timedOut, isFalse);
+    });
+
+    test('run cancel 后孙进程孤儿持有管道也不挂起', () async {
+      if (Platform.isWindows) return;
+      // 脚本内 sleep：bash 不 exec 优化，cancel 杀 bash 后 sleep 成孤儿持管道。
+      final Directory tmp = Directory.systemTemp.createTempSync('shell-orphan-');
+      addTearDown(() => tmp.deleteSync(recursive: true));
+      final File script = File('${tmp.path}/s.sh')
+        ..writeAsStringSync('sleep 30\n');
+      final executor = LocalShellExecutor();
+      final Completer<void> cancel = Completer<void>();
+      final Stopwatch sw = Stopwatch()..start();
+      final Future<ShellRunResult> pending = executor.run(executor.resolve(
+        ShellExecRequest(command: 'bash ${script.path}', cancelSignal: cancel.future),
+      ));
+      Timer(const Duration(milliseconds: 300), cancel.complete);
+      final ShellRunResult result = await pending;
+      sw.stop();
+      expect(sw.elapsed, lessThan(const Duration(seconds: 5)));
+      expect(result.exitCode, isNot(0)); // 被 SIGKILL
+    });
+
+    test('正常命令不受宽限期拖累', () async {
+      if (Platform.isWindows) return;
+      final executor = LocalShellExecutor();
+      final Stopwatch sw = Stopwatch()..start();
+      final ShellRunResult result = await executor.run(
+        executor.resolve(const ShellExecRequest(command: "bash -c 'echo hi'")),
+      );
+      sw.stop();
+      expect(result.stdout.text, contains('hi'));
+      expect(sw.elapsed, lessThan(const Duration(seconds: 2)));
     });
   });
 

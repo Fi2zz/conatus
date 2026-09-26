@@ -4,6 +4,15 @@
 
 ## [未发布]
 
+`conatus_foundation` 修复 shell 层两个同族时序缺陷：
+
+- `LocalShellExecutor.run()`：exitCode 落定后给管道关闭 250ms 宽限期，逾期返回
+  已采集快照——进程被 cancel/超时杀掉后，孙进程（脚本 fork 出的子进程）可能以
+  孤儿身份持有管道写端导致挂到其自然退出（`bash script.sh` 内 `sleep` 场景
+  100% 复现；此前测试全绿是 bash 单命令 exec 优化掩盖的）
+- `_LocalShellProcess.done`：改为同时等待 stdout/stderr 流关闭——`done` 落定后
+  `readOutput()` 此前可能拿不到尚未投递的尾部输出（慢 I/O 环境 5/5 复现空输出）
+
 `conatus_search` 支持多 provider 搜索路由：
 
 - 新增 Tavily / Brave 搜索源与名字驱动的装配（`buildSearchProviders` /

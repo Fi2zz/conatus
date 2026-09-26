@@ -18,6 +18,13 @@ const Map<String, String> _envOverrides = <String, String>{
   'GIT_PAGER': 'cat',
 };
 
+/// exitCode 落定后，等待管道关闭的宽限期。
+///
+/// 进程被杀（cancel/超时）后，其孙进程可能以孤儿身份持有 stdout/stderr
+/// 的管道写端，使流迟迟不关闭；宽限期过后返回已采集快照，调用方不再被
+/// 挂到孙进程自然退出。
+const Duration _pipeSettleGrace = Duration(milliseconds: 250);
+
 /// 基于本地子进程的默认执行器。
 class LocalShellExecutor implements ShellExecutor {
   LocalShellExecutor({
@@ -61,10 +68,10 @@ class LocalShellExecutor implements ShellExecutor {
     if (cancel != null) {
       unawaited(cancel.then((_) => process.kill(ProcessSignal.sigkill)));
     }
-    final Future<CollectedOutput> stdout =
-        _collect(process.stdout, spec.stdoutMaxBytes);
-    final Future<CollectedOutput> stderr =
-        _collect(process.stderr, maxOutputBytes);
+    final _BoundedCollector stdout =
+        _BoundedCollector(process.stdout, spec.stdoutMaxBytes)..start();
+    final _BoundedCollector stderr =
+        _BoundedCollector(process.stderr, maxOutputBytes)..start();
     bool timedOut = false;
     final Timer timer = Timer(Duration(milliseconds: spec.timeoutMs), () {
       timedOut = true;
@@ -72,12 +79,13 @@ class LocalShellExecutor implements ShellExecutor {
     });
     final int exitCode = await process.exitCode;
     timer.cancel();
+    await _awaitSettled(<Completer<void>>[stdout.finished, stderr.finished]);
     return ShellRunResult(
       exitCode: exitCode,
       timedOut: timedOut,
       timeoutMs: spec.timeoutMs,
-      stdout: await stdout,
-      stderr: await stderr,
+      stdout: stdout.snapshot(),
+      stderr: stderr.snapshot(),
     );
   }
 
@@ -112,34 +120,29 @@ class LocalShellExecutor implements ShellExecutor {
     process.stdin.write(input);
     unawaited(process.stdin.close());
   }
-
-  Future<CollectedOutput> _collect(
-      Stream<List<int>> stream, int maxBytes) async {
-    final List<int> bytes = <int>[];
-    bool truncated = false;
-    await for (final List<int> chunk in stream) {
-      truncated = _append(bytes, chunk, maxBytes) || truncated;
-    }
-    return CollectedOutput(
-      text: utf8.decode(bytes, allowMalformed: true),
-      truncated: truncated,
-    );
-  }
 }
 
 /// 后台进程句柄：缓冲输出，支持增量读取与终止。
 class _LocalShellProcess implements ShellProcess {
   _LocalShellProcess(this._process, int maxBytes) {
-    _process.stdout.listen((List<int> chunk) =>
-        _lossy = _append(_stdout, chunk, maxBytes) || _lossy);
-    _process.stderr.listen((List<int> chunk) =>
-        _lossy = _append(_stderr, chunk, maxBytes) || _lossy);
-    _done = _process.exitCode.then((int code) {
-      _exitCode = code;
-      if (_status == ShellProcessStatus.running) {
-        _status = ShellProcessStatus.completed;
-      }
-    });
+    final Future<void> stdoutDone = _process.stdout
+        .listen((List<int> chunk) =>
+            _lossy = _append(_stdout, chunk, maxBytes) || _lossy)
+        .asFuture();
+    final Future<void> stderrDone = _process.stderr
+        .listen((List<int> chunk) =>
+            _lossy = _append(_stderr, chunk, maxBytes) || _lossy)
+        .asFuture();
+    _done = Future.wait<void>(<Future<void>>[
+      _process.exitCode.then((int code) {
+        _exitCode = code;
+        if (_status == ShellProcessStatus.running) {
+          _status = ShellProcessStatus.completed;
+        }
+      }),
+      stdoutDone,
+      stderrDone,
+    ]).then((_) {});
   }
 
   final Process _process;
@@ -186,6 +189,44 @@ class _LocalShellProcess implements ShellProcess {
     final String section = '[stderr]\n$err';
     return out.isEmpty ? section : '$out\n$section';
   }
+}
+
+/// 有界采集：把 [stream] 持续收进 [buffer]；[finished] 在流关闭（或出错）时落定。
+///
+/// 与「await 采集 future」的区别：buffer 随时可快照——进程被杀后若孙进程
+/// 孤儿持有管道 fd，流迟迟不关闭，调用方可以宽限期后取走已采集部分，
+/// 而不是挂到孤儿自然退出。
+class _BoundedCollector {
+  _BoundedCollector(this._stream, this._maxBytes);
+
+  final Stream<List<int>> _stream;
+  final int _maxBytes;
+  final List<int> buffer = <int>[];
+  final Completer<void> finished = Completer<void>();
+  bool truncated = false;
+
+  void start() {
+    _stream.listen(
+      (List<int> chunk) =>
+          truncated = _append(buffer, chunk, _maxBytes) || truncated,
+      onError: (Object _) => finished.complete(),
+      onDone: finished.complete,
+    );
+  }
+
+  /// 当前已采集内容的快照（不结束采集）。
+  CollectedOutput snapshot() => CollectedOutput(
+        text: utf8.decode(buffer, allowMalformed: true),
+        truncated: truncated,
+      );
+}
+
+/// 等全部 [completers] 落定，最长 [_pipeSettleGrace]；逾期按已落定处理。
+Future<void> _awaitSettled(List<Completer<void>> completers) async {
+  await Future.any<void>(<Future<void>>[
+    Future.wait<void>(completers.map((Completer<void> c) => c.future)),
+    Future<void>.delayed(_pipeSettleGrace),
+  ]);
 }
 
 /// 把 [chunk] 追加到 [bytes]，超过 [maxBytes] 时截断并返回 true。
