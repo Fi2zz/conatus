@@ -7,10 +7,10 @@
 
 本仓库是一个 [pub workspace](https://dart.dev/tools/pub/workspaces) monorepo。
 **根包 `conatus` 是伞包（umbrella）**：自身不含实现，统一再导出 `packages/` 下的
-14 个模块包，因此 `import 'package:conatus/conatus.dart';` 是完整公开 API；也可以
+全部 22 个模块包，因此 `import 'package:conatus/conatus.dart';` 是完整公开 API；也可以
 只依赖某个模块包（如 `conatus_core`、`conatus_agent`），以获得更小的依赖面。
-仓库另有 7 个**实验性包**（`publish_to: none`，不导出到伞包，API 可能随时变更），
-需显式依赖，见下方「实验性包」小节。
+其中 8 个**实验性包**（API 可能随时变更）同样随伞包导出，生产环境依赖前
+见下方「实验性包」小节与各包 README。
 
 `packages/conatus_code` 是独立的**子模块**（[Fi2zz/conatus_code](https://github.com/Fi2zz/conatus_code)）：
 基于本仓库构建的终端编码智能体，不在下表内、不进伞包；根包只在
@@ -68,7 +68,7 @@ make clean      # 删除 packages/conatus_code/dist
 > `conatus_coding` 三个包，现已并入 `conatus_code` 子模块：其 `lib/tui.dart` /
 > `lib/fs_tools.dart` / `lib/coding.dart` 即对应入口。
 
-### 实验性包（不进伞包，`publish_to: none`）
+### 实验性包（随伞包导出；API 可能破坏性变更，生产慎用）
 
 | 包 | 说明 | 依赖 | 文档 |
 |----|------|------|------|
@@ -79,6 +79,7 @@ make clean      # 删除 packages/conatus_code/dist
 | `conatus_observability` | 可观测性导出器：span 语义 + 从 Session Log 派生 trace | `conatus_agent`、`conatus_foundation` | [README](packages/conatus_observability/README.md) |
 | `conatus_team` | 多智能体协作：任务板（DAG + CAS）+ 成员运行时 + 协作模式 | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_team/README.md) |
 | `conatus_workflow` | 编排引擎：声明式流程（数据，非代码）+ 运行状态机 | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_tasks`、`conatus_team` | [README](packages/conatus_workflow/README.md) |
+| `conatus_ontology` | 自进化本体层（EvoOntology 适配）：Term / Mapping / Constraint / Evidence，接地构建 + TypedEdits 局部更新 | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_ontology/README.md) |
 
 依赖方向自上而下，无环：
 
@@ -103,9 +104,10 @@ conatus_computer_use ▶ conatus_mcp、conatus_tasks、conatus_credentials、con
 conatus_team ────────▶ conatus_agent、conatus_llm、conatus_foundation
 conatus_intent ──────▶ conatus_agent、conatus_foundation
 conatus_workflow ────▶ conatus_team、conatus_tasks、conatus_foundation
+conatus_ontology ──▶ conatus_agent、conatus_llm、conatus_foundation
 ```
 
-（`conatus_core` 为所有包的公共底座，各行从略。）后 7 行是实验性包：只被上层装配
+（`conatus_core` 为所有包的公共底座，各行从略。）后 8 行是实验性包：只被上层装配
 依赖，稳定包不反向依赖它们（`conatus_agent` / `conatus_mcp` / `conatus_tasks` 都
 不知道它们的存在）。
 
@@ -134,89 +136,36 @@ conatus_workflow ────▶ conatus_team、conatus_tasks、conatus_foundati
 - 🔌 **MCP 生态**：`mcp`（MCP 客户端：stdio / HTTP / SSE 传输 + 握手与工具发现），外部 server 的工具以 `server__tool` 接入同一张工具表，风险缺省 `medium` 走审批
 - 🗜️ **分层压缩与缓存度量**：`content-classifier`（内容分类器能力缝）、`layered-compaction`（按类别分层折叠：工具结果压成指针、用户偏好留原文）、`context-cache`（可缓存前缀指纹 + 命中遥测）
 - 🔭 **产品化**：`telemetry`（事件导出 + 埋点）、`evaluation`（用例评估 + 基线对比）、`approval`（高危工具审批）、`skill`（技能沉淀）、`skill-catalog`（技能加载：发现 `SKILL.md` 指令集 + 目录注入 + `skill` 工具）、`recovery`（会话快照恢复）
-- 🕹️ **实验性能力包**（`publish_to: none`，不进伞包）：`alerting`（订阅遥测按规则主动告警）、`browser_use` / `computer_use`（经 MCP 驱动浏览器与本地桌面）、`team`（多智能体协作：任务板 + 成员运行时）、`workflow`（把协作沉淀为声明式流程资产）、`observability`（span 语义 + 从 Session Log 派生 trace）
-- ✅ **完整测试覆盖**：1350 个测试（21 个模块包 + 根包，CI 全量执行）
+- 🕹️ **实验性能力包**（API 可能破坏性变更）：`alerting`（订阅遥测按规则主动告警）、`browser_use` / `computer_use`（经 MCP 驱动浏览器与本地桌面）、`team`（多智能体协作：任务板 + 成员运行时）、`workflow`（把协作沉淀为声明式流程资产）、`observability`（span 语义 + 从 Session Log 派生 trace）、`ontology`（自进化本体层：Term / Mapping / Constraint / Evidence）
+- ✅ **完整测试覆盖**：1600 个测试（22 个模块包 + 根包与集成，CI 全量执行）
 
 ---
 
 ## 安装
 
-根包 `conatus` 依赖同一仓库内的 `conatus_*` 兄弟包（目前尚未发布到 pub.dev）。
-因此从 git 引入时，伞包直接指向仓库根，兄弟包放进 `dependency_overrides`，
-否则 pub 会按 hosted 源去 pub.dev 查找不存在的 `conatus_search` 等：
+全部 23 个包均为 `publish_to: none`，**不经 pub.dev 分发**（也从未发布过）。
+以 git 源依赖伞包 `conatus`，一次性获得全部 22 个子包——伞包与各子包之间
+一律是 path 依赖，随仓库自洽解析，**不需要任何 `dependency_overrides`**：
 
 ```yaml
 dependencies:
   conatus:
     git:
       url: https://github.com/Fi2zz/conatus.git
-      ref: master        # 建议 pin 到 release tag 或 commit SHA，避免 master 漂移
-
-dependency_overrides:
-  conatus_agent:
-    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_agent}
-  conatus_asr:
-    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_asr}
-  conatus_core:
-    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_core}
-  conatus_compaction:
-    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_compaction}
-  conatus_credentials:
-    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_credentials}
-  conatus_cron:
-    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_cron}
-  conatus_foundation:
-    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_foundation}
-  conatus_llm:
-    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_llm}
-  conatus_mcp:
-    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_mcp}
-  conatus_schedule:
-    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_schedule}
-  conatus_search:
-    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_search}
-  conatus_skill:
-    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_skill}
-  conatus_tasks:
-    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_tasks}
-  conatus_tts:
-    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_tts}
+      ref: v0.17.0        # 建议 pin 到 tag 或 commit SHA，避免 master 漂移
 ```
 
-实验性包（`conatus_alerting` / `conatus_browser_use` / `conatus_computer_use` /
-`conatus_intent` / `conatus_observability` / `conatus_team` / `conatus_workflow`）
-不在伞包依赖内，
-要用就单独声明，并同样把它们依赖的兄弟包放进 `dependency_overrides`：依赖
-`conatus_workflow` 时要额外补 `conatus_team`（workflow → team），依赖
-`conatus_browser_use` / `conatus_computer_use` 时要补 `conatus_mcp` 与
-`conatus_tasks`（上面的列表已含）；`conatus_intent` 只依赖 `conatus_agent` 与
-`conatus_foundation`，无需额外补装。
-
-```yaml
-dependencies:
-  conatus_workflow:
-    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_workflow}
-
-dependency_overrides:
-  # ...上面的兄弟包列表...
-  conatus_team:
-    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_team}
-```
-
-各包发布到 pub.dev 后即可简化为 `conatus: ^0.15.0`。
+`import 'package:conatus/conatus.dart';` 即完整公开 API（含实验性包）；也可以
+只 import 需要的子包入口（如 `package:conatus_core/conatus_core.dart`）——子包
+随伞包一并安装，无需重复声明。若你的 lint 开了 `depend_on_referenced_packages`，
+把直接 import 的子包也显式声明为 git 依赖（加 `path: packages/<name>`）。
 
 > 包是纯 Dart（不含 Flutter SDK 依赖），Flutter 项目同样可用，只是用 `flutter pub get`。
 
-本地开发时把上面的 `git: {...}` 换成 `path:`：伞包写仓库根
-（`path: /你的路径/conatus`），兄弟包写 `path: /你的路径/conatus/packages/<name>`。
+本地开发时把上面的 `git: {...}` 换成 `path: /你的路径/conatus`。
 
-只依赖叶子包 `conatus_core`（无任何依赖）时不需要 override：
-
-```yaml
-dependencies:
-  conatus_core:
-    git: {url: https://github.com/Fi2zz/conatus.git, ref: master, path: packages/conatus_core}
-```
+版本演进由 git tag 承载（`v0.17.0` 起），CHANGELOG 照旧维护；各 pubspec 的
+`version:` 冻结在 0.16.0 仅作快照标识。
 
 从源码使用：
 
@@ -1141,9 +1090,10 @@ for (final step in turn.steps) print('${step.call.name}: ${step.result.content}'
 
 ## 实验性能力包
 
-以下 6 个包是 `publish_to: none` 的实验性包，不进伞包，需显式依赖
-（`import 'package:conatus_alerting/conatus_alerting.dart';` 等）。API 可能在没有
+以下 8 个包是实验性包（随伞包一并导出，也可只 import 各自包入口，如
+`import 'package:conatus_alerting/conatus_alerting.dart';`）。API 可能在没有
 major 版本号变更的情况下发生破坏性改动，请勿在生产环境依赖。
+`ontology`（自进化本体层）无独立小节，见其[包 README](packages/conatus_ontology/README.md)。
 
 ### `alerting` — 主动告警（`conatus_alerting`）
 
@@ -1729,7 +1679,7 @@ root.provide('x', 1);
 
 ### 实验性包
 
-以下包均为 `publish_to: none`，不进伞包，需显式依赖（详见各包 README）。
+以下包均为实验性包（同样随伞包导出；详见各包 README，`conatus_ontology` 见其包 README）。
 
 | 成员 | 说明 |
 |------|------|
@@ -1829,31 +1779,17 @@ for d in packages/*/; do (cd "$d" && dart test); done
 
 ## 发版
 
-所有包共用同一个版本号，包间依赖也用同一约束（`^0.15.0` 在 0.x 下等价于
-`>=0.15.0 <0.16.0`，所以每升一次版本，22 个 `pubspec.yaml`（21 个模块包 + 根伞包）
-必须一起改）：
+分发方式为 **git 源**（全部 23 个包 `publish_to: none`，不发布 pub.dev），
+版本演进由 git tag 承载：
 
 ```bash
-bash tool/version.sh            # 检查：23 个包版本号一致，且包间约束都指向它
-bash tool/version.sh 0.16.0     # 统一升版：改 version 行 + 同步所有包间约束
+bash tool/version.sh            # 冻结校验：版本一致、无残留托管约束（子模块除外）
+git tag v0.17.0 && git push --tags   # 升版 = 打 tag；用户以 ref pin 版本
 ```
 
-漏改任何一处，`dart pub get` 会在 workspace 内解析阶段直接失败（不会悄悄发出去）。
-
-发布按依赖顺序进行（依赖在前）；14 个可发布包如下，7 个实验性包
-（`conatus_alerting` / `conatus_browser_use` / `conatus_computer_use` /
-`conatus_intent` / `conatus_observability` / `conatus_team` / `conatus_workflow`）
-是 `publish_to: none`，不在发布之列：
-
-```bash
-for p in conatus_core conatus_foundation conatus_compaction conatus_cron \
-         conatus_credentials conatus_llm conatus_mcp conatus_schedule \
-         conatus_search conatus_skill conatus_asr conatus_tts conatus_agent \
-         conatus_tasks; do
-  dart pub publish -C "packages/$p"
-done
-dart pub publish            # 最后发布伞包 conatus
-```
+各 pubspec 的 `version:` 冻结在 0.16.0 不再变动（仅作快照标识）；包间依赖
+一律为 path，不存在需要同步的版本约束。`version.sh` 的升版能力已退役——
+传版本号参数会报错并指向本流程。
 
 ---
 

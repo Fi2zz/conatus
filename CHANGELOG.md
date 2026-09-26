@@ -4,6 +4,28 @@
 
 ## [未发布]
 
+**分发方式变更为 git 源**（版本锚点：`v0.17.0` tag 起）：
+
+- 全部 23 个包声明 `publish_to: none`，不再发布 pub.dev（此前也从未发布过，
+  无存量 hosted 用户需要迁移）；用户以 git 源依赖伞包 `conatus` 即一次性获得
+  全部 22 个子包
+- 伞包 `conatus` 的依赖改为 path 并纳入全部 8 个实验性包（alerting /
+  browser_use / computer_use / intent / observability / team / workflow /
+  ontology），`package:conatus/conatus.dart` 统一导出；`conatus_ontology` 的
+  `MemoryStore` / `Constraint` 与 foundation / workflow 同名，伞包出口隐藏
+  ontology 侧（直接依赖 ontology 包不受影响）
+- 子包间 76 条 `^0.16.0` 托管约束全部转为 path 依赖：git 消费场景下托管约束
+  会与根包的 path 源冲突导致求解失败，path 化是 git 源自洽的前提
+- 各 pubspec 的 `version:` 冻结在 0.16.0，版本演进由 git tag 承载；
+  `tool/version.sh` 退役升版能力，改为冻结校验（并排除独立版本的
+  conatus_code 子模块——此前子模块就位时必红的已知缺口一并消失）
+- CI 新增 consumer-chain job：以本地 git 源依赖根包跑 pub get / analyze /
+  run，防 path 依赖与导出链回归
+- `conatus_code` 子模块的 pubspec 维持现状（14 个 git+path 直接依赖 + 22 条
+  dependency_overrides）：实证「合并为单个 conatus 依赖」会触发
+  `depend_on_referenced_packages` 252 条 info、「去掉 overrides」会因 git
+  ref/SHA 源身份不一致求解失败
+
 `conatus_foundation` 修复 shell 层两个同族时序缺陷：
 
 - `LocalShellExecutor.run()`：exitCode 落定后给管道关闭 250ms 宽限期，逾期返回

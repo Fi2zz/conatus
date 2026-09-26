@@ -44,7 +44,7 @@ Agent 能力。
 
 | 类别 | 包 | 说明 |
 |------|----|------|
-| **稳定模块包 ×14**（进伞包，可发布） | `conatus_core` | 核心范式：Context / EffectScope / Reactor，零运行时依赖 |
+| **稳定模块包 ×14**（进伞包） | `conatus_core` | 核心范式：Context / EffectScope / Reactor，零运行时依赖 |
 | | `conatus_foundation` | 基础设施：timer / logger / loader / tools / shell / fs / session / session-log / system-prompt / memory / database / ask-user |
 | | `conatus_credentials` | 凭据能力缝：env / 内存 / 文件 / Vault KV v2 / AWS Secrets Manager |
 | | `conatus_llm` | 大模型接入（豆包 / DeepSeek，chat 与 responses 两种形态，FallbackLlm 回退链） |
@@ -56,8 +56,7 @@ Agent 能力。
 | | `conatus_compaction` | 压缩能力缝：滚动摘要 + `compaction/*` 日志事件 |
 | | `conatus_agent` | Agent Loop 与产品化：plan / sub-agent / reflection / telemetry / eval / approval / skill / recovery |
 | | `conatus_tasks` | 任务中心：运行时任务追踪（任务树 + `list_tasks` / `cancel_task`） |
-| **实验性包 ×7**（`publish_to: none`，不进伞包，API 可能破坏性变更） | `conatus_alerting` / `conatus_browser_use` / `conatus_computer_use` / `conatus_intent` / `conatus_observability` / `conatus_team` / `conatus_workflow` | 告警 / 浏览器操作 / 桌面操作 / 意图路由 / 可观测性导出 / 多智能体协作 / 流程编排 |
-| **新实验性包 ×1** | `conatus_ontology` | 自进化本体层（EvoOntology，arXiv:2609.15779 适配）：Term / Mapping / Constraint / Evidence，接地构建 + TypedEdits 局部更新 + 配对评估门控。0.16.0 新加入，**尚未进伞包、未进 README 表格**；自述实验性，勿在生产依赖 |
+| **实验性包 ×8**（进伞包导出，API 可能破坏性变更） | `conatus_alerting` / `conatus_browser_use` / `conatus_computer_use` / `conatus_intent` / `conatus_observability` / `conatus_team` / `conatus_workflow` / `conatus_ontology` | 告警 / 浏览器操作 / 桌面操作 / 意图路由 / 可观测性导出 / 多智能体协作 / 流程编排 / 自进化本体层（EvoOntology 适配） |
 | **子模块 ×1** | `conatus_code` | 独立仓库（github.com/Fi2zz/conatus_code）的终端编码智能体；根包仅在 `dev_dependencies` 以 git 源引用，workspace 内解析到本地成员。不开发它时无需拉取 |
 
 依赖方向自上而下无环：`conatus` → `conatus_agent` → `conatus_llm` / `conatus_foundation` /
@@ -86,14 +85,13 @@ dart test test/integration/ --reporter=expanded # 集成测试（CI 单独跑）
 专项验证与工具：
 
 ```bash
-bash tool/version.sh                    # 检查：所有包版本号一致、包间约束指向它
-bash tool/version.sh 0.16.0             # 统一升版（改 version + 同步包间约束；fail-closed）
+bash tool/version.sh                    # 版本冻结校验：version 一致、无残留托管约束（升版能力已退役，版本演进由 git tag 承载）
 bash tool/verify_reversibility.sh       # conatus_core 可逆性验证：静态检查 + 单元 + 随机顺序(3种子) + 行覆盖率 + 变异测试
 git submodule update --init             # 首次拉取 conatus_code 子模块
 bash tool/setup_code_filter.sh          # 子模块 workspace filter（开发 conatus_code 前必跑）
 ```
 
-注意：pub workspace 会在解析期校验成员间版本约束，**任何一处版本漏改，`dart pub get` 直接失败**（这是特性不是 bug）。
+注意：包间依赖一律为 path（git 源分发），任何一处 path 指错，`dart pub get` 直接失败（这是特性不是 bug）。
 
 ## 5. 代码组织与风格
 
@@ -166,9 +164,11 @@ filter 的作用：checkout 时恢复 `pubspec.yaml` 的 `resolution: workspace`
 
 ### 版本管理
 
-所有包**共用同一版本号**（0.x 下 `^0.15.0` 等价 `>=0.15.0 <0.16.0`），升版一律走
-`bash tool/version.sh <新版本>`，它会同步改全部 `pubspec.yaml` 的 `version:` 与包间约束，
-校验失败自动还原。
+全部包 `publish_to: none`（git 源分发，见第 8 节），各 pubspec 的 `version:`
+**冻结在 0.16.0 不再变动**；包间依赖一律为 path，不存在需要同步的版本约束。
+版本演进由 **git tag** 承载（`v0.17.0` 起，CHANGELOG 照旧维护）。`version.sh`
+只做冻结校验（版本一致、无残留 `^` 托管约束；排除独立版本的子模块），
+升版能力已退役——传版本号参数会报错并指向 tag 流程。
 
 ### 其他
 
@@ -178,24 +178,18 @@ filter 的作用：checkout 时恢复 `pubspec.yaml` 的 `resolution: workspace`
 
 ## 8. 发布与部署
 
-1. `bash tool/version.sh <新版本>` 统一升版并过检查。
-2. 按依赖顺序发布（依赖在前），14 个可发布包 + 伞包：
+分发方式为 **git 源**：全部 23 个包 `publish_to: none`，不发布 pub.dev（也从未
+发布过），用户以 git 依赖伞包即获得全部子包（见 README「安装」）。
 
-```bash
-for p in conatus_core conatus_foundation conatus_compaction conatus_cron \
-         conatus_credentials conatus_llm conatus_mcp conatus_schedule \
-         conatus_search conatus_skill conatus_asr conatus_tts conatus_agent \
-         conatus_tasks; do
-  dart pub publish -C "packages/$p"
-done
-dart pub publish            # 最后发布伞包 conatus
-```
-
-3. 7 个实验性包（alerting / browser_use / computer_use / intent / observability / team /
-   workflow）是 `publish_to: none`，不在发布之列；`conatus_code` 是独立仓库，独立发版。
-4. CI（`.github/workflows/integration-test.yml`）：push / PR 触发，ubuntu-latest +
-   `dart-lang/setup-dart@v1`，跑根测试 + 各包测试（跳过无 pubspec.yaml 的目录）+ 集成测试。
-5. push 会自动触发镜像到 Gitee（`mirror-to-gitee.yml`，force push，无需人工干预）。
+1. 版本演进由 git tag 承载：`git tag v0.17.0 && git push --tags`；各 pubspec 的
+   `version:` 冻结在 0.16.0。升版前跑 `bash tool/version.sh` 过冻结校验。
+2. 无 `dart pub publish` 动作（pub 也会拒绝：含 path 依赖 + publish_to: none
+   双保险）。`conatus_code` 是独立仓库，独立发版（`tool/build_binary.sh`）。
+3. CI（`.github/workflows/integration-test.yml`）：push / PR 触发，ubuntu-latest +
+   `dart-lang/setup-dart@v1`，跑根测试 + 各包测试（跳过无 pubspec.yaml 的目录）+
+   集成测试 + 消费链验证（consumer-chain job：以本地 git 源依赖根包跑
+   pub get / analyze / run，防 path 依赖与导出链回归）。
+4. push 会自动触发镜像到 Gitee（`mirror-to-gitee.yml`，force push，无需人工干预）。
 
 ## 9. 安全注意事项
 
@@ -213,12 +207,15 @@ dart pub publish            # 最后发布伞包 conatus
 
 ## 10. 已知边界与注意事项
 
-- **`tool/version.sh` 与子模块**：脚本遍历 `packages/*/pubspec.yaml`，会把 submodule
-  `conatus_code`（独立版本号，当前 0.1.0）也纳入版本一致性检查，因此**当前会报「版本号不一致」**。
-  发布 14 个模块包 + 伞包时按第 8 节流程即可；如需 version.sh 通过，需先排除子模块目录
-  （脚本当前未排除，属已知缺口）。
-- `conatus_ontology` 是新实验性包：不进伞包、不在根 `pubspec.yaml` 依赖、未进 README 表格，
-  但已在 workspace 内并被 version.sh 纳入。改它之前先读其 README 与 `docs/superpowers/` 相关 spec。
+- **git 源分发的边界**：下游库若未来要发布 pub.dev 并依赖 conatus——pub 同样拒绝
+  git/path 依赖，该下游只能改用 git 或 vendoring（当前无已知下游）。
+- `conatus_code` 子模块的 pubspec 形态（14 个 git+path 直接依赖 + 22 条
+  dependency_overrides）是实证约束，**不要简化**：合并为单个 `conatus` git 依赖会
+  触发 `depend_on_referenced_packages` 252 条 info（--fatal-infos 必红）；去掉
+  overrides 则因「ref: master 与解析后 SHA 是两种源身份」求解失败。
+  见 docs/superpowers/specs/2026-09-26-conatus-git-source-distribution-design.md。
+- `conatus_ontology` 已进伞包与 README 表格（0.16.0 起）；自述实验性，勿在生产依赖。
+  改它之前先读其 README 与 `docs/superpowers/` 相关 spec。
 - 未拉取子模块时 `dart pub get` 照常工作（glob 自动跳过无 pubspec.yaml 的目录）；
   拉取后根包 dev 依赖 `conatus_code` 解析到本地成员。
 - 实验性包 API 可能在无 major 版本号变更的情况下破坏性变更，勿在生产依赖。
