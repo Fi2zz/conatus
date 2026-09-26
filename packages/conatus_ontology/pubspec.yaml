@@ -4,6 +4,7 @@ description: >-
   Evidence），从执行轨迹持续进化——接地构建、TypedEdits 局部更新、
   backbone-conditional 配对评估门控、人类可回滚。
 version: 0.16.0
+publish_to: none # 实验性包暂不发布
 repository: https://github.com/Fi2zz/conatus
 issue_tracker: https://github.com/Fi2zz/conatus/issues
 
