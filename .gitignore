@@ -24,3 +24,4 @@ coverage/
 # 本地参考资料
 .refs/
 *.log
+.audits/
