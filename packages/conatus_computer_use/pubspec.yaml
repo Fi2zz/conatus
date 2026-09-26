@@ -11,12 +11,12 @@ environment:
 resolution: workspace
 
 dependencies:
-  conatus_agent: ^0.16.0
-  conatus_core: ^0.16.0
-  conatus_credentials: ^0.16.0
-  conatus_foundation: ^0.16.0
-  conatus_mcp: ^0.16.0
-  conatus_tasks: ^0.16.0
+  conatus_agent: {path: ../conatus_agent}
+  conatus_core: {path: ../conatus_core}
+  conatus_credentials: {path: ../conatus_credentials}
+  conatus_foundation: {path: ../conatus_foundation}
+  conatus_mcp: {path: ../conatus_mcp}
+  conatus_tasks: {path: ../conatus_tasks}
 
 dev_dependencies:
   lints: ^4.0.0

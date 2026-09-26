@@ -14,10 +14,10 @@ environment:
 resolution: workspace
 
 dependencies:
-  conatus_agent: ^0.16.0
-  conatus_core: ^0.16.0
-  conatus_foundation: ^0.16.0
-  conatus_llm: ^0.16.0
+  conatus_agent: {path: ../conatus_agent}
+  conatus_core: {path: ../conatus_core}
+  conatus_foundation: {path: ../conatus_foundation}
+  conatus_llm: {path: ../conatus_llm}
 
 dev_dependencies:
   lints: ^4.0.0

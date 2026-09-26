@@ -11,8 +11,6 @@ library;
 import 'dart:async';
 import 'package:conatus/conatus.dart';
 import 'package:conatus_code/tui.dart';
-import 'package:conatus_team/conatus_team.dart';
-import 'package:conatus_workflow/conatus_workflow.dart';
 import 'package:test/test.dart';
 
 import 'helpers/scripted_llm.dart';

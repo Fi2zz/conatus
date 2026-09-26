@@ -13,13 +13,13 @@ environment:
 resolution: workspace
 
 dependencies:
-  conatus_agent: ^0.16.0
-  conatus_alerting: ^0.16.0
-  conatus_core: ^0.16.0
-  conatus_cron: ^0.16.0
-  conatus_foundation: ^0.16.0
-  conatus_tasks: ^0.16.0
-  conatus_team: ^0.16.0
+  conatus_agent: {path: ../conatus_agent}
+  conatus_alerting: {path: ../conatus_alerting}
+  conatus_core: {path: ../conatus_core}
+  conatus_cron: {path: ../conatus_cron}
+  conatus_foundation: {path: ../conatus_foundation}
+  conatus_tasks: {path: ../conatus_tasks}
+  conatus_team: {path: ../conatus_team}
 
 dev_dependencies:
   lints: ^4.0.0

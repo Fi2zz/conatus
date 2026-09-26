@@ -12,10 +12,10 @@ environment:
 resolution: workspace
 
 dependencies:
-  conatus_agent: ^0.16.0
-  conatus_core: ^0.16.0
-  conatus_foundation: ^0.16.0
-  conatus_tts: ^0.16.0
+  conatus_agent: {path: ../conatus_agent}
+  conatus_core: {path: ../conatus_core}
+  conatus_foundation: {path: ../conatus_foundation}
+  conatus_tts: {path: ../conatus_tts}
   http: ^1.2.0
 
 dev_dependencies:

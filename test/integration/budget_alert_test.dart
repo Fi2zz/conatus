@@ -7,7 +7,6 @@
 library;
 
 import 'package:conatus/conatus.dart';
-import 'package:conatus_alerting/conatus_alerting.dart';
 import 'package:test/test.dart';
 
 import 'helpers/scripted_llm.dart';

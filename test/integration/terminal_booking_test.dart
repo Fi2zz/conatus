@@ -7,7 +7,6 @@
 library;
 
 import 'package:conatus/conatus.dart';
-import 'package:conatus_browser_use/conatus_browser_use.dart';
 import 'package:test/test.dart';
 
 import 'helpers/fake_browser.dart';

@@ -12,8 +12,8 @@ environment:
 resolution: workspace
 
 dependencies:
-  conatus_agent: ^0.16.0
-  conatus_foundation: ^0.16.0
+  conatus_agent: {path: ../conatus_agent}
+  conatus_foundation: {path: ../conatus_foundation}
 
 dev_dependencies:
   lints: ^4.0.0

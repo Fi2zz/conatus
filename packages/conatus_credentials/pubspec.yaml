@@ -5,6 +5,7 @@ description: >-
 version: 0.16.0
 repository: https://github.com/Fi2zz/conatus
 issue_tracker: https://github.com/Fi2zz/conatus/issues
+publish_to: none # 不再发布 pub.dev：由根包以 git 源统一分发
 
 environment:
   sdk: ^3.6.0
@@ -12,7 +13,7 @@ environment:
 resolution: workspace
 
 dependencies:
-  conatus_core: ^0.16.0
+  conatus_core: {path: ../conatus_core}
   crypto: ^3.0.0
   http: ^1.2.0
 

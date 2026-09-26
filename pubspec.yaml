@@ -1,11 +1,14 @@
 name: conatus
 description: >-
   时空可组合性（Spatiotemporal Composability）编程范式的 Dart 实现。
-  伞包 conatus 再导出 core / foundation / llm / mcp / agent / tasks / tui
-  等 14 个模块包，`package:conatus/conatus.dart` 即完整公开 API。
+  伞包 conatus 再导出全部 22 个 conatus_* 模块包（含实验性包），
+  `package:conatus/conatus.dart` 即完整公开 API。
 version: 0.16.0
 repository: https://github.com/Fi2zz/conatus
 issue_tracker: https://github.com/Fi2zz/conatus/issues
+# 不再发布 pub.dev：全部子包为 path 依赖（pub 拒绝含 path 依赖的发布），
+# 用户以 git 源依赖本包即一次性获得全部子包。版本演进由 git tag 承载。
+publish_to: none
 
 environment:
   sdk: ^3.11.0
@@ -15,33 +18,37 @@ environment:
 workspace:
   - packages/*
 
+# 全部 22 个子包（14 稳定 + 8 实验性）以 path 依赖纳入：本包经 git 源被消费时，
+# pub 随仓库一次性解析安装全部子包；子包之间的相互依赖同为 path，整条链自洽。
 dependencies:
-  conatus_agent: ^0.16.0
-  conatus_asr: ^0.16.0
-  conatus_compaction: ^0.16.0
-  conatus_core: ^0.16.0
-  conatus_credentials: ^0.16.0
-  conatus_cron: ^0.16.0
-  conatus_foundation: ^0.16.0
-  conatus_llm: ^0.16.0
-  conatus_mcp: ^0.16.0
-  conatus_schedule: ^0.16.0
-  conatus_search: ^0.16.0
-  conatus_skill: ^0.16.0
-  conatus_tasks: ^0.16.0
-  conatus_tts: ^0.16.0
+  conatus_agent: {path: packages/conatus_agent}
+  conatus_alerting: {path: packages/conatus_alerting}
+  conatus_asr: {path: packages/conatus_asr}
+  conatus_browser_use: {path: packages/conatus_browser_use}
+  conatus_compaction: {path: packages/conatus_compaction}
+  conatus_computer_use: {path: packages/conatus_computer_use}
+  conatus_core: {path: packages/conatus_core}
+  conatus_credentials: {path: packages/conatus_credentials}
+  conatus_cron: {path: packages/conatus_cron}
+  conatus_foundation: {path: packages/conatus_foundation}
+  conatus_intent: {path: packages/conatus_intent}
+  conatus_llm: {path: packages/conatus_llm}
+  conatus_mcp: {path: packages/conatus_mcp}
+  conatus_observability: {path: packages/conatus_observability}
+  conatus_ontology: {path: packages/conatus_ontology}
+  conatus_schedule: {path: packages/conatus_schedule}
+  conatus_search: {path: packages/conatus_search}
+  conatus_skill: {path: packages/conatus_skill}
+  conatus_tasks: {path: packages/conatus_tasks}
+  conatus_team: {path: packages/conatus_team}
+  conatus_tts: {path: packages/conatus_tts}
+  conatus_workflow: {path: packages/conatus_workflow}
 
 dev_dependencies:
-  conatus_alerting: ^0.16.0
-  conatus_browser_use: ^0.16.0
   # 未发布到 pub.dev：声明为 git 源，workspace 内仍解析到本地成员
   # packages/conatus_code；未拉取子模块时按 git 源解析。
   conatus_code:
     git: {url: https://github.com/Fi2zz/conatus_code.git, ref: master}
-  conatus_intent: ^0.16.0
-  conatus_observability: ^0.16.0
-  conatus_team: ^0.16.0
-  conatus_workflow: ^0.16.0
   lints: ^4.0.0
   test: ^1.25.0
 
