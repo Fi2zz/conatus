@@ -1,4 +1,4 @@
 [submodule "packages/conatus_code"]
 	path = packages/conatus_code
-	url = git@github.com:Fi2zz/conatus_code.git
+	url = https://github.com/Fi2zz/conatus_code.git
 	ignore = untracked
