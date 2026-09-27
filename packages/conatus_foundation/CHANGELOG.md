@@ -4,6 +4,12 @@
 
 ## [未发布]
 
+- **行为变更**：`JsonDatabaseBackend` / `JsonlSessionPersistence` 的缺省目录由
+  `<cwd>/.conatus/{database,sessions}` 迁至 `$CONATUS_HOME/{database,sessions}`
+  （缺省 `~/.conatus/...`）；新增 `resolveConatusHome` / `resolveHomeDir` /
+  `kConatusHomeEnv` 出口。用户目录无法定位（无 `HOME` / `USERPROFILE`）时抛
+  `StateError`，不再回退当前工作目录；旧 `<cwd>/.conatus` 数据保留不删、
+  不自动迁移。
 - `SessionStore.create()` 缺省 id 改为 `session_<uuid>`（新增 `newUuidV4()`
   生成 UUID v4）；不再使用 `session-<微秒>-<序号>` 格式。
 - **破坏性变更**：移除 `ReadFileTool` / `provideFsTools`（`read_file` 工具层）。

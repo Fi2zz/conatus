@@ -7,6 +7,7 @@ library;
 import 'dart:convert';
 import 'dart:io';
 import 'package:conatus_core/conatus_core.dart';
+import 'conatus_home.dart';
 import 'session_types.dart';
 
 /// 会话持久化端口。
@@ -80,8 +81,7 @@ class JsonlSessionPersistence implements SessionPersistence {
   }
 
   static String _defaultDir() =>
-      '${Directory.current.path}${Platform.pathSeparator}.conatus'
-      '${Platform.pathSeparator}sessions';
+      '${resolveConatusHome()}${Platform.pathSeparator}sessions';
 }
 
 /// 将 [SessionPersistence] 作为 `'sessionPersistence'` 服务提供到上下文。

@@ -4,6 +4,10 @@
 
 ## [未发布]
 
+- 用户级发现根（`$CONATUS_HOME/skills`、`$CONATUS_AGENTS_HOME/skills`）的用户目录
+  解析复用 `conatus_foundation` 的 `resolveHomeDir`：无 `HOME` / `USERPROFILE`
+  时抛 `StateError`，不再静默回退当前工作目录。
+
 初始实现——技能加载，从 `deepseek-harness` 的 skill 包族移植为独立包：
 
 - `SkillRegistry` / `provideSkillRegistry`（服务键 `'skillRegistry'`）：provider

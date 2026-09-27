@@ -35,7 +35,7 @@ Agent 能力。
 │                           #        demo.dart（离线脚本化模型）、voice_plan_mode.dart
 ├── tool/                   # 版本管理、子模块 filter、可逆性验证脚本
 ├── .github/workflows/      # integration-test.yml + mirror-to-gitee.yml
-├── .conatus/               # 本地运行数据（sessions/database/providers.json），已 gitignore
+├── .conatus/               # 历史遗留的本地运行数据（新版默认落 ~/.conatus，见第 9 节），已 gitignore
 ├── .handoffs/              # 交接文档（HANDOFF.md、HANDOFF-<N>.md），跨轮次上下文
 └── docs/superpowers/       # superpowers 工作流的 plans/ 与 specs/
 ```
@@ -203,7 +203,8 @@ filter 的作用：checkout 时恢复 `pubspec.yaml` 的 `resolution: workspace`
   超时视为拒绝。
 - `shell` / `fs` 是能力缝：默认 `LocalShellExecutor`（`bash -c`）与 `LocalFileSystem`
   （原子写入 + 版本守卫）。生产替换为沙箱实现时消费方代码不变。
-- 提交时注意不要带入真实 API Key（`.conatus/` 已 gitignore；`providers.json` 只存键名）。
+- 提交时注意不要带入真实 API Key（`.conatus/` 已 gitignore；运行数据默认落用户目录
+  `~/.conatus` / `~/.nava`，不入工作区）。
 
 ## 10. 已知边界与注意事项
 

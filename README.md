@@ -732,7 +732,7 @@ final resumed = await app.recovery.restore('cli'); // 重启后继续
 并在追加时异步落盘（`flush()` 等待在途写入）。
 
 ```dart
-provideSessionPersistence(app); // 本地 JSONL（默认 <cwd>/.conatus/sessions）
+provideSessionPersistence(app); // 本地 JSONL（默认 $CONATUS_HOME/sessions，缺省 ~/.conatus/sessions）
 final sessions = provideSessions(app);
 
 final session = sessions.create(id: 's1');
@@ -1035,6 +1035,8 @@ provideMemoryTools(app);
 服务键 `'database'`。hub 本身不做 IO：具名后端（默认 `JsonDatabaseBackend`，每单元
 一个 JSON 文件、整表原子发布）拥有介质，`open(unit)` 载入整表并返回句柄。句柄
 同步读、异步写，落盘成功后才广播 `DatabaseChange`，因此读到内存永不领先介质。
+`JsonDatabaseBackend` 缺省目录为 `$CONATUS_HOME/database`（未设置时
+`~/.conatus/database`），可用 `dir` 覆盖；所有默认目录只落用户目录，不碰当前工作目录。
 
 ```dart
 final db = provideDatabase(app, defaultBackend: 'json');

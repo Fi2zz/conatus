@@ -3,6 +3,8 @@ library;
 
 import 'dart:io';
 
+import 'package:conatus_foundation/conatus_foundation.dart';
+
 import 'skill_markdown.dart';
 import 'skill_provider.dart';
 import 'skill_types.dart';
@@ -180,8 +182,7 @@ String _under(String base, String relative) =>
     '$base${Platform.pathSeparator}${relative.replaceAll('/', Platform.pathSeparator)}';
 
 String _home(String envKey, String fallbackDir) {
-  final String? fromEnv = Platform.environment[envKey];
+  final String? fromEnv = Platform.environment[envKey]?.trim();
   if (fromEnv != null && fromEnv.isNotEmpty) return fromEnv;
-  final String home = Platform.environment['HOME'] ?? Directory.current.path;
-  return _under(home, fallbackDir);
+  return _under(resolveHomeDir(), fallbackDir);
 }

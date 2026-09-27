@@ -26,6 +26,17 @@
   `depend_on_referenced_packages` 252 条 info、「去掉 overrides」会因 git
   ref/SHA 源身份不一致求解失败
 
+默认数据目录统一迁至用户目录，不再碰当前工作目录：
+
+- `conatus_foundation` 新增 `resolveConatusHome` / `resolveHomeDir` 出口
+  （`CONATUS_HOME` → `HOME` → `USERPROFILE`，全缺抛 `StateError`）；
+  `JsonDatabaseBackend` / `JsonlSessionPersistence` 缺省目录由
+  `<cwd>/.conatus/{database,sessions}` 改为 `$CONATUS_HOME/{database,sessions}`
+  （缺省 `~/.conatus/...`）
+- `conatus_skill` 用户级发现根与 `conatus_code` 的 `resolveConfigDir` /
+  TUI `baseDir` 缺省同步去掉 cwd 兜底；旧 `<cwd>/.conatus` 数据保留不删、
+  不自动迁移
+
 `conatus_foundation` 修复 shell 层两个同族时序缺陷：
 
 - `LocalShellExecutor.run()`：exitCode 落定后给管道关闭 250ms 宽限期，逾期返回

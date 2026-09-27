@@ -1,5 +1,7 @@
 export 'src/ask_user.dart'
     show AskCancelledException, AskUser, CliAskUser, provideAskUser;
+export 'src/conatus_home.dart'
+    show kConatusHomeEnv, resolveConatusHome, resolveHomeDir;
 export 'src/database.dart' show Database, provideDatabase;
 export 'src/database_json.dart' show JsonDatabaseBackend, provideDatabaseJson;
 export 'src/database_types.dart'

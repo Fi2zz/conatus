@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:conatus_core/conatus_core.dart';
+import 'conatus_home.dart';
 import 'database.dart';
 import 'database_types.dart';
 
@@ -62,8 +63,7 @@ class JsonDatabaseBackend implements DatabaseBackend {
   }
 
   static String _defaultDir() =>
-      '${Directory.current.path}${Platform.pathSeparator}.conatus'
-      '${Platform.pathSeparator}database';
+      '${resolveConatusHome()}${Platform.pathSeparator}database';
 }
 
 /// 将 [JsonDatabaseBackend] 注册到 hub 的 `'database'` 服务上。
