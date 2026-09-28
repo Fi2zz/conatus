@@ -17,6 +17,7 @@ import 'dart:io';
 import 'package:conatus_credentials/conatus_credentials.dart';
 import 'package:http/http.dart' as http;
 import 'llm.dart';
+import 'llm_retry.dart';
 
 /// LLM 请求的默认 User-Agent。
 const String kDefaultLlmUserAgent = 'ConatusCode/0.16';
@@ -227,14 +228,21 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
     try {
       response = await _client.send(request).timeout(timeout);
     } on TimeoutException {
-      throw LlmException(name, '请求超时（${timeout.inSeconds}s）');
+      throw _transportFailure('请求超时（${timeout.inSeconds}s）');
     } on SocketException catch (e) {
-      throw LlmException(name, '网络错误：${e.message}');
+      throw _transportFailure('网络错误：${e.message}');
+    } on http.ClientException catch (e) {
+      throw _transportFailure('网络错误：${e.message}');
     }
 
     if (response.statusCode != 200) {
       final String body = await response.stream.bytesToString();
-      throw LlmException(name, body, response.statusCode);
+      throw LlmException(
+        name,
+        _errorMessage(response.statusCode, body),
+        statusCode: response.statusCode,
+        retryAfter: parseRetryAfter(response.headers['retry-after']),
+      );
     }
 
     final _StreamState state = _StreamState();
@@ -353,7 +361,11 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
             (json['response'] as Map<String, dynamic>?) ?? <String, dynamic>{};
         final Map<String, dynamic> error =
             (data['error'] as Map<String, dynamic>?) ?? <String, dynamic>{};
-        throw LlmException(name, '流式响应失败：${error['message'] ?? 'unknown'}');
+        throw LlmException(
+          name,
+          '流式响应失败：${error['message'] ?? 'unknown'}',
+          kind: LlmErrorKind.server,
+        );
       default:
         return const <LlmStreamEvent>[];
     }
@@ -401,8 +413,29 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
         credentialKey.isEmpty
             ? '缺少 API Key'
             : '缺少 API Key（凭据键：$credentialKey 未配置）',
+        kind: LlmErrorKind.config,
       );
     }
+  }
+
+  /// 传输层失败：没有状态码，只能靠类别区分「可重试」与「重试无用」。
+  LlmException _transportFailure(String message) =>
+      LlmException(name, message, kind: LlmErrorKind.network);
+
+  /// 错误正文：优先取服务端结构化 JSON 的 `error.message`，退回原始 body。
+  ///
+  /// 直接把整段 body 抛给上层，会让屏上出现几百字符的 HTML / JSON 噪声。
+  String _errorMessage(int statusCode, String body) {
+    final Object? decoded = _tryDecode(body.trim());
+    if (decoded is! Map<String, dynamic>) {
+      return body.trim().isEmpty ? 'HTTP $statusCode' : body.trim();
+    }
+    final Object? error = decoded['error'];
+    if (error is Map && error['message'] is String) {
+      return error['message']! as String;
+    }
+    if (decoded['message'] is String) return decoded['message']! as String;
+    return body.trim().isEmpty ? 'HTTP $statusCode' : body.trim();
   }
 
   /// 释放：取消凭据变更订阅，并关闭 HTTP client。
@@ -479,6 +512,34 @@ Map<String, dynamic>? _tryDecode(String data) {
     final Object? decoded = jsonDecode(data);
     return decoded is Map<String, dynamic> ? decoded : null;
   } on FormatException {
+    return null;
+  }
+}
+
+/// 解析 `Retry-After` 响应头；两种合法形态都收，解析不了返回 `null`。
+///
+/// * delta-seconds：`Retry-After: 30`；
+/// * HTTP-date：`Retry-After: Wed, 21 Oct 2026 07:28:00 GMT`。
+///
+/// 头缺失 / 非法 / 指向过去（负数）都返回 `null`，交给退避策略用自己的节奏。
+Duration? parseRetryAfter(String? header) {
+  final String value = header?.trim() ?? '';
+  if (value.isEmpty) return null;
+  final int? seconds = int.tryParse(value);
+  if (seconds != null) {
+    return seconds <= 0 ? null : Duration(seconds: seconds);
+  }
+  final DateTime? at = _httpDateOrNull(value);
+  if (at == null) return null;
+  final Duration delta = at.difference(DateTime.now().toUtc());
+  return delta.isNegative ? null : delta;
+}
+
+/// `HttpDate.parse` 的容错包装：非法输入返回 `null` 而不是抛异常。
+DateTime? _httpDateOrNull(String value) {
+  try {
+    return HttpDate.parse(value);
+  } on Exception {
     return null;
   }
 }

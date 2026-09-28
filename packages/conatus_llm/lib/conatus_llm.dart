@@ -1,6 +1,5 @@
 export 'src/llm.dart'
     show
-        FallbackLlm,
         LlmApiStyle,
         LlmException,
         LlmImage,
@@ -14,5 +13,17 @@ export 'src/llm.dart'
         LlmToolCall,
         provideLlm,
         streamChatResult;
+export 'src/llm_fallback.dart'
+    show FallbackLlm, LlmFallbackEvent, LlmFallbackReporter;
 export 'src/llm_openai.dart'
-    show OpenAiCompatibleProvider, kDefaultLlmUserAgent;
+    show OpenAiCompatibleProvider, kDefaultLlmUserAgent, parseRetryAfter;
+export 'src/llm_retry.dart'
+    show
+        LlmErrorKind,
+        LlmRetryAttempt,
+        LlmRetryReporter,
+        LlmSleeper,
+        RetryPolicy,
+        RetryingLlm,
+        isRetryableError,
+        retryAfterOf;

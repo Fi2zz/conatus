@@ -5,12 +5,18 @@
 /// * [LlmApiStyle.chat]：`{baseUrl}/chat/completions`，消息用 `messages`；
 /// * [LlmApiStyle.responses]：`{baseUrl}/responses`，消息用 `input`。
 ///
-/// 默认提供商顺序为 **豆包 → DeepSeek**，任一成功即返回。
 /// 非流式走 [LlmProvider.chat]，流式走 [LlmProvider.chatStream]。
 /// 具体 provider 实现见 `llm_openai.dart`。
+///
+/// 韧性由两个正交装饰器提供（都在本库内）：
+/// `llm_retry.dart` 的 `RetryingLlm`（同一提供商退避重试）与
+/// `llm_fallback.dart` 的 `FallbackLlm`（换下一个提供商）。
 library;
 
 import 'package:conatus_core/conatus_core.dart';
+
+import 'llm_fallback.dart';
+import 'llm_retry.dart';
 
 /// OpenAI 兼容端点的请求形态。
 enum LlmApiStyle { chat, responses }
@@ -272,95 +278,37 @@ abstract class LlmProvider {
 }
 
 /// 提供商调用失败时抛出。
+///
+/// [kind] 由 wire 层在抛出时显式标注——传输层失败（超时 / 连接错误）没有
+/// 状态码，只能显式标；未标注时 [errorKind] 按 [statusCode] 推断。重试语义
+/// 见 `llm_retry.dart` 的 [LlmErrorKind]。
 class LlmException implements Exception {
-  const LlmException(this.provider, this.message, [this.statusCode]);
+  const LlmException(
+    this.provider,
+    this.message, {
+    this.statusCode,
+    this.kind,
+    this.retryAfter,
+  });
 
   final String provider;
   final String message;
   final int? statusCode;
 
+  /// 显式标注的失败类别；`null` 表示按 [statusCode] 推断。
+  final LlmErrorKind? kind;
+
+  /// 服务端 `Retry-After` 解析出的等待时长；没有则 `null`。
+  final Duration? retryAfter;
+
+  /// 失败类别（供 `llm_retry.dart` 判定）。
+  LlmErrorKind get errorKind => kind ?? LlmErrorKind.infer(statusCode);
+
+  /// 重试是否可能得到不同结果。
+  bool get isRetryable => errorKind.isRetryable;
+
   @override
   String toString() => 'LlmException($provider, $statusCode): $message';
-}
-
-/// 按顺序尝试多个提供商，直到有一个成功。
-///
-/// 默认顺序：豆包 → DeepSeek。
-/// 非流式与流式都支持回退：任一提供商失败即尝试下一个，
-/// 全部失败时抛出 [LlmException]，消息中汇总所有提供商的错误。
-///
-/// 流式回退只在**尚未产出任何事件**时生效；一旦已经 yield 过增量，
-/// 中途失败会直接向上抛出（已产出的内容无法收回）。
-class FallbackLlm implements LlmProvider {
-  FallbackLlm(this.providers);
-
-  final List<LlmProvider> providers;
-
-  @override
-  String get name => 'fallback';
-
-
-  @override
-  Future<LlmResult> chat(
-    List<LlmMessage> messages, {
-    Map<String, dynamic>? options,
-    List<Map<String, dynamic>>? tools,
-  }) async {
-    final List<String> errors = <String>[];
-    for (final LlmProvider provider in providers) {
-      try {
-        return await provider.chat(messages, options: options, tools: tools);
-      } on LlmException catch (e) {
-        errors.add('${provider.name}: ${e.message}');
-      } catch (e) {
-        errors.add('${provider.name}: $e');
-      }
-    }
-    throw LlmException(
-      'fallback',
-      '所有提供商均失败：\n${errors.join('\n')}',
-    );
-  }
-
-  @override
-  Stream<LlmStreamEvent> chatStream(
-    List<LlmMessage> messages, {
-    Map<String, dynamic>? options,
-    List<Map<String, dynamic>>? tools,
-  }) async* {
-    final List<String> errors = <String>[];
-    for (final LlmProvider provider in providers) {
-      bool emitted = false;
-      try {
-        await for (final LlmStreamEvent event in provider.chatStream(
-          messages,
-          options: options,
-          tools: tools,
-        )) {
-          emitted = true;
-          yield event;
-        }
-        return;
-      } on LlmException catch (e) {
-        if (emitted) rethrow;
-        errors.add('${provider.name}: ${e.message}');
-      } catch (e) {
-        if (emitted) rethrow;
-        errors.add('${provider.name}: $e');
-      }
-    }
-    throw LlmException(
-      'fallback',
-      '所有提供商均失败：\n${errors.join('\n')}',
-    );
-  }
-
-  @override
-  void close() {
-    for (final LlmProvider provider in providers) {
-      provider.close();
-    }
-  }
 }
 
 /// 将 LLM 服务提供到上下文中。
