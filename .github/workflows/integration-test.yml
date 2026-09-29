@@ -8,7 +8,7 @@ jobs:
   integration-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dart-lang/setup-dart@v1
       - run: dart pub get
       - name: Run unit tests
@@ -25,7 +25,7 @@ jobs:
   # 工作区集成：拉子模块，测 conatus_code 在 **workspace 形态**下的状态。
   #
   # 为什么要单独一个 job：上面那个 integration-test 不拉子模块
-  # （actions/checkout 默认不初始化），所以 conatus_code 那 820 个测试在父仓库
+  # （actions/checkout 默认不初始化），所以 conatus_code 那 800+ 个测试在父仓库
   # CI 里根本没跑；而 conatus_code 自己的 CI 测的是**独立形态**（依赖经 git
   # 拉 master）。两种形态都绿 ≠ 集成被验证过——父仓库改了框架还没推送时，
   # 独立形态的 CI 看不见。
@@ -39,7 +39,7 @@ jobs:
   workspace-integration:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: true
 
@@ -66,7 +66,7 @@ jobs:
   consumer-chain:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dart-lang/setup-dart@v1
       - name: Consumer probe via git source
         run: |
