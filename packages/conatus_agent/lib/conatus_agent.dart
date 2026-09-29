@@ -198,6 +198,17 @@ export 'src/sub_agent.dart'
         SubAgentResult,
         kDefaultSubAgentPrompt,
         provideSpawnAgent;
+export 'src/sub_agent_progress.dart'
+    show
+        ProgressTool,
+        SubAgentEvent,
+        SubAgentFinished,
+        SubAgentProgressReporter,
+        SubAgentRound,
+        SubAgentStarted,
+        SubAgentToolCall,
+        SubAgentToolDone,
+        buildChildRegistry;
 export 'src/telemetry.dart'
     show
         ConsoleTelemetry,

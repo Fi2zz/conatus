@@ -11,6 +11,7 @@ import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 import 'agent_loop.dart';
 import 'agent_types.dart';
+import 'sub_agent_progress.dart';
 
 /// 子 Agent 的默认人设：只完成交办的一件事，只回结论。
 const String kDefaultSubAgentPrompt = '你是内部子助手，只完成交办的一件事。只依据工具返回的事实作答，禁止编造；'
@@ -56,6 +57,8 @@ class SpawnAgentTool extends Tool {
     this.maxRounds = 8,
     this.subAgentPrompt = kDefaultSubAgentPrompt,
     this.systemPrompt,
+    this.onProgress,
+    this.childLlm,
   });
 
   /// 宿主上下文：子上下文在其下派生，随宿主释放。
@@ -78,6 +81,16 @@ class SpawnAgentTool extends Tool {
 
   /// 子 Agent 的 system prompt 注册表；缺省不用（隔离）。
   final SystemPrompt? systemPrompt;
+
+  /// 进度回调；缺省不报（子 Agent 仍是黑箱）。
+  final SubAgentProgressReporter? onProgress;
+
+  /// 为子 Agent 派生模型实例；缺省复用 [llm]。
+  ///
+  /// 宿主传一个「给子 Agent 单独计数」的包装（如独立的轮次预算）时用：子
+  /// Agent 可能跑十几轮模型调用，全记进主轮次会把**主**轮次撞爆上限收口，
+  /// 而子 Agent 拿到的半截结论会被当成结论回传。
+  final LlmProvider Function(LlmProvider base)? childLlm;
 
   int _seq = 0;
 
@@ -120,11 +133,19 @@ class SpawnAgentTool extends Tool {
     required int maxRounds,
   }) async {
     _seq++;
-    final ToolRegistry childTools = ToolRegistry();
-    for (final String name in allowed) {
-      final Tool? tool = tools.get(name);
-      if (tool != null) childTools.register(tool);
-    }
+    final SubAgentProgressReporter? report = onProgress;
+    report?.call(SubAgentStarted(task));
+    final Set<String> used = <String>{};
+    final ToolRegistry childTools = buildChildRegistry(
+      tools,
+      allowed,
+      reporter: report == null
+          ? null
+          : (SubAgentEvent event) {
+              if (event is SubAgentToolCall) used.add(event.tool);
+              report(event);
+            },
+    );
     final Session childSession =
         Session(id: 'subagent-$_seq-${DateTime.now().microsecondsSinceEpoch}');
     final Context child = host.plugin('subagent$_seq', (Context c) {
@@ -132,25 +153,48 @@ class SpawnAgentTool extends Tool {
     });
     try {
       final AgentTurn turn = await AgentLoop(
-        llm: llm,
+        llm: childLlm?.call(llm) ?? llm,
         tools: childTools,
         session: childSession,
         systemPrompt: systemPrompt,
         defaultSystemPrompt: subAgentPrompt,
         maxSteps: maxRounds,
+        onEvent: report == null ? null : _roundReporter(report, used),
       ).run(task);
-      return SubAgentResult(
+      final SubAgentResult result = SubAgentResult(
         status: 'success',
         output: turn.reply,
         rounds: turn.steps.length,
         toolCalls: <String>[for (final AgentStep s in turn.steps) s.call.name],
       );
+      report?.call(SubAgentFinished(result.status, result.rounds, used.toList()));
+      return result;
     } catch (error) {
+      report?.call(SubAgentFinished('failed', 0, used.toList()));
       return SubAgentResult(status: 'failed', output: '子 Agent 失败：$error');
     } finally {
       child.dispose();
     }
   }
+
+  /// 把主循环的 `agent.round` 事件翻成 [SubAgentRound]。
+  void Function(String, Map<String, Object?>)? _roundReporter(
+    SubAgentProgressReporter report,
+    Set<String> used,
+  ) =>
+      (String type, Map<String, Object?> data) {
+        if (type != 'agent.round') return;
+        report(SubAgentRound(
+          (data['step'] as int? ?? 0) + 1,
+          _preview(data['contentLength'] as int? ?? 0, used.length),
+        ));
+      };
+
+  /// 一轮的简短回执：只报体量与累计工具数，不复制正文。
+  String _preview(int contentLength, int toolCount) =>
+      contentLength > 0
+          ? '输出 $contentLength 字符'
+          : '思考中（工具已 $toolCount 次）';
 
   Set<String> _allowedTools(List<Object?>? requested) {
     if (requested != null && requested.isNotEmpty) {
@@ -182,6 +226,8 @@ SpawnAgentTool provideSpawnAgent(
   int maxRounds = 8,
   String subAgentPrompt = kDefaultSubAgentPrompt,
   SystemPrompt? systemPrompt,
+  SubAgentProgressReporter? onProgress,
+  LlmProvider Function(LlmProvider base)? childLlm,
 }) {
   final ToolRegistry registry = tools ?? ctx.tools;
   final SpawnAgentTool tool = SpawnAgentTool(
@@ -192,6 +238,8 @@ SpawnAgentTool provideSpawnAgent(
     maxRounds: maxRounds,
     subAgentPrompt: subAgentPrompt,
     systemPrompt: systemPrompt,
+    onProgress: onProgress,
+    childLlm: childLlm,
   );
   ctx.effect(() => registry.register(tool));
   return tool;
