@@ -65,4 +65,6 @@ String _describe(AgentTeamEvent event) => switch (event) {
       TeamTaskChanged(:final TeamTask task) =>
         'task~(${task.id}:${task.status.name})',
       TeamMessageSent(:final String to) => 'msg→$to',
+      TeammateActed(:final String teammateId, :final TeammateActivity activity) =>
+        'act($teammateId:${activity.kind})',
     };

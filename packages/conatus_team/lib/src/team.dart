@@ -13,6 +13,16 @@ export 'patterns/concurrent.dart' show ConcurrentPattern;
 export 'patterns/group_chat.dart' show GroupChatPattern;
 export 'patterns/maker_checker.dart' show MakerCheckerPattern;
 export 'patterns/sequential.dart' show SequentialPattern;
+export 'team_activity.dart'
+    show
+        TeammateActivity,
+        TeammateActivityLine,
+        TeammateReasoning,
+        TeammateRoundStart,
+        TeammateText,
+        TeammateToolCall,
+        TeammateToolResult,
+        activityLine;
 export 'team_board.dart' show TeamBoard;
 export 'team_events.dart'
     show
@@ -20,12 +30,18 @@ export 'team_events.dart'
         TeamMessageSent,
         TeamTaskChanged,
         TeamTaskCreated,
+        TeammateActed,
         TeammateSpawned,
         TeammateStatusChanged;
 export 'team_hooks.dart' show TeamHooks;
 export 'team_impl.dart' show AgentTeamImpl, TeamContext, provideAgentTeam;
 export 'team_member_runtime.dart'
-    show MemberRuntime, TeammateMutation, TeamTurn;
+    show
+        MemberLoopFactory,
+        MemberRuntime,
+        TeammateActivitySink,
+        TeammateMutation,
+        TeamTurn;
 export 'team_pattern.dart' show TeamPattern;
 export 'team_task.dart' show TeamTask, TeamTaskStatus;
 export 'team_task_tracker.dart' show TeamTaskTracker;

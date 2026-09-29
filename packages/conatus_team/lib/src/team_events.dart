@@ -4,6 +4,7 @@
 /// `switch` 模式匹配分发。所有事件都是不可变值对象。
 library;
 
+import 'team_activity.dart';
 import 'team_task.dart';
 import 'teammate.dart';
 
@@ -42,4 +43,14 @@ class TeamMessageSent extends AgentTeamEvent {
   final String from;
   final String to;
   final String message;
+}
+
+/// 成员产生了一次活动（正文 / 思考 / 工具调用与结果 / 新一轮）。
+///
+/// 走 [AgentTeam.changes] 同一入口而不是另开一条流：界面已经订阅了 changes
+/// 并据此重建快照，多一条流就多一处可能漏订阅的地方。
+class TeammateActed extends AgentTeamEvent {
+  const TeammateActed(this.teammateId, this.activity);
+  final String teammateId;
+  final TeammateActivity activity;
 }

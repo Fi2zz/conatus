@@ -17,6 +17,7 @@ import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 
 import 'agent_team.dart';
+import 'team_activity.dart';
 import 'team_board.dart';
 import 'team_events.dart';
 import 'team_hooks.dart';
@@ -99,13 +100,17 @@ class AgentTeamImpl implements AgentTeam {
     final MemberRuntime runtime = MemberRuntime(
       id: id,
       session: ms,
-      loop: AgentLoop(
+      // 工厂接 onStream：成员的活动（正文 / 工具轨迹）从 runtime 出，汇进
+      // changes 流，界面据此重绘。
+      loopFactory: (void Function(LlmStreamEvent) onStream) => AgentLoop(
         llm: llm,
         tools: _buildChildTools(toolList),
         session: ms,
         defaultSystemPrompt: systemPrompt ?? '你是团队成员「$name」，完成任务后简短回复结论。',
+        onStream: onStream,
       ),
       onStatus: (TeammateStatus next) => _mutate(id, next),
+      onActivity: (TeammateActivity a) => _act(id, a),
     );
     host.onDispose(runtime.dispose);
     _teammates[id] = mate;
@@ -257,6 +262,12 @@ class AgentTeamImpl implements AgentTeam {
     _runtimes.clear();
     _teammates.clear();
     _changes.close();
+  }
+
+  /// 成员活动 → 事件流。
+  void _act(String teammateId, TeammateActivity activity) {
+    if (_changes.isClosed) return;
+    _changes.add(TeammateActed(teammateId, activity));
   }
 
   void _mutate(String teammateId, TeammateStatus next) {

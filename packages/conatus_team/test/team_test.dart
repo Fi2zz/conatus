@@ -327,6 +327,9 @@ void main() {
             changed++;
           case TeamMessageSent():
             sent++;
+          case TeammateActed():
+            // 活动不参与这里的计数断言。
+            break;
         }
       }
       expect(spawned, 1);
