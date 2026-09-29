@@ -22,6 +22,45 @@ jobs:
       - name: Run integration tests
         run: dart test test/integration/ --reporter=expanded
 
+  # 工作区集成：拉子模块，测 conatus_code 在 **workspace 形态**下的状态。
+  #
+  # 为什么要单独一个 job：上面那个 integration-test 不拉子模块
+  # （actions/checkout 默认不初始化），所以 conatus_code 那 820 个测试在父仓库
+  # CI 里根本没跑；而 conatus_code 自己的 CI 测的是**独立形态**（依赖经 git
+  # 拉 master）。两种形态都绿 ≠ 集成被验证过——父仓库改了框架还没推送时，
+  # 独立形态的 CI 看不见。
+  #
+  # 关键一步是 bash tool/setup_code_filter.sh：那个 git filter 的配置**不在版本
+  # 控制里**（本机由脚本装进 .git/config），CI 上没有，所以 checkout 出来的
+  # conatus_code/pubspec.yaml 里 `resolution: workspace` 是注释态、依赖走 git。
+  # 脚本会取消注释并生成 pubspec_overrides.yaml（清空 dependency_overrides ——
+  # workspace 内禁止 override 成员包）。直接跑脚本而不是在 yaml 里复现这两步：
+  # 脚本改了 CI 自动跟随。
+  workspace-integration:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: 恢复 workspace 形态（filter 配置不在版本控制内）
+        run: bash tool/setup_code_filter.sh
+
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: "3.12.2"
+
+      # workspace 内无需联网解析依赖（实测 <1s；独立形态要 clone 整个 conatus）。
+      - run: dart pub get
+
+      - run: dart analyze --fatal-infos
+
+      - name: 子模块（conatus_code）测试
+        run: dart test packages/conatus_code
+
+      - name: 根集成测试
+        run: dart test test/integration/
+
   # 消费链验证：模拟外部用户以 git 源依赖根包，防 path 依赖 / 导出链回归
   # （全部包 publish_to: none 后，git 源是唯一分发通道，这条链断了等于断供）。
   consumer-chain:
