@@ -68,6 +68,22 @@ class _GreetTool extends Tool {
   }
 }
 
+class _RecordingTool extends Tool {
+  int runs = 0;
+
+  @override
+  String get name => 'rec';
+
+  @override
+  String get description => '';
+
+  @override
+  Future<ToolResult> call(ToolContext ctx) async {
+    runs++;
+    return ToolResult.success('ran');
+  }
+}
+
 class _SlowTool extends Tool {
   const _SlowTool();
 
@@ -325,6 +341,24 @@ void main() {
       final ToolResult result = await tools.call(const ToolCall(name: 'slow'));
 
       expect(result.error!.code, 'TOOL_TIMEOUT');
+    });
+
+    test('defaultTimeout 只管工具体，不管等用户的中间件', () async {
+      // 审批是「最外层」的中间件，等人可达数分钟；工具预算是给工具干活的。
+      // 两者混在一处计时时，小的那个静默获胜：用户批准后工具照样执行，但模型
+      // 已被告知失败 → 写操作会变成「以为失败而重试，实际写了两遍」。
+      final ToolRegistry tools = ToolRegistry(
+        defaultTimeout: const Duration(milliseconds: 30),
+      )..register(_RecordingTool());
+      tools.use((ToolCall call, Future<ToolResult> Function() next) async {
+        await Future<void>.delayed(const Duration(milliseconds: 120));
+        return next();
+      });
+
+      final ToolResult result = await tools.call(const ToolCall(name: 'rec'));
+
+      expect(result.error?.code, isNot('TOOL_TIMEOUT'));
+      expect(result.content, 'ran');
     });
 
     test('工具自声明 timeout 覆盖 defaultTimeout，调用参数又覆盖它', () async {

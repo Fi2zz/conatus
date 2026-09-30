@@ -137,8 +137,7 @@ class ToolRegistry {
     }
     final Duration? effective = timeout ?? tool.timeout ?? defaultTimeout;
     try {
-      final Future<ToolResult> execution = _chain(tool, call)();
-      return await _withTimeout(call, execution, effective);
+      return await _chain(tool, call, effective)();
     } catch (error) {
       return ToolResult.failure(
         '$error',
@@ -162,8 +161,20 @@ class ToolRegistry {
     );
   }
 
-  Future<ToolResult> Function() _chain(Tool tool, ToolCall call) {
-    Future<ToolResult> body() => tool.call(ToolContext(call));
+  /// 组装中间件链；超时**只包住工具体**（链的最内层）。
+  ///
+  /// 不能包住整条链：最外层中间件可能是审批门控——那是**等用户**，自己的预算是
+  /// 5~30 分钟（见 `instrumentApproval` / `kTuiDecisionTimeout`）。混在一起计时时
+  /// 小的那个静默获胜：用户批准后工具照样执行，结果却被丢掉并上报 TOOL_TIMEOUT，
+  /// 写操作就会变成「模型以为失败而重试、实际写了两遍」。因此各中间件需自备
+  /// 边界（lint 有 30s，MCP 请求有 30s），工具干活由本处的预算兜底。
+  Future<ToolResult> Function() _chain(
+    Tool tool,
+    ToolCall call,
+    Duration? timeout,
+  ) {
+    Future<ToolResult> body() =>
+        _withTimeout(call, tool.call(ToolContext(call)), timeout);
     Future<ToolResult> Function() chain = body;
     for (final ToolMiddleware middleware in _middlewares.reversed) {
       final Future<ToolResult> Function() next = chain;

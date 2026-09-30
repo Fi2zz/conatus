@@ -4,6 +4,15 @@
 
 ## [未发布]
 
+- **行为变更**：`ToolRegistry` 的超时预算（`defaultTimeout` / `Tool.timeout` /
+  `call(timeout:)`）改为**只包住工具体**，不再包住整条中间件链。
+  - 原先超时套在链外，最外层中间件若是审批门控（`instrumentApproval`，其自身
+    预算是 5~30 分钟）就会被工具预算截断：用户批准后工具照样执行，结果却被丢弃
+    并上报 `TOOL_TIMEOUT`——写操作于是变成「模型以为失败而重试、实际写了两遍」。
+  - 现在各中间件需自备边界（`conatus_agent` 的 lint 有 30s、MCP 请求有 30s），
+    工具干活由注册表的预算兜底。超时行为对纯工具调用无变化。
+
+
 - **行为变更**：`JsonDatabaseBackend` / `JsonlSessionPersistence` 的缺省目录由
   `<cwd>/.conatus/{database,sessions}` 迁至 `$CONATUS_HOME/{database,sessions}`
   （缺省 `~/.conatus/...`）；新增 `resolveConatusHome` / `resolveHomeDir` /
