@@ -54,14 +54,31 @@ Future<String> _identity(String displayPath) async {
   try {
     return await File(displayPath).resolveSymbolicLinks();
   } on FileSystemException {
-    // 目标不存在：对父目录取真实路径再拼回 basename，键在目录创建后仍稳定。
-    final String parent = _dirname(displayPath);
-    final String base = _basename(displayPath);
+    // 目标尚未存在：对**最长的已存在祖先**取真实路径再拼回余下段。只解父目录
+    // 不够——父链中间还有未创建的目录时，键会退回字面路径，而 macOS 的 /var、
+    // /tmp 是 /private/... 的别名，字面路径与真实路径前缀不同，会破坏
+    // 「同一文件同一键」的契约（也让人误判越界）。
+    return await _identityViaAncestor(displayPath) ?? displayPath;
+  }
+}
+
+/// 目标不存在时，向上找到最近的已存在祖先，取其真实路径再拼回余下段；
+/// 没有任何已存在祖先时返回 null。
+Future<String?> _identityViaAncestor(String displayPath) async {
+  final List<String> trailing = <String>[];
+  String current = displayPath;
+  while (true) {
+    final String parent = _dirname(current);
+    if (parent == current) return null;
+    trailing.add(_basename(current));
+    current = parent;
     try {
-      final String realParent = await Directory(parent).resolveSymbolicLinks();
-      return _normalize('$realParent${Platform.pathSeparator}$base');
+      final String realParent =
+          await Directory(current).resolveSymbolicLinks();
+      final String rest = trailing.reversed.join(Platform.pathSeparator);
+      return _normalize('$realParent${Platform.pathSeparator}$rest');
     } on FileSystemException {
-      return displayPath;
+      continue;
     }
   }
 }

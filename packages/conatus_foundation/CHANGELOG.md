@@ -4,6 +4,13 @@
 
 ## [未发布]
 
+- 修 `LocalFileSystem` 对**尚未创建的深层路径**的键：此前目标不存在时只对父目录
+  取真实路径，父链中间还有未创建目录时会退回字面路径，违反「同一文件同一键」
+  的契约。macOS 上 `/var`、`/tmp` 是 `/private/...` 的别名，于是「根已规范化 +
+  目标未规范化」会让沙箱文件 jail（`JailedFileSystem`）把工作区内的新文件误判
+  越界。现对**最长的已存在祖先**取真实路径再拼回余下段（与 dart_io_sandbox 的
+  `canonicalizePath` 同语义）。
+
 - **行为变更**：`ToolRegistry` 的超时预算（`defaultTimeout` / `Tool.timeout` /
   `call(timeout:)`）改为**只包住工具体**，不再包住整条中间件链。
   - 原先超时套在链外，最外层中间件若是审批门控（`instrumentApproval`，其自身

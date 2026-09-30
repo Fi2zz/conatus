@@ -49,6 +49,23 @@ void main() {
         throwsA(_fsError(FsErrorCode.notFound)),
       );
     });
+
+    test('未创建路径的键按最长已存在祖先规范化（别名共享同一键）', () async {
+      // 用符号链接造一个目录别名，不依赖平台特有的 /var → /private/var。
+      Link('${dir.path}/alias').createSync(dir.path);
+      final LocalFileSystem aliased = LocalFileSystem(cwd: '${dir.path}/alias');
+      final String realDir = dir.resolveSymbolicLinksSync();
+
+      final FsTarget target = await aliased.resolve('deep/nested/c.txt');
+
+      // 中间目录尚不存在时，键也要落到真实路径（而非别名下的字面路径）。
+      expect(target.targetKey, '$realDir/deep/nested/c.txt');
+
+      // 目录创建后同一目标仍解析出同一键。
+      Directory('${dir.path}/deep/nested').createSync(recursive: true);
+      final FsTarget after = await aliased.resolve('deep/nested/c.txt');
+      expect(after.targetKey, target.targetKey);
+    });
   });
 
   group('readText', () {
