@@ -10,8 +10,12 @@ import 'package:conatus_compaction/conatus_compaction.dart';
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
+import 'agent_cancel.dart';
 import 'agent_loop.dart';
 import 'agent_types.dart';
+import 'approval.dart';
+import 'approval_gate.dart';
+import 'sub_agent_permission.dart';
 import 'sub_agent_progress.dart';
 
 /// 子 Agent 的默认人设：只完成交办的一件事，只回结论。
@@ -59,6 +63,7 @@ class SpawnAgentTool extends Tool {
     this.subAgentPrompt = kDefaultSubAgentPrompt,
     this.systemPrompt,
     this.compactor,
+    this.permissionMode = SubAgentPermission.inherit,
     this.onProgress,
     this.childLlm,
   });
@@ -90,6 +95,9 @@ class SpawnAgentTool extends Tool {
   /// `provideCompaction`，注册期取不到。
   final CompactionEngine? compactor;
 
+  /// 子代理默认权限模式；模型可在 `spawn_agent` 请求，但只能收紧（不能放宽）。
+  final SubAgentPermission permissionMode;
+
   /// 进度回调；缺省不报（子 Agent 仍是黑箱）。
   final SubAgentProgressReporter? onProgress;
 
@@ -101,6 +109,19 @@ class SpawnAgentTool extends Tool {
   final LlmProvider Function(LlmProvider base)? childLlm;
 
   int _seq = 0;
+
+  /// 在途子 Agent 的取消句柄；[interrupt] 据此打断全部。
+  final Set<AgentCancel> _inflight = <AgentCancel>{};
+
+  /// 取消所有在途子 Agent（主轮次被打断时调用）。
+  ///
+  /// 子 Agent 跑在自己的 [Session]、不参与主轮次的取消竞速，主轮次 Esc 只会
+  /// 丢掉 `spawn_agent` 的结果，子循环仍在后台烧 token；这里把它一并收掉。
+  void interrupt() {
+    for (final AgentCancel cancel in List<AgentCancel>.of(_inflight)) {
+      cancel.cancel();
+    }
+  }
 
   @override
   String get name => 'spawn_agent';
@@ -120,6 +141,11 @@ class SpawnAgentTool extends Tool {
           description: '允许子 Agent 使用的工具名（白名单）',
         ),
         ParamSpec.integer('max_rounds', description: '子 Agent 最大步数'),
+        ParamSpec.string(
+          'permission_mode',
+          description: '子代理权限模式：inherit / readonly / ask / auto；'
+              '只能比宿主默认更严，不能放宽',
+        ),
       ];
 
   @override
@@ -130,6 +156,7 @@ class SpawnAgentTool extends Tool {
       task,
       allowed: _allowedTools(ctx.array('tools')),
       maxRounds: rounds,
+      requestedPermission: ctx.string('permission_mode'),
     );
     return ToolResult.success(result.output, value: result.toJson());
   }
@@ -139,16 +166,24 @@ class SpawnAgentTool extends Tool {
     String task, {
     required Set<String> allowed,
     required int maxRounds,
+    String? requestedPermission,
   }) async {
     _seq++;
     final SubAgentProgressReporter? report = onProgress;
     report?.call(SubAgentStarted(task));
     final CompactionEngine? compactor =
         this.compactor ?? host.get<CompactionEngine>('compaction');
+    final SubAgentPermission permission =
+        tightenBelow(permissionMode, requestedPermission);
+    // 非继承档由子代理自带审批策略，故把宿主审批层从继承管线里排除，避免双层。
+    final Set<String> excludeTags = permission == SubAgentPermission.inherit
+        ? const <String>{}
+        : const <String>{kApprovalMiddlewareTag};
     final Set<String> used = <String>{};
     final ToolRegistry childTools = buildChildRegistry(
       tools,
       allowed,
+      excludeTags: excludeTags,
       reporter: report == null
           ? null
           : (SubAgentEvent event) {
@@ -158,9 +193,13 @@ class SpawnAgentTool extends Tool {
     );
     final Session childSession =
         Session(id: 'subagent-$_seq-${DateTime.now().microsecondsSinceEpoch}');
+    final AgentCancel cancel = AgentCancel();
+    _inflight.add(cancel);
     final Context child = host.plugin('subagent$_seq', (Context c) {
       c.onDispose(childSession.close);
     });
+    applySubAgentPermission(child, childTools, permission,
+        gate: host.get<Approval>('approval'));
     try {
       final AgentTurn turn = await AgentLoop(
         llm: childLlm?.call(llm) ?? llm,
@@ -171,7 +210,7 @@ class SpawnAgentTool extends Tool {
         defaultSystemPrompt: subAgentPrompt,
         maxSteps: maxRounds,
         onEvent: report == null ? null : _roundReporter(report, used),
-      ).run(task);
+      ).run(task, cancel: cancel);
       final SubAgentResult result = SubAgentResult(
         status: 'success',
         output: turn.reply,
@@ -180,10 +219,14 @@ class SpawnAgentTool extends Tool {
       );
       report?.call(SubAgentFinished(result.status, result.rounds, used.toList()));
       return result;
+    } on AgentCancelled {
+      report?.call(SubAgentFinished('failed', 0, used.toList()));
+      return const SubAgentResult(status: 'failed', output: '子 Agent 已被取消。');
     } catch (error) {
       report?.call(SubAgentFinished('failed', 0, used.toList()));
       return SubAgentResult(status: 'failed', output: '子 Agent 失败：$error');
     } finally {
+      _inflight.remove(cancel);
       child.dispose();
     }
   }
@@ -245,6 +288,7 @@ SpawnAgentTool provideSpawnAgent(
   String subAgentPrompt = kDefaultSubAgentPrompt,
   SystemPrompt? systemPrompt,
   CompactionEngine? compactor,
+  SubAgentPermission permissionMode = SubAgentPermission.inherit,
   SubAgentProgressReporter? onProgress,
   LlmProvider Function(LlmProvider base)? childLlm,
 }) {
@@ -258,6 +302,7 @@ SpawnAgentTool provideSpawnAgent(
     subAgentPrompt: subAgentPrompt,
     systemPrompt: systemPrompt,
     compactor: compactor,
+    permissionMode: permissionMode,
     onProgress: onProgress,
     childLlm: childLlm,
   );

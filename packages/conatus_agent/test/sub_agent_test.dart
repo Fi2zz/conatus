@@ -248,6 +248,28 @@ void main() {
       host.dispose();
     });
 
+    test('interrupt 取消在途子 Agent，收敛为 failed', () async {
+      final Context host = Context.root();
+      final _BlockingProvider provider = _BlockingProvider();
+      final SpawnAgentTool spawn = SpawnAgentTool(
+        host: host,
+        llm: provider,
+        tools: _parentTools(),
+        defaultTools: <String>['get_time'],
+      );
+
+      final Future<ToolResult> pending = spawn.call(const ToolContext(ToolCall(
+        name: 'spawn_agent',
+        arguments: <String, Object?>{'task': '长时间任务'},
+      )));
+      await Future<void>.delayed(Duration.zero);
+      spawn.interrupt();
+
+      final ToolResult result = await pending;
+      expect((result.value! as Map<String, Object?>)['status'], 'failed');
+      host.dispose();
+    });
+
     test('宿主释放终止在途子 Agent', () async {
       final Context host = Context.root();
       final ToolRegistry parent = _parentTools();
@@ -269,6 +291,119 @@ void main() {
 
       final ToolResult result = await pending;
       expect((result.value! as Map<String, Object?>)['status'], 'failed');
+    });
+  });
+
+  group('子代理权限模式', () {
+    test('readonly：medium 工具被拒，不执行', () async {
+      final Context host = Context.root();
+      final ToolRegistry parent = _parentTools();
+      var writes = 0;
+      parent.fn(
+        'write',
+        riskLevel: ToolRisk.medium,
+        handler: (ToolContext ctx) async {
+          writes++;
+          return ToolResult.success('w');
+        },
+      );
+      final _ScriptedProvider provider =
+          _ScriptedProvider(<LlmResult>[_call('c1', 'write'), _text('done')]);
+      final SpawnAgentTool spawn = SpawnAgentTool(
+        host: host,
+        llm: provider,
+        tools: parent,
+        permissionMode: SubAgentPermission.readonly,
+      );
+      parent.register(spawn);
+
+      final ToolResult result = await spawn.call(const ToolContext(ToolCall(
+        name: 'spawn_agent',
+        arguments: <String, Object?>{
+          'task': 'x',
+          'tools': <Object?>['write'],
+        },
+      )));
+
+      expect(writes, 0, reason: 'readonly 直接拒绝，不执行');
+      expect((result.value! as Map<String, Object?>)['status'], 'success');
+      host.dispose();
+    });
+
+    test('auto：medium 工具免审批执行，不调用审批', () async {
+      final Context host = Context.root();
+      final ToolRegistry parent = _parentTools();
+      var writes = 0;
+      parent.fn(
+        'write',
+        riskLevel: ToolRisk.medium,
+        handler: (ToolContext ctx) async {
+          writes++;
+          return ToolResult.success('w');
+        },
+      );
+      final AutoApproval gate = AutoApproval(false);
+      host.provide('approval', gate);
+      instrumentApproval(host, approval: gate, tools: parent, threshold: ToolRisk.low);
+      final _ScriptedProvider provider =
+          _ScriptedProvider(<LlmResult>[_call('c1', 'write'), _text('done')]);
+      final SpawnAgentTool spawn = SpawnAgentTool(
+        host: host,
+        llm: provider,
+        tools: parent,
+        permissionMode: SubAgentPermission.auto,
+      );
+      parent.register(spawn);
+
+      await spawn.call(const ToolContext(ToolCall(
+        name: 'spawn_agent',
+        arguments: <String, Object?>{
+          'task': 'x',
+          'tools': <Object?>['write'],
+        },
+      )));
+
+      expect(writes, 1, reason: 'auto 免审批，直接执行');
+      expect(gate.requests, 0, reason: '不应调用宿主审批');
+      host.dispose();
+    });
+
+    test('ask：每个子工具都过审批，拒绝即不执行', () async {
+      final Context host = Context.root();
+      final ToolRegistry parent = _parentTools();
+      final AutoApproval gate = AutoApproval(false);
+      host.provide('approval', gate);
+      final _ScriptedProvider provider =
+          _ScriptedProvider(<LlmResult>[_call('c1', 'get_time'), _text('done')]);
+      final SpawnAgentTool spawn = SpawnAgentTool(
+        host: host,
+        llm: provider,
+        tools: parent,
+        permissionMode: SubAgentPermission.ask,
+      );
+      parent.register(spawn);
+
+      await spawn.call(const ToolContext(ToolCall(
+        name: 'spawn_agent',
+        arguments: <String, Object?>{'task': 'x'},
+      )));
+
+      expect(gate.requests, greaterThan(0), reason: 'ask 模式每个子工具都问');
+      host.dispose();
+    });
+
+    test('解析与收紧：只收紧不放宽', () {
+      expect(parseSubAgentPermission('readonly'), SubAgentPermission.readonly);
+      expect(parseSubAgentPermission('AUTO'), SubAgentPermission.auto);
+      expect(parseSubAgentPermission('nope'), isNull);
+      expect(tightenBelow(SubAgentPermission.inherit, 'readonly'),
+          SubAgentPermission.readonly);
+      expect(tightenBelow(SubAgentPermission.inherit, 'auto'),
+          SubAgentPermission.inherit);
+      expect(tightenBelow(SubAgentPermission.readonly, 'auto'),
+          SubAgentPermission.readonly);
+      expect(tightenBelow(SubAgentPermission.readonly, null),
+          SubAgentPermission.readonly);
     });
   });
 

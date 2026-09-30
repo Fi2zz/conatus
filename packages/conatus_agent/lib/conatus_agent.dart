@@ -35,7 +35,11 @@ export 'src/approval.dart'
         AutoApproval,
         RuleBasedApproval;
 export 'src/approval_gate.dart'
-    show instrumentApproval, pathArguments, provideApproval;
+    show
+        instrumentApproval,
+        kApprovalMiddlewareTag,
+        pathArguments,
+        provideApproval;
 export 'src/autonomous_policy.dart'
     show AutonomousPolicy, CostTracker, DefaultAutonomousPolicy, TimeWindow;
 export 'src/autonomous_runner.dart'
@@ -198,6 +202,8 @@ export 'src/sub_agent.dart'
         SubAgentResult,
         kDefaultSubAgentPrompt,
         provideSpawnAgent;
+export 'src/sub_agent_permission.dart'
+    show SubAgentPermission, parseSubAgentPermission, tightenBelow;
 export 'src/sub_agent_progress.dart'
     show
         ProgressTool,

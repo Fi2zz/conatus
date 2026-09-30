@@ -7,6 +7,9 @@ import 'package:conatus_foundation/conatus_foundation.dart';
 import 'approval.dart';
 import 'telemetry.dart';
 
+/// 审批中间件的分类标记：子代理自带审批策略时据它从继承管线里排除宿主审批层。
+const String kApprovalMiddlewareTag = 'approval';
+
 /// 在工具表上挂审批中间件：对风险不低于 [threshold] 的工具，先经 [approval]
 /// 批准再执行；拒绝或超时返回 `APPROVAL_DENIED` 失败结果。返回撤销函数。
 ///
@@ -67,6 +70,7 @@ Disposer instrumentApproval(
           }
           return next();
         },
+        tag: kApprovalMiddlewareTag,
       ));
 }
 

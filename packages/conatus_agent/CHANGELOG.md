@@ -4,6 +4,15 @@
 
 ## [未发布]
 
+- **子 Agent 可被打断**：新增 `SpawnAgentTool.interrupt()` 取消所有在途子 Agent。
+  子 Agent 跑在自己的 `Session`、不参与主轮次的取消竞速，此前主轮次 Esc 只丢结果、
+  子循环仍在后台烧 token；TUI 的 `Esc` 现在一并收掉，收敛为 `status=failed`。
+- **子代理权限模式**：新增 `SubAgentPermission`（`inherit` / `readonly` / `ask` /
+  `auto`）与 `provideSpawnAgent(permissionMode:)`、模型参数 `permission_mode`。模型
+  只能**收紧**（`tightenBelow`）。审批中间件打上 `kApprovalMiddlewareTag`：非
+  `inherit` 档从继承管线里排除宿主审批层，改由子代理自带策略（readonly 守卫 /
+  ask 低阈值审批 / auto 不装），避免双层审批。
+
 - **子 Agent（`spawn_agent`）的工具调用复用宿主管线**：`buildChildRegistry` 经新的
   `ToolRegistry.copyPipelineTo` 复制主注册表的守卫与中间件，审批 / 工具结果驱逐 /
   hooks / lint 对子调用一视同仁。此前子表是全新的空管线，后果有二：工具结果驱逐
