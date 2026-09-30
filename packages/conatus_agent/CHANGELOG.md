@@ -4,6 +4,12 @@
 
 ## [未发布]
 
+- **子 Agent（`spawn_agent`）的工具调用复用宿主管线**：`buildChildRegistry` 经新的
+  `ToolRegistry.copyPipelineTo` 复制主注册表的守卫与中间件，审批 / 工具结果驱逐 /
+  hooks / lint 对子调用一视同仁。此前子表是全新的空管线，后果有二：工具结果驱逐
+  不生效（`read_file` 20 万字符直接灌进子历史），以及显式点名的 high 工具绕过审批。
+  工具本身仍只有白名单内的那些。
+
 - **子 Agent（`spawn_agent`）接上历史压缩器**：`SpawnAgentTool` / `provideSpawnAgent`
   新增 `compactor`，缺省在 `run` 内从宿主上下文惰性解析 `'compaction'`（装配顺序上
   `provideSpawnAgent` 早于 `provideCompaction`，注册期取不到，故不能提前取）。

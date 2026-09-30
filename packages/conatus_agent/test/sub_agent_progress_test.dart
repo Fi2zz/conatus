@@ -318,6 +318,22 @@ void main() {
       expect(child.names, isEmpty);
     });
 
+    test('子注册表复用宿主管线：中间件在子调用上也生效', () async {
+      final ToolRegistry parent = _parentTools();
+      final List<String> seen = <String>[];
+      parent.use((ToolCall call, Future<ToolResult> Function() next) async {
+        seen.add(call.name);
+        return next();
+      });
+      final ToolRegistry child =
+          buildChildRegistry(parent, <String>{'get_time'});
+
+      await child.call(const ToolCall(name: 'get_time'));
+
+      expect(seen, <String>['get_time'],
+          reason: '审批 / 结果驱逐等宿主中间件要作用到子 Agent 的工具调用');
+    });
+
     test('代理透传 name / description / riskLevel', () {
       final ToolRegistry parent = ToolRegistry();
       parent.fn(
