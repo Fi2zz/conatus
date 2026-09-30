@@ -392,6 +392,52 @@ void main() {
       host.dispose();
     });
 
+    test('ask 无审批服务（headless）→ 退化为只读而非全拒', () async {
+      final Context host = Context.root();
+      final ToolRegistry parent = _parentTools();
+      var writes = 0;
+      var reads = 0;
+      parent.fn(
+        'write',
+        riskLevel: ToolRisk.medium,
+        handler: (ToolContext ctx) async {
+          writes++;
+          return ToolResult.success('w');
+        },
+      );
+      parent.fn(
+        'read',
+        handler: (ToolContext ctx) async {
+          reads++;
+          return ToolResult.success('r');
+        },
+      );
+      final _ScriptedProvider provider = _ScriptedProvider(<LlmResult>[
+        _call('c1', 'write'),
+        _call('c2', 'read'),
+        _text('done'),
+      ]);
+      final SpawnAgentTool spawn = SpawnAgentTool(
+        host: host,
+        llm: provider,
+        tools: parent,
+        permissionMode: SubAgentPermission.ask,
+      );
+      parent.register(spawn);
+
+      await spawn.call(const ToolContext(ToolCall(
+        name: 'spawn_agent',
+        arguments: <String, Object?>{
+          'task': 'x',
+          'tools': <Object?>['write', 'read'],
+        },
+      )));
+
+      expect(writes, 0, reason: '无审批人，写操作拒绝（fail-closed）');
+      expect(reads, 1, reason: '只读工具照常执行，而非全拒');
+      host.dispose();
+    });
+
     test('解析与收紧：只收紧不放宽', () {
       expect(parseSubAgentPermission('readonly'), SubAgentPermission.readonly);
       expect(parseSubAgentPermission('AUTO'), SubAgentPermission.auto);

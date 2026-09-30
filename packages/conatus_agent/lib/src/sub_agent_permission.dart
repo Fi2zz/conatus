@@ -72,10 +72,17 @@ void applySubAgentPermission(
     case SubAgentPermission.readonly:
       childTools.guard(_readonlyGuard(childTools));
     case SubAgentPermission.ask:
+      final Approval? approver = gate;
+      if (approver == null) {
+        // 无人可问（headless 无审批服务）：按只读处理，而不是把所有子工具都
+        // 静默拒掉——「无法确认」不等于「什么都不能做」，低风险读取照常。
+        childTools.guard(_readonlyGuard(childTools));
+        return;
+      }
       instrumentApproval(
         child,
         tools: childTools,
-        approval: gate ?? AutoApproval(false),
+        approval: approver,
         threshold: ToolRisk.low,
       );
   }

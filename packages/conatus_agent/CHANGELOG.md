@@ -11,7 +11,8 @@
   `auto`）与 `provideSpawnAgent(permissionMode:)`、模型参数 `permission_mode`。模型
   只能**收紧**（`tightenBelow`）。审批中间件打上 `kApprovalMiddlewareTag`：非
   `inherit` 档从继承管线里排除宿主审批层，改由子代理自带策略（readonly 守卫 /
-  ask 低阈值审批 / auto 不装），避免双层审批。
+  ask 低阈值审批 / auto 不装），避免双层审批。无审批人（headless）时 `ask` 退化为
+  只读，而不是把所有子工具静默拒掉。
 
 - **子 Agent（`spawn_agent`）的工具调用复用宿主管线**：`buildChildRegistry` 经新的
   `ToolRegistry.copyPipelineTo` 复制主注册表的守卫与中间件，审批 / 工具结果驱逐 /
