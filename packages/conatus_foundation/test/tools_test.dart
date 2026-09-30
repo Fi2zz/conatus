@@ -286,6 +286,30 @@ void main() {
     });
   });
 
+  group('ToolRegistry — 管线复制', () {
+    test('copyPipelineTo 复制守卫与中间件，不复制工具', () async {
+      final ToolRegistry parent = ToolRegistry()..register(const _EchoTool());
+      final List<String> order = <String>[];
+      parent.use((ToolCall call, Future<ToolResult> Function() next) async {
+        order.add(call.name);
+        return next();
+      });
+
+      final ToolRegistry child = ToolRegistry()..register(const _EchoTool());
+      parent.copyPipelineTo(child);
+      await child.call(const ToolCall(name: 'echo'));
+
+      expect(child.names, <String>['echo'], reason: '工具不随管线复制');
+      expect(order, <String>['echo'], reason: '中间件已复制');
+
+      parent.guard((ToolCall call) => '不允许');
+      final ToolRegistry guarded = ToolRegistry()..register(const _EchoTool());
+      parent.copyPipelineTo(guarded);
+      final ToolResult denied = await guarded.call(const ToolCall(name: 'echo'));
+      expect(denied.error!.code, 'TOOL_DENIED', reason: '守卫已复制');
+    });
+  });
+
   group('ToolRegistry — 参数校验', () {
     test('缺失必填参数 → INVALID_ARGS，执行体不运行', () async {
       final _GreetTool greet = _GreetTool();

@@ -84,6 +84,20 @@ class ToolRegistry {
     return () => _middlewares.remove(middleware);
   }
 
+  /// 把本注册表的守卫与环绕中间件复制到 [target]（不复制工具与结果监听器）。
+  ///
+  /// 供「受限子注册表」复用宿主同一条执行管线：子表只放白名单内的工具，但审批、
+  /// 结果驱逐、hooks、lint 等对子调用同样生效。复制的是中间件闭包本身；闭包内对
+  /// 注册表的引用仍指向**源**表（如审批会用源表查工具元信息），与直接调用源表一致。
+  void copyPipelineTo(ToolRegistry target) {
+    for (final ToolGuard guard in _guards) {
+      target.guard(guard);
+    }
+    for (final ToolMiddleware middleware in _middlewares) {
+      target.use(middleware);
+    }
+  }
+
   /// 监听工具表变更。返回撤销函数（幂等）。
   Disposer onChange(void Function() listener) {
     _changeListeners.add(listener);
