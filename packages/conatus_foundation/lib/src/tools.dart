@@ -34,7 +34,7 @@ class ToolRegistry {
 
   final Map<String, Tool> _tools = <String, Tool>{};
   final List<ToolGuard> _guards = <ToolGuard>[];
-  final List<ToolMiddleware> _middlewares = <ToolMiddleware>[];
+  final List<_MiddlewareEntry> _middlewares = <_MiddlewareEntry>[];
   final List<void Function()> _changeListeners = <void Function()>[];
   final List<ToolResultListener> _resultListeners = <ToolResultListener>[];
 
@@ -79,9 +79,13 @@ class ToolRegistry {
   }
 
   /// 登记一个环绕中间件（后进先出包裹执行体）。返回撤销函数（幂等）。
-  Disposer use(ToolMiddleware middleware) {
-    _middlewares.add(middleware);
-    return () => _middlewares.remove(middleware);
+  ///
+  /// [tag] 可选标记该中间件，供 [copyPipelineTo] 按类排除（如子注册表要换掉
+  /// 审批那一层，同时保留 hooks / 驱逐 / lint）。
+  Disposer use(ToolMiddleware middleware, {String? tag}) {
+    final _MiddlewareEntry entry = _MiddlewareEntry(middleware, tag);
+    _middlewares.add(entry);
+    return () => _middlewares.remove(entry);
   }
 
   /// 把本注册表的守卫与环绕中间件复制到 [target]（不复制工具与结果监听器）。
@@ -89,12 +93,16 @@ class ToolRegistry {
   /// 供「受限子注册表」复用宿主同一条执行管线：子表只放白名单内的工具，但审批、
   /// 结果驱逐、hooks、lint 等对子调用同样生效。复制的是中间件闭包本身；闭包内对
   /// 注册表的引用仍指向**源**表（如审批会用源表查工具元信息），与直接调用源表一致。
-  void copyPipelineTo(ToolRegistry target) {
+  ///
+  /// [excludeTags] 里的中间件跳过不复制（如子代理自带审批策略时排除宿主的审批层）。
+  void copyPipelineTo(ToolRegistry target,
+      {Set<String> excludeTags = const <String>{}}) {
     for (final ToolGuard guard in _guards) {
       target.guard(guard);
     }
-    for (final ToolMiddleware middleware in _middlewares) {
-      target.use(middleware);
+    for (final _MiddlewareEntry entry in _middlewares) {
+      if (entry.tag != null && excludeTags.contains(entry.tag)) continue;
+      target.use(entry.fn, tag: entry.tag);
     }
   }
 
@@ -190,7 +198,8 @@ class ToolRegistry {
     Future<ToolResult> body() =>
         _withTimeout(call, tool.call(ToolContext(call)), timeout);
     Future<ToolResult> Function() chain = body;
-    for (final ToolMiddleware middleware in _middlewares.reversed) {
+    for (final _MiddlewareEntry entry in _middlewares.reversed) {
+      final ToolMiddleware middleware = entry.fn;
       final Future<ToolResult> Function() next = chain;
       chain = () => middleware(call, next);
     }
@@ -203,6 +212,14 @@ class ToolRegistry {
       listener();
     }
   }
+}
+
+/// 一条中间件登记：函数体 + 可选分类标记（供 [ToolRegistry.copyPipelineTo] 排除）。
+class _MiddlewareEntry {
+  const _MiddlewareEntry(this.fn, this.tag);
+
+  final ToolMiddleware fn;
+  final String? tag;
 }
 
 /// `ctx.tools`：当前上下文可见的工具注册表。

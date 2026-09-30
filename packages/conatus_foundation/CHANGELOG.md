@@ -4,6 +4,9 @@
 
 ## [未发布]
 
+- `ToolRegistry.use` 新增可选 `tag`；`copyPipelineTo` 新增 `excludeTags`，供受限
+  子注册表按类排除中间件（如子代理自带审批策略时排除宿主审批层，避免双层审批）。
+
 - `ToolRegistry.copyPipelineTo`：把守卫与环绕中间件复制到另一个注册表（不复制工具
   与结果监听器），供「受限子注册表」复用宿主同一条执行管线。
 
