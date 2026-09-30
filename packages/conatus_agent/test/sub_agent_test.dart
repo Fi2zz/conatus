@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:conatus_agent/conatus_agent.dart';
+import 'package:conatus_compaction/conatus_compaction.dart';
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
@@ -96,6 +97,29 @@ class _BlockingProvider implements LlmProvider {
   void close() {}
 }
 
+class _FakeCompaction implements CompactionEngine {
+  int calls = 0;
+
+  @override
+  int get keepRecent => 4;
+
+  @override
+  String? summaryOf(String sessionId) => null;
+
+  @override
+  void forget(String sessionId) {}
+
+  @override
+  Future<CompactionResult?> compactIfNeeded(
+    Session session,
+    Summarizer summarize, {
+    int? keepRecent,
+  }) async {
+    calls++;
+    return null;
+  }
+}
+
 LlmResult _text(String content) =>
     LlmResult(content: content, provider: 'scripted', model: 'm');
 
@@ -154,6 +178,30 @@ void main() {
       expect(value['status'], 'success');
       expect(value['output'], '结论是 12:00');
       expect(value['tool_calls'], <String>['get_time']);
+      expect(_schemaNames(provider.toolSchemas.first), <String>{'get_time'});
+      host.dispose();
+    });
+
+    test('显式白名单同样排除 high 风险与 spawn_agent 自身', () async {
+      final Context host = Context.root();
+      final ToolRegistry parent = _parentTools();
+      parent.fn('danger',
+          riskLevel: ToolRisk.high,
+          handler: (ToolContext ctx) async => ToolResult.success('boom'));
+      final _ScriptedProvider provider =
+          _ScriptedProvider(<LlmResult>[_text('ok')]);
+      final SpawnAgentTool spawn =
+          SpawnAgentTool(host: host, llm: provider, tools: parent);
+      parent.register(spawn);
+
+      await spawn.call(const ToolContext(ToolCall(
+        name: 'spawn_agent',
+        arguments: <String, Object?>{
+          'task': '随便做点什么',
+          'tools': <Object?>['get_time', 'danger', 'spawn_agent'],
+        },
+      )));
+
       expect(_schemaNames(provider.toolSchemas.first), <String>{'get_time'});
       host.dispose();
     });
@@ -240,6 +288,29 @@ void main() {
       expect(tools.get('spawn_agent'), isNotNull);
       ctx.dispose();
       expect(tools.get('spawn_agent'), isNull);
+    });
+
+    test('从上下文取 compaction 接入子 AgentLoop', () async {
+      final Context ctx = Context.root();
+      final _FakeCompaction compactor = _FakeCompaction();
+      ctx.provide('compaction', compactor);
+      final ToolRegistry tools = _parentTools();
+      provideLlm(
+        ctx,
+        llm: FallbackLlm(<LlmProvider>[
+          _ScriptedProvider(<LlmResult>[_text('ok')])
+        ]),
+      );
+
+      final SpawnAgentTool spawn = provideSpawnAgent(ctx, tools: tools);
+      await spawn.call(const ToolContext(ToolCall(
+        name: 'spawn_agent',
+        arguments: <String, Object?>{'task': 'x'},
+      )));
+
+      expect(compactor.calls, greaterThan(0),
+          reason: '子 Agent 历史长了要能压缩，不能顶爆模型窗口');
+      ctx.dispose();
     });
   });
 }

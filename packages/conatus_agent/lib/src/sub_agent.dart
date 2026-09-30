@@ -6,6 +6,7 @@
 /// 随宿主释放，宿主被取消/释放时子 Agent 一并终止。
 library;
 
+import 'package:conatus_compaction/conatus_compaction.dart';
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
@@ -57,6 +58,7 @@ class SpawnAgentTool extends Tool {
     this.maxRounds = 8,
     this.subAgentPrompt = kDefaultSubAgentPrompt,
     this.systemPrompt,
+    this.compactor,
     this.onProgress,
     this.childLlm,
   });
@@ -81,6 +83,12 @@ class SpawnAgentTool extends Tool {
 
   /// 子 Agent 的 system prompt 注册表；缺省不用（隔离）。
   final SystemPrompt? systemPrompt;
+
+  /// 历史压缩器；缺省不压缩。子 Agent 读几个大文件工具结果一叠加就会顶爆模型
+  /// 窗口直接失败，故与主循环一样接上下文里的 `'compaction'`。为 null 时在
+  /// [run] 内从 [host] 惰性解析——装配顺序上 `provideSpawnAgent` 早于
+  /// `provideCompaction`，注册期取不到。
+  final CompactionEngine? compactor;
 
   /// 进度回调；缺省不报（子 Agent 仍是黑箱）。
   final SubAgentProgressReporter? onProgress;
@@ -135,6 +143,8 @@ class SpawnAgentTool extends Tool {
     _seq++;
     final SubAgentProgressReporter? report = onProgress;
     report?.call(SubAgentStarted(task));
+    final CompactionEngine? compactor =
+        this.compactor ?? host.get<CompactionEngine>('compaction');
     final Set<String> used = <String>{};
     final ToolRegistry childTools = buildChildRegistry(
       tools,
@@ -157,6 +167,7 @@ class SpawnAgentTool extends Tool {
         tools: childTools,
         session: childSession,
         systemPrompt: systemPrompt,
+        compactor: compactor,
         defaultSystemPrompt: subAgentPrompt,
         maxSteps: maxRounds,
         onEvent: report == null ? null : _roundReporter(report, used),
@@ -200,19 +211,26 @@ class SpawnAgentTool extends Tool {
     if (requested != null && requested.isNotEmpty) {
       return <String>{
         for (final Object? item in requested)
-          if (tools.get('$item') != null && '$item' != name) '$item',
+          if (_usable('$item')) '$item',
       };
     }
     if (defaultTools != null) {
       return <String>{
         for (final String n in defaultTools!)
-          if (tools.get(n) != null && n != name) n,
+          if (_usable(n)) n,
       };
     }
     return <String>{
       for (final String n in tools.names)
-        if (n != name && tools.get(n)!.riskLevel != ToolRisk.high) n,
+        if (_usable(n)) n,
     };
+  }
+
+  /// 工具可进子白名单：存在、非本工具、且不是 high 风险。子注册表是新建的、
+  /// 不带主注册表的审批中间件，high 工具一旦进来就等于绕过人工确认，挡在外面。
+  bool _usable(String toolName) {
+    final Tool? tool = tools.get(toolName);
+    return tool != null && toolName != name && tool.riskLevel != ToolRisk.high;
   }
 }
 
@@ -226,6 +244,7 @@ SpawnAgentTool provideSpawnAgent(
   int maxRounds = 8,
   String subAgentPrompt = kDefaultSubAgentPrompt,
   SystemPrompt? systemPrompt,
+  CompactionEngine? compactor,
   SubAgentProgressReporter? onProgress,
   LlmProvider Function(LlmProvider base)? childLlm,
 }) {
@@ -238,6 +257,7 @@ SpawnAgentTool provideSpawnAgent(
     maxRounds: maxRounds,
     subAgentPrompt: subAgentPrompt,
     systemPrompt: systemPrompt,
+    compactor: compactor,
     onProgress: onProgress,
     childLlm: childLlm,
   );
