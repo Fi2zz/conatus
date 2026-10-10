@@ -161,6 +161,11 @@ filter 的作用：checkout 时恢复 `pubspec.yaml` 的 `resolution: workspace`
   在 `packages/conatus_code` 下运行 `bash tool/build_binary.sh`，产出 `dist/nava`
   （`/Users/fitz/bin/nava` 是它的符号链接，PATH 里的 `nava` 随之生效）。只改源码不
   重建、或交付旧二进制，视为改动未完成。
+- **conatus 依赖 ref 钉版**：子模块 pubspec 里 37 条 conatus git 依赖的 `ref` 钉到
+  具体 commit（非浮动 master），保证外部用户 `pub get` 拿到的组合与子模块 CI 验证
+  过的组合一致。父仓更新并推送后，在 `packages/conatus_code` 下跑
+  `bash tool/pin_conatus_refs.sh` 刷新（默认钉 conatus `origin/master` 最新），
+  通过测试后提交并推送子模块、同步父仓 gitlink。
 
 ### 版本管理
 
@@ -213,7 +218,7 @@ filter 的作用：checkout 时恢复 `pubspec.yaml` 的 `resolution: workspace`
 - `conatus_code` 子模块的 pubspec 形态（14 个 git+path 直接依赖 + 22 条
   dependency_overrides）是实证约束，**不要简化**：合并为单个 `conatus` git 依赖会
   触发 `depend_on_referenced_packages` 252 条 info（--fatal-infos 必红）；去掉
-  overrides 则因「ref: master 与解析后 SHA 是两种源身份」求解失败。
+  overrides 则因「各处 git 源的 ref 与解析后 SHA 是两种源身份」求解失败。
   见 docs/superpowers/specs/2026-09-26-conatus-git-source-distribution-design.md。
 - `conatus_ontology` 已进伞包与 README 表格（0.16.0 起）；自述实验性，勿在生产依赖。
   改它之前先读其 README 与 `docs/superpowers/` 相关 spec。
