@@ -20,3 +20,13 @@ Future<void> restrictFilePermissions(String path) async {
   if (Platform.isWindows) return;
   await Process.run('chmod', <String>['600', path]);
 }
+
+/// 把 [path] 指向的目录权限收紧为 0700（属主可读写执行，组 / 其他无权限）。
+///
+/// 用途：检查点这类「按会话分目录承载敏感内容」的落盘面，收紧**外层目录**
+/// 一次即可挡住其他用户遍历进去（比逐文件收紧更强、也更省）；文件自身的
+/// 600 作为兜底。Windows 无 POSIX 权限位，直接返回；失败同样抛出。
+Future<void> restrictDirectoryPermissions(String path) async {
+  if (Platform.isWindows) return;
+  await Process.run('chmod', <String>['700', path]);
+}

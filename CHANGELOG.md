@@ -4,6 +4,12 @@
 
 ## [未发布]
 
+**安全（E-11 / E-12，conatus_code）**：项目上下文读取前校验 canonical 路径
+（符号链接指向工作区外一律不读，防把外部配置 / 私钥拼进 system prompt 外发）；
+检查点归档 / index 写后收紧为 0600、会话目录与影子仓库目录 0700（对齐
+config.toml 与会话 JSONL 的权限策略）。`conatus_foundation` 的
+`file_permissions.dart` 相应新增 `restrictDirectoryPermissions`。
+
 **安全（E-13）**：`conatus_foundation` 的会话 JSONL 落盘权限收紧为 0600
 （`JsonlSessionPersistence` 首写即 chmod，旧文件下次追加时补收紧）——会话文件
 含完整对话与工具输出，此前默认随 umask 0644 可被同机其他用户读取。新增通用

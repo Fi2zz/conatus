@@ -7,7 +7,8 @@ export 'src/database_json.dart' show JsonDatabaseBackend, provideDatabaseJson;
 export 'src/database_types.dart'
     show DatabaseBackend, DatabaseChange, DatabaseChangeKind, DatabaseException;
 export 'src/database_unit.dart' show DatabaseUnit;
-export 'src/file_permissions.dart' show restrictFilePermissions;
+export 'src/file_permissions.dart'
+    show restrictFilePermissions, restrictDirectoryPermissions;
 export 'src/fs.dart'
     show
         FileSystem,

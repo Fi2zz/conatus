@@ -6,7 +6,8 @@
 
 - **安全（E-13）会话 JSONL 落盘权限收紧**：`JsonlSessionPersistence` 首写即把
   会话文件设为 0600（属主读写），不再随 umask（通常 0644）暴露给同机其他用户；
-  新增 `restrictFilePermissions`（`file_permissions.dart`）作为通用落盘权限缝，
+  新增 `restrictFilePermissions` / `restrictDirectoryPermissions`
+  （`file_permissions.dart`）作为通用落盘权限缝（文件 0600 / 目录 0700），
   语义与 conatus_code 对 config.toml 的 600 策略一致。会话文件含完整对话与
   工具输出（用户可能粘贴过密钥），旧版本遗留的 0644 文件会在下次追加时补收紧。
 
