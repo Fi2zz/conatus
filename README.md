@@ -133,7 +133,7 @@ conatus_ontology ──▶ conatus_agent、conatus_llm、conatus_foundation
 - 🗂️ **会话与上下文**：`session`（事件日志 + 仓库 + JSONL 持久化）、`session-log`（多会话只追加日志：fork / replay / 轨迹重建，附「模型可见即已记录」不变式）、`schedule`（会话本地持久提醒：创建 / 列出 / 取消，重启后自动重建）、`cron`（定时任务：at / every / daily / cron 规则调度 + 运行历史持久化 + cron_* 管理工具）、`system-prompt`（prompt 段装配 + 动态上下文）、`time-context`（日粒度日期锚点）、`compaction`（压缩能力缝：滚动摘要 + `compaction/*` 日志事件）、`memory`（长记忆库 + 显式记住/遗忘能力与工具）
 - 🗄️ **持久化**：`database`（KV 存储 hub + 可插拔后端 + JSON 本地实现）
 - 🤖 **Agent Loop**：`agent`（会话事件 + prompt 装配 + 压缩 + 记忆 + 工具闭环）、`tool-result-eviction`（大结果落盘）、`plan`（结构化计划）、`sub-agent`（`spawn_agent` 隔离委托）、`reflection`（工具后自省重试）
-- 🔌 **MCP 生态**：`mcp`（MCP 客户端：stdio / HTTP / SSE 传输 + 握手与工具发现），外部 server 的工具以 `server__tool` 接入同一张工具表，风险缺省 `medium` 走审批
+- 🔌 **MCP 生态**：`mcp`（MCP 客户端：stdio / HTTP / SSE 传输 + 握手与工具发现），外部 server 的工具以 `server__tool` 接入同一张工具表，风险缺省 `high` 走审批
 - 🗜️ **分层压缩与缓存度量**：`content-classifier`（内容分类器能力缝）、`layered-compaction`（按类别分层折叠：工具结果压成指针、用户偏好留原文）、`context-cache`（可缓存前缀指纹 + 命中遥测）
 - 🔭 **产品化**：`telemetry`（事件导出 + 埋点）、`evaluation`（用例评估 + 基线对比）、`approval`（高危工具审批）、`skill`（技能沉淀）、`skill-catalog`（技能加载：发现 `SKILL.md` 指令集 + 目录注入 + `skill` 工具）、`recovery`（会话快照恢复）
 - 🕹️ **实验性能力包**（API 可能破坏性变更）：`alerting`（订阅遥测按规则主动告警）、`browser_use` / `computer_use`（经 MCP 驱动浏览器与本地桌面）、`team`（多智能体协作：任务板 + 成员运行时）、`workflow`（把协作沉淀为声明式流程资产）、`observability`（span 语义 + 从 Session Log 派生 trace）、`ontology`（自进化本体层：Term / Mapping / Constraint / Evidence）
@@ -480,7 +480,7 @@ await provideMcp(app, <McpServerConfig>[
   `McpToolAdapter.toSchema()` 直通 `inputSchema`；
 - 风险映射：非标准 `riskLevel`（`readonly` / `read` → `low`，`write` / `mutating` →
   `medium`，`destructive` / `admin` → `high`）、`annotations.destructiveHint` → `high`、
-  `annotations.readOnlyHint` → `low`，**什么都没声明则缺省 `medium`**（默认需要审批）；
+  `annotations.readOnlyHint` → `low`，**什么都没声明则缺省 `high`**（缺省审批阈值即 high，未声明风险进审批）；
 - `env` / `headers` 的值支持 `${KEY}` 占位符，用 `Credentials` 解析（Dart 源码里要写成
   原始字符串 `r'...'` 或转义 `\$`，否则会被当成字符串插值）；解析不了时
   占位符原样保留，且**解析结果不得写进日志**（要排查就用键名）；

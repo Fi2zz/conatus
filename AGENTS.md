@@ -204,7 +204,8 @@ filter 的作用：checkout 时恢复 `pubspec.yaml` 的 `resolution: workspace`
 - MCP 的 `env` / `headers` 支持 `${KEY}` 占位符（经 `Credentials` 解析），**解析结果不得写进日志**
   （排查用键名）；Dart 源码里写 `r'...'` 原始字符串或转义 `\$`。
 - 工具风险分级：`Tool.riskLevel` + `ctx.tools.guardRisk(max)` 能力分级；MCP 工具风险映射，
-  未声明缺省 `medium`（默认需要审批）。高危工具（`approval`）默认走审批链，`AskUserApproval`
+  未声明缺省 `high`（缺省审批阈值就是 high，medium 不进审批——stdio 子进程不经沙箱，
+  审批是唯一防线，未知风险 fail-closed）。高危工具（`approval`）默认走审批链，`AskUserApproval`
   超时视为拒绝。
 - `shell` / `fs` 是能力缝：默认 `LocalShellExecutor`（`bash -c`）与 `LocalFileSystem`
   （原子写入 + 版本守卫）。生产替换为沙箱实现时消费方代码不变。

@@ -4,6 +4,13 @@
 
 ## [未发布]
 
+**安全（E-10）**：`conatus_mcp` 的 `mcpToolRisk` 未声明风险的缺省从 `medium`
+提级为 `high`（标签无法识别同样按 `high`）。原因：审批阈值缺省是 `high`
+（`instrumentApproval` 与宿主默认权限模式），`medium` 不进审批——与文档承诺的
+「未声明默认需要审批」矛盾；MCP stdio 子进程不经本地沙箱，审批是未知风险的
+唯一防线，按 fail-closed 提级。配套 `conatus_code` 的 headless 启动闸门见
+子模块 CHANGELOG（E-9）。
+
 **分发方式变更为 git 源**（版本锚点：`v0.17.0` tag 起）：
 
 - 全部 23 个包声明 `publish_to: none`，不再发布 pub.dev（此前也从未发布过，

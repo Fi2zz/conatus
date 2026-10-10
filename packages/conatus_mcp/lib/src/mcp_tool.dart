@@ -17,8 +17,14 @@ String mcpToolName(String serverName, String toolName) =>
 /// [params] 留空（空声明不做校验，多余参数不会被拒）而 [toSchema] 直接透传
 /// 服务端 `inputSchema`。
 ///
-/// 风险等级见 [mcpToolRisk]：**未声明的工具一律 [ToolRisk.medium]**，也就是
-/// 默认走审批门控——宁可多问一次，也不要让未知的写操作静默执行。
+/// 风险等级见 [mcpToolRisk]：**未声明的工具一律 [ToolRisk.high]**，也就是
+/// 缺省走审批门控——宁可多问一次，也不要让未知的写操作静默执行。
+///
+/// 曾缺省 [ToolRisk.medium]，但那与「默认需要审批」的契约相矛盾：审批中间件
+/// 的缺省阈值（`instrumentApproval(threshold:)` 与 nava 默认权限模式）都是
+/// `high`，medium 根本不进审批——而 MCP stdio 子进程不经本地沙箱，审批是
+/// 唯一防线。故按 fail-closed 提级：未知风险让审批兜底，服务端显式声明
+/// `readOnlyHint` / `riskLevel` 后再按声明分级（声明是降级的唯一途径）。
 class McpToolAdapter extends Tool {
   /// 构造。[client] 提供 server 归属，[tool] 是服务端声明。
   McpToolAdapter({required this.client, required this.tool});
@@ -117,14 +123,16 @@ class McpToolAlias extends Tool {
 ///    [ToolRisk.high]（大小写不敏感）；
 /// 2. MCP 标准注解 `annotations.destructiveHint == true` → [ToolRisk.high]；
 /// 3. `annotations.readOnlyHint == true` → [ToolRisk.low]；
-/// 4. 其余（含什么都没声明）→ [ToolRisk.medium]，即默认需要审批。
+/// 4. 其余（什么都没声明、或标签无法识别）→ [ToolRisk.high]，缺省需要审批：
+///    审批阈值缺省是 `high`，只有 high 才真正进审批；未声明的风险不能默认
+///    放行（stdio 子进程不经本地沙箱，见 [McpToolAdapter] 头注释）。
 ToolRisk mcpToolRisk(McpTool tool) {
   final ToolRisk? declared = _riskFromTag(tool.riskLevel);
   if (declared != null) return declared;
   final Map<String, Object?> annotations = tool.annotations;
   if (annotations['destructiveHint'] == true) return ToolRisk.high;
   if (annotations['readOnlyHint'] == true) return ToolRisk.low;
-  return ToolRisk.medium;
+  return ToolRisk.high;
 }
 
 /// 把一次 MCP 工具结果转成 [ToolResult]。

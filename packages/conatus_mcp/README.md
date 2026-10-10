@@ -71,13 +71,15 @@ await provideMcp(app, <McpServerConfig>[
 | 非标准 `riskLevel: readonly` / `read` | `low` |
 | `annotations.readOnlyHint == true` | `low` |
 | 非标准 `riskLevel: write` / `mutating` | `medium` |
-| 什么都没声明 | `medium` |
+| 什么都没声明 / 标签无法识别 | `high` |
 | 非标准 `riskLevel: destructive` / `admin` | `high` |
 | `annotations.destructiveHint == true` | `high` |
 
 判定顺序是「非标准 `riskLevel` → `destructiveHint` → `readOnlyHint` → 缺省
-`medium`」。**默认 `medium` 意味着默认需要审批**：MCP server 是外部进程，宁可
-多问一次，也不要让未知的写操作静默执行。
+`high`」。**默认 `high` 意味着默认进入审批**：审批阈值缺省就是 `high`
+（`instrumentApproval` / 宿主默认权限模式），缺 `medium` 会静默放行——而 MCP
+stdio 子进程不经本地沙箱，审批是唯一防线，未知风险必须 fail-closed。MCP server
+想降低打扰，显式声明 `readOnlyHint`（→ `low`）或 `riskLevel` 即可。
 
 ## 生命周期
 

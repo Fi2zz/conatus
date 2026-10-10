@@ -14,13 +14,16 @@ McpTool _tool({
 
 void main() {
   group('mcpToolRisk', () {
-    test('什么都没声明 → medium（默认需审批）', () {
-      expect(mcpToolRisk(_tool()), ToolRisk.medium);
+    // 未声明风险 → high 而非 medium：审批缺省阈值就是 high（instrumentApproval
+    // 与宿主默认权限模式），medium 不进审批；MCP 子进程不经本地沙箱，审批是
+    // 唯一防线，未知风险必须 fail-closed。
+    test('什么都没声明 → high（默认需审批）', () {
+      expect(mcpToolRisk(_tool()), ToolRisk.high);
       expect(
         mcpToolRisk(
           _tool(annotations: <String, Object?>{'idempotentHint': true}),
         ),
-        ToolRisk.medium,
+        ToolRisk.high,
       );
     });
 
@@ -60,7 +63,8 @@ void main() {
         )),
         ToolRisk.low,
       );
-      expect(mcpToolRisk(_tool(riskLevel: '未知标签')), ToolRisk.medium);
+      // 无法识别的风险标签视同未声明（fail-closed）。
+      expect(mcpToolRisk(_tool(riskLevel: '未知标签')), ToolRisk.high);
     });
   });
 
