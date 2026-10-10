@@ -35,9 +35,6 @@ class JsonlSessionPersistence implements SessionPersistence {
 
   File _file(String id) => File('$dir${Platform.pathSeparator}$id.jsonl');
 
-  /// 本进程内已确认收紧过权限的会话文件路径（每个会话只 chmod 一次）。
-  final Set<String> _restricted = <String>{};
-
   @override
   Future<List<String>> list() async {
     final Directory directory = Directory(dir);
@@ -79,14 +76,15 @@ class JsonlSessionPersistence implements SessionPersistence {
     );
   }
 
-  /// 确保 [file] 存在且权限已收紧；同一文件每个进程只做一次。
+  /// 确保 [file] 存在且权限为 0600；已是 0600 则跳过（不每次追加都起 chmod 进程）。
   ///
   /// 顺序是「先建空文件 → chmod 600 → 再 append」，而不是「先 append 再
   /// chmod」：后者会让首行内容在收紧前短暂以 0644 落盘，形成明文窗口。
-  /// 旧版本遗留的 0644 文件也会在本次追加时补收紧一次。
+  /// 用「读当前权限位」而非内存集合判定：chmod 失败不会留下「已收紧」的假记录，
+  /// 下次追加重试；旧版本遗留的 0644 文件也因此被补收紧。
   Future<void> _restrictPermissions(File file) async {
-    if (!_restricted.add(file.path)) return;
     if (!file.existsSync()) await file.create(recursive: true);
+    if ((file.statSync().mode & 0x1FF) == 0x180) return; // 已是 0600
     await restrictFilePermissions(file.path);
   }
 

@@ -64,4 +64,15 @@ void main() {
           'assistant_message',
         ]);
   });
+
+  test('chmod 失败（路径不存在）抛出，不静默放过', () async {
+    if (Platform.isWindows) return;
+    final String missing =
+        '${Directory.systemTemp.path}/nope-${DateTime.now().microsecondsSinceEpoch}.jsonl';
+
+    await expectLater(
+      restrictFilePermissions(missing),
+      throwsA(isA<FileSystemException>()),
+    );
+  });
 }
