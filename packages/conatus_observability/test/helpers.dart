@@ -20,19 +20,19 @@ SessionEvent eventAt(String id, String type, int second, {Object? data}) =>
     );
 
 SessionEvent userMessage(String id, int second) =>
-    eventAt(id, kUserMessageEvent, second, data: <String, Object?>{'text': 'hi'});
+    eventAt(id, kUserMessageEvent, second,
+        data: <String, Object?>{'text': 'hi'});
 
-SessionEvent assistantMessage(String id, int second) => eventAt(
-    id, kAssistantMessageEvent, second,
-    data: <String, Object?>{'text': 'ok'});
+SessionEvent assistantMessage(String id, int second) =>
+    eventAt(id, kAssistantMessageEvent, second,
+        data: <String, Object?>{'text': 'ok'});
 
-SessionEvent llmRequest(String id, int second) => eventAt(
-    id, kLlmRequestEvent, second,
-    data: <String, Object?>{'provider': 'doubao'});
+SessionEvent llmRequest(String id, int second) =>
+    eventAt(id, kLlmRequestEvent, second,
+        data: <String, Object?>{'provider': 'doubao'});
 
-SessionEvent llmResponse(String id, int second) => eventAt(
-    id, kLlmResponseEvent, second,
-    data: <String, Object?>{
+SessionEvent llmResponse(String id, int second) =>
+    eventAt(id, kLlmResponseEvent, second, data: <String, Object?>{
       'provider': 'doubao',
       'model': 'seed-1',
       'usage': <String, Object?>{'prompt_tokens': 10},
@@ -44,20 +44,19 @@ SessionEvent toolCall(String id, int second, {required String callId}) =>
 
 SessionEvent toolResult(String id, int second,
         {required String callId, bool isError = false}) =>
-    eventAt(id, kToolResultEvent, second,
-        data: <String, Object?>{
-          'name': 'shell',
-          'callId': callId,
-          'isError': isError,
-        });
+    eventAt(id, kToolResultEvent, second, data: <String, Object?>{
+      'name': 'shell',
+      'callId': callId,
+      'isError': isError,
+    });
 
-SessionEvent teamSpawned(String id, int second) => eventAt(
-    id, kTeamSpawnedEvent, second,
-    data: <String, Object?>{'name': 'alice', 'teammateId': 'm1'});
+SessionEvent teamSpawned(String id, int second) =>
+    eventAt(id, kTeamSpawnedEvent, second,
+        data: <String, Object?>{'name': 'alice', 'teammateId': 'm1'});
 
-SessionEvent teamRemoved(String id, int second) => eventAt(
-    id, kTeamRemovedEvent, second,
-    data: <String, Object?>{'teammateId': 'm1', 'completed': true});
+SessionEvent teamRemoved(String id, int second) =>
+    eventAt(id, kTeamRemovedEvent, second,
+        data: <String, Object?>{'teammateId': 'm1', 'completed': true});
 
 /// 用事件序列填充内存日志。
 Future<InMemorySessionLog> seedLog(List<SessionEvent> events) async {

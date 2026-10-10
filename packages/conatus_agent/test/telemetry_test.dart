@@ -117,8 +117,7 @@ void main() {
 
       await tools.call(const ToolCall(name: 'web_search'));
 
-      expect(
-          telemetry.recent.map((TelemetryEvent e) => e.name),
+      expect(telemetry.recent.map((TelemetryEvent e) => e.name),
           <String>['tool.called', 'tool.failed']);
       final TelemetryEvent failed = telemetry.recent.last;
       expect(failed.data['tool'], 'web_search');

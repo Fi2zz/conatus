@@ -15,7 +15,8 @@ void main() {
         );
 
     Future<String> capture(void Function(IOSink sink) run) async {
-      final Directory dir = await Directory.systemTemp.createTemp('conatus_alerting');
+      final Directory dir =
+          await Directory.systemTemp.createTemp('conatus_alerting');
       addTearDown(() => dir.delete(recursive: true));
       final IOSink sink = File('${dir.path}/out.txt').openWrite();
       run(sink);
@@ -24,8 +25,8 @@ void main() {
     }
 
     test('输出带时间戳与标记的告警行', () async {
-      final String out = await capture((IOSink sink) =>
-          ConsoleNotifier(writer: sink).notify(sample()));
+      final String out = await capture(
+          (IOSink sink) => ConsoleNotifier(writer: sink).notify(sample()));
 
       expect(out, contains('[WARN] llm-slow:'));
       expect(out, contains('2026-09-17T10:30'));

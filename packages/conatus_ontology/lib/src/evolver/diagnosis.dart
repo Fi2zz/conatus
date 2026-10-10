@@ -20,7 +20,8 @@ class SemanticError {
         manifestation: json['manifestation']! as String,
         fixDirection: json['fixDirection']! as String,
         traceIds: <String>[
-          for (final Object? id in (json['traceIds'] ?? const <Object?>[]) as List)
+          for (final Object? id
+              in (json['traceIds'] ?? const <Object?>[]) as List)
             id! as String,
         ],
       );
@@ -89,8 +90,9 @@ SemanticDiagnosis parseDiagnosis(String content) {
 }
 
 String _summarize(SessionEvent event) {
-  final Map<String, Object?> data =
-      event.data is Map ? Map<String, Object?>.from(event.data! as Map) : <String, Object?>{};
+  final Map<String, Object?> data = event.data is Map
+      ? Map<String, Object?>.from(event.data! as Map)
+      : <String, Object?>{};
   final List<String> parts = <String>[
     for (final MapEntry<String, Object?> entry in data.entries.take(3))
       '${entry.key}=${entry.value}',

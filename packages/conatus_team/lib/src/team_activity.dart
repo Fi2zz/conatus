@@ -94,12 +94,16 @@ class TeammateActivityLine {
 /// 个视图撑开，其它成员被挤出视野。
 TeammateActivityLine activityLine(TeammateActivity activity) =>
     switch (activity) {
-      TeammateText(:final String text) => TeammateActivityLine(_clip(text, 120)),
+      TeammateText(:final String text) =>
+        TeammateActivityLine(_clip(text, 120)),
       TeammateReasoning(:final String text) =>
         TeammateActivityLine('思考 ${_clip(text, 80)}'),
       TeammateToolCall(:final String tool) => TeammateActivityLine('→ $tool'),
-      TeammateToolResult(:final String tool, :final bool failed,
-          :final String preview) =>
+      TeammateToolResult(
+        :final String tool,
+        :final bool failed,
+        :final String preview
+      ) =>
         TeammateActivityLine(
           '${failed ? '✗' : '✓'} $tool${preview.isEmpty ? '' : ' · ${_clip(preview, 60)}'}',
           failed: failed,

@@ -33,8 +33,8 @@ class ConcurrentPattern implements TeamPattern {
     for (int i = 0; i < limit; i++) {
       members.add(await team.spawn(name: names[i]));
     }
-    final List<String> replies = await Future.wait(
-        members.map((Teammate m) => team.ask(m.id, input)));
+    final List<String> replies =
+        await Future.wait(members.map((Teammate m) => team.ask(m.id, input)));
     return replies;
   }
 

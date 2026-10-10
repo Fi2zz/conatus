@@ -140,7 +140,8 @@ SearchProviderSet _resolveSearchProviders({
       statuses: <SearchSourceStatus>[],
     );
   }
-  final Credentials? resolved = credentials ?? ctx.get<Credentials>('credentials');
+  final Credentials? resolved =
+      credentials ?? ctx.get<Credentials>('credentials');
   if (resolved == null) {
     return _resolveKeylessProviders(order, client);
   }

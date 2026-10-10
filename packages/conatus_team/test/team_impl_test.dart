@@ -156,8 +156,8 @@ void main() {
       await team.send(b.id, 'xB');
       final List<Teammate> all = await team.waitAll();
       expect(all.length, 2);
-      expect(all.every((Teammate t) => t.status == TeammateStatus.finished),
-          true);
+      expect(
+          all.every((Teammate t) => t.status == TeammateStatus.finished), true);
       team.dispose();
     });
 

@@ -44,11 +44,13 @@ void main() {
           ScreenRegion(x: 1, y: 2, width: 320, height: 240);
       final Map<String, Object?> json = region.toJson();
       expect(ScreenRegion.fromJson(json), isA<ScreenRegion>());
-      expect(json, <String, Object?>{'x': 1, 'y': 2, 'width': 320, 'height': 240});
+      expect(
+          json, <String, Object?>{'x': 1, 'y': 2, 'width': 320, 'height': 240});
     });
 
     test('fromJson 字段缺失退回 0', () {
-      final ScreenRegion region = ScreenRegion.fromJson(const <String, Object?>{});
+      final ScreenRegion region =
+          ScreenRegion.fromJson(const <String, Object?>{});
       expect(region.x, 0);
       expect(region.height, 0);
     });
@@ -57,7 +59,8 @@ void main() {
   group('InMemoryAttachmentStore', () {
     test('save / load / delete 往返', () async {
       final InMemoryAttachmentStore store = InMemoryAttachmentStore();
-      final String ref = await store.save(<int>[9, 8, 7], mimeType: 'image/png');
+      final String ref =
+          await store.save(<int>[9, 8, 7], mimeType: 'image/png');
 
       expect(store.refs, contains(ref));
       expect(await store.load(ref), <int>[9, 8, 7]);

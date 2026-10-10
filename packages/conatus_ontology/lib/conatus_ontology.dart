@@ -10,7 +10,8 @@ library;
 export 'src/benchmark/adapter.dart' show EvolutionAdapter, RolloutResult;
 export 'src/benchmark/bird.dart' show BirdAdapter;
 export 'src/builder/builder.dart' show BuildResult, buildOntology;
-export 'src/builder/extractor.dart' show describeSources, extractCandidates, parseTerms;
+export 'src/builder/extractor.dart'
+    show describeSources, extractCandidates, parseTerms;
 export 'src/builder/grounding.dart'
     show
         GroundingResult,
@@ -20,23 +21,13 @@ export 'src/builder/grounding.dart'
         proposeMappings;
 export 'src/builder/source.dart' show DataColumn, DataSource;
 export 'src/evolver/attribution.dart'
-    show
-        Attribution,
-        AttributionEngine,
-        AttributionTarget,
-        parseAttributions;
+    show Attribution, AttributionEngine, AttributionTarget, parseAttributions;
 export 'src/evolver/diagnosis.dart'
     show SemanticDiagnosis, SemanticError, diagnose, parseDiagnosis;
-export 'src/evolver/evaluator.dart'
-    show BackboneConfig, ConditionalEvalResult;
-export 'src/evolver/evolver.dart'
-    show OntologyVariant, evolveVariant;
+export 'src/evolver/evaluator.dart' show BackboneConfig, ConditionalEvalResult;
+export 'src/evolver/evolver.dart' show OntologyVariant, evolveVariant;
 export 'src/evolver/generic_evolver.dart'
-    show
-        EvolutionOutcome,
-        Evolver,
-        EvolverVariant,
-        OntologyEvolver;
+    show EvolutionOutcome, Evolver, EvolverVariant, OntologyEvolver;
 export 'src/evolver/paired_evaluator.dart' show PairedEvaluator;
 export 'src/evolver/patcher.dart' show generateEdits, parseTypedEdits;
 export 'src/mcp/tools.dart' show registerOntologyTools;
@@ -57,14 +48,9 @@ export 'src/ontology/edits.dart'
 export 'src/ontology/layer.dart' show OntologyLayer;
 export 'src/ontology/node.dart'
     show Constraint, Evidence, Mapping, OntologyNode, Term;
-export 'src/ontology/relation.dart'
-    show SemanticRelation, StructuralReference;
+export 'src/ontology/relation.dart' show SemanticRelation, StructuralReference;
 export 'src/ontology/schema.dart'
-    show
-        OntologySchema,
-        SchemaField,
-        SchemaFieldType,
-        ValidationResult;
+    show OntologySchema, SchemaField, SchemaFieldType, ValidationResult;
 export 'src/runtime/browse.dart' show NodeSummary, browseLayer;
 export 'src/runtime/manifest.dart' show buildManifest;
 export 'src/runtime/resolve.dart' show ResolvedSemantics, resolveSemantics;
@@ -81,7 +67,4 @@ export 'src/store/database_store.dart' show DatabaseStore;
 export 'src/store/memory_store.dart' show MemoryStore;
 export 'src/store/store.dart' show OntologyStore;
 export 'src/tools/ontology_tools.dart'
-    show
-        BrowseSemanticsTool,
-        OntologyManifestTool,
-        ResolveSemanticsTool;
+    show BrowseSemanticsTool, OntologyManifestTool, ResolveSemanticsTool;

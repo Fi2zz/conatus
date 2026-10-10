@@ -14,8 +14,7 @@ sealed class TypedEdit {
       'add_node' => AddNode(OntologyNode.fromJson(
           Map<String, Object?>.from(json['node']! as Map))),
       'remove_node' => RemoveNode(json['nodeId']! as String),
-      'update_node_fields' => UpdateNodeFields(
-          json['nodeId']! as String,
+      'update_node_fields' => UpdateNodeFields(json['nodeId']! as String,
           Map<String, Object?>.from(json['fields']! as Map)),
       'add_relation' => AddRelation(SemanticRelation.fromJson(
           Map<String, Object?>.from(json['relation']! as Map))),
@@ -25,12 +24,10 @@ sealed class TypedEdit {
       'remove_reference' => RemoveReference(json['referenceId']! as String),
       'merge_terms' => MergeTerms(
           json['sourceTermId']! as String, json['targetTermId']! as String),
-      'split_term' => SplitTerm(
-          json['sourceTermId']! as String,
-          <Term>[
-            for (final Object? term in json['newTerms']! as List)
-              Term.fromJson(Map<String, Object?>.from(term! as Map)),
-          ]),
+      'split_term' => SplitTerm(json['sourceTermId']! as String, <Term>[
+          for (final Object? term in json['newTerms']! as List)
+            Term.fromJson(Map<String, Object?>.from(term! as Map)),
+        ]),
       _ => throw ArgumentError('未知编辑类型: $kind'),
     };
   }
@@ -156,4 +153,3 @@ class SplitTerm extends TypedEdit {
         ],
       };
 }
-

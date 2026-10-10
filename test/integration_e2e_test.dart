@@ -32,8 +32,10 @@ class _TurnProvider implements LlmProvider {
     List<Map<String, dynamic>>? tools,
   }) async {
     calls.add(List<LlmMessage>.of(messages));
-    final bool compaction = messages.any((LlmMessage m) =>
-        m.role == 'user' && m.content.contains(kCompactionSummaryPrompt));
+    final bool compaction = messages.any(
+      (LlmMessage m) =>
+          m.role == 'user' && m.content.contains(kCompactionSummaryPrompt),
+    );
     if (compaction) {
       return const LlmResult(content: '历史要点摘要', provider: 'turn', model: 'm');
     }
@@ -47,8 +49,7 @@ class _TurnProvider implements LlmProvider {
     List<LlmMessage> messages, {
     Map<String, dynamic>? options,
     List<Map<String, dynamic>>? tools,
-  }) =>
-      const Stream<LlmStreamEvent>.empty();
+  }) => const Stream<LlmStreamEvent>.empty();
 
   @override
   void close() {}
@@ -71,47 +72,48 @@ class _EchoTransport implements McpTransport {
   @override
   Future<void> send(McpMessage message) async {
     if (!message.request) return;
-    _incoming.add(McpMessage.fromJson(<String, Object?>{
-      'jsonrpc': '2.0',
-      'id': message.id,
-      'result': _respond(
-          message.method!, message.params ?? const <String, Object?>{}),
-    }));
+    _incoming.add(
+      McpMessage.fromJson(<String, Object?>{
+        'jsonrpc': '2.0',
+        'id': message.id,
+        'result': _respond(
+          message.method!,
+          message.params ?? const <String, Object?>{},
+        ),
+      }),
+    );
   }
 
   Map<String, Object?> _respond(String method, Map<String, Object?> params) =>
       switch (method) {
         'initialize' => <String, Object?>{
-            'protocolVersion': '2025-06-18',
-            'serverInfo': <String, Object?>{
-              'name': 'probe',
-              'version': '0.0.1'
-            },
-            'capabilities': <String, Object?>{},
-          },
+          'protocolVersion': '2025-06-18',
+          'serverInfo': <String, Object?>{'name': 'probe', 'version': '0.0.1'},
+          'capabilities': <String, Object?>{},
+        },
         'tools/list' => <String, Object?>{
-            'tools': <Object?>[
-              <String, Object?>{
-                'name': 'echo',
-                'description': '原样回显 arguments',
-                'inputSchema': <String, Object?>{
-                  'type': 'object',
-                  'properties': <String, Object?>{
-                    'text': <String, Object?>{'type': 'string'},
-                  },
+          'tools': <Object?>[
+            <String, Object?>{
+              'name': 'echo',
+              'description': '原样回显 arguments',
+              'inputSchema': <String, Object?>{
+                'type': 'object',
+                'properties': <String, Object?>{
+                  'text': <String, Object?>{'type': 'string'},
                 },
-                'annotations': <String, Object?>{'readOnlyHint': true},
               },
-            ],
-          },
+              'annotations': <String, Object?>{'readOnlyHint': true},
+            },
+          ],
+        },
         'tools/call' => <String, Object?>{
-            'content': <Object?>[
-              <String, Object?>{
-                'type': 'text',
-                'text': jsonEncode(params['arguments']),
-              },
-            ],
-          },
+          'content': <Object?>[
+            <String, Object?>{
+              'type': 'text',
+              'text': jsonEncode(params['arguments']),
+            },
+          ],
+        },
         _ => <String, Object?>{},
       };
 
@@ -123,24 +125,27 @@ LlmResult _text(String content) =>
     LlmResult(content: content, provider: 'turn', model: 'm');
 
 LlmResult _call(String id, String name) => LlmResult(
-      content: '',
-      provider: 'turn',
-      model: 'm',
-      toolCalls: <LlmToolCall>[
-        LlmToolCall(id: id, name: name, arguments: '{"text":"hi"}'),
-      ],
-    );
+  content: '',
+  provider: 'turn',
+  model: 'm',
+  toolCalls: <LlmToolCall>[
+    LlmToolCall(id: id, name: name, arguments: '{"text":"hi"}'),
+  ],
+);
 
 void main() {
   test('四个方向装配到同一 Context，跑一轮含工具调用的对话，不变式零违规', () async {
     final Context app = Context.root();
     addTearDown(app.dispose);
 
-    final Telemetry telemetry =
-        provideTelemetry(app, telemetry: InMemoryTelemetry());
+    final Telemetry telemetry = provideTelemetry(
+      app,
+      telemetry: InMemoryTelemetry(),
+    );
     final List<String> telemetryNames = <String>[];
-    final StreamSubscription<TelemetryEvent> watch = telemetry.events
-        .listen((TelemetryEvent event) => telemetryNames.add(event.name));
+    final StreamSubscription<TelemetryEvent> watch = telemetry.events.listen(
+      (TelemetryEvent event) => telemetryNames.add(event.name),
+    );
     addTearDown(watch.cancel);
 
     provideCredentials(
@@ -163,12 +168,13 @@ void main() {
     );
 
     app.provide(
-        'llm',
-        _TurnProvider(<LlmResult>[
-          _call('c1', 'get_time'),
-          _call('c2', 'probe__echo'),
-          _text('完成'),
-        ]));
+      'llm',
+      _TurnProvider(<LlmResult>[
+        _call('c1', 'get_time'),
+        _call('c2', 'probe__echo'),
+        _text('完成'),
+      ]),
+    );
 
     await provideMcp(
       app,
@@ -202,16 +208,17 @@ void main() {
     // 1) MCP 工具注册进了 ToolRegistry，并被 Agent Loop 调用
     expect(app.mcp.servers, <String>['probe']);
     expect(tools.names, contains('probe__echo'));
-    expect(
-      turn.steps.map((AgentStep s) => s.call.name),
-      <String>['get_time', 'probe__echo'],
-    );
+    expect(turn.steps.map((AgentStep s) => s.call.name), <String>[
+      'get_time',
+      'probe__echo',
+    ]);
     expect(turn.reply, '完成');
 
     // 2) 业务会话事件序列不受四个方向影响：本轮的业务事件仍是 6 条，压缩只在
     //    本轮用户消息之后追加 3 条记录事件
-    final List<String> allTypes =
-        session.events.map((SessionEvent e) => e.type).toList();
+    final List<String> allTypes = session.events
+        .map((SessionEvent e) => e.type)
+        .toList();
     expect(allTypes.length, 21); // 12 条预置历史 + 6 条本轮 + 3 条压缩记录
     expect(allTypes.sublist(12, 16), <String>[
       kUserMessageEvent,
@@ -223,21 +230,19 @@ void main() {
       for (final String type in allTypes)
         if (!type.startsWith('compaction/')) type,
     ];
-    expect(
-      business.sublist(business.length - 6),
-      <String>[
-        kUserMessageEvent,
-        kAssistantMessageEvent,
-        kToolResultEvent,
-        kAssistantMessageEvent,
-        kToolResultEvent,
-        kAssistantMessageEvent,
-      ],
-    );
-    expect(
-      business.toSet(),
-      <String>{kUserMessageEvent, kAssistantMessageEvent, kToolResultEvent},
-    );
+    expect(business.sublist(business.length - 6), <String>[
+      kUserMessageEvent,
+      kAssistantMessageEvent,
+      kToolResultEvent,
+      kAssistantMessageEvent,
+      kToolResultEvent,
+      kAssistantMessageEvent,
+    ]);
+    expect(business.toSet(), <String>{
+      kUserMessageEvent,
+      kAssistantMessageEvent,
+      kToolResultEvent,
+    });
     expect(checkCompactionInvariant(session.events), isEmpty);
 
     // 3) Session Log 是超集（含派生事件）
@@ -252,15 +257,18 @@ void main() {
     expect(checkModelVisibleInvariant(log), isEmpty);
 
     // 5) fork 任意事件点，历史是前缀
-    final SessionEvent mark =
-        log.firstWhere((SessionEvent e) => e.type == kToolResultEvent);
+    final SessionEvent mark = log.firstWhere(
+      (SessionEvent e) => e.type == kToolResultEvent,
+    );
     final String forkId = await app.sessionLog.fork('e2e', mark.id!);
     final List<String> forkTypes = await app.sessionLog
         .read(forkId)
         .map((SessionEvent e) => e.type)
         .toList();
     expect(
-        forkTypes, logTypes.sublist(0, logTypes.indexOf(kToolResultEvent) + 1));
+      forkTypes,
+      logTypes.sublist(0, logTypes.indexOf(kToolResultEvent) + 1),
+    );
 
     // 6) 分层压缩真的工作（偏好原文进摘要），缓存度量真的发出
     expect(app.get<Compactor>('compaction')?.summaryOf('e2e'), isNotNull);

@@ -31,7 +31,8 @@ class MockBrowserUseProvider implements BrowserUseProvider {
     final Object? error = initializeError;
     if (error != null) throw error;
     initialized.add(session);
-    final Future<SessionBrowser> Function(Session session)? custom = onInitialize;
+    final Future<SessionBrowser> Function(Session session)? custom =
+        onInitialize;
     if (custom != null) return custom(session);
     return MockSessionBrowser(
       sessionId: session.id,

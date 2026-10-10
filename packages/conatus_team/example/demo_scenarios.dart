@@ -25,7 +25,9 @@ Future<void> scenarioConcurrent(AgentTeam team) async {
   final Object? replies = await const ConcurrentPattern().execute(
     team: team,
     input: '审查支付回调这段代码',
-    options: <String, Object?>{'members': <String>['性能', '安全', '产品']},
+    options: <String, Object?>{
+      'members': <String>['性能', '安全', '产品']
+    },
   );
   await sub.cancel();
 
@@ -65,6 +67,9 @@ String _describe(AgentTeamEvent event) => switch (event) {
       TeamTaskChanged(:final TeamTask task) =>
         'task~(${task.id}:${task.status.name})',
       TeamMessageSent(:final String to) => 'msg→$to',
-      TeammateActed(:final String teammateId, :final TeammateActivity activity) =>
+      TeammateActed(
+        :final String teammateId,
+        :final TeammateActivity activity
+      ) =>
         'act($teammateId:${activity.kind})',
     };

@@ -23,7 +23,10 @@ class _Recorder {
             'choices': <dynamic>[
               <String, dynamic>{
                 'index': 0,
-                'message': <String, dynamic>{'role': 'assistant', 'content': 'ok'},
+                'message': <String, dynamic>{
+                  'role': 'assistant',
+                  'content': 'ok'
+                },
                 'finish_reason': 'stop',
               },
             ],

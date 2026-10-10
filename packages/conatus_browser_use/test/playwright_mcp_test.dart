@@ -46,9 +46,9 @@ void main() {
   setUp(() {
     transports = <FakeTransport>[];
     provider = PlaywrightMcpProvider(
-      transportFactory: (String command, List<String> args,
-              Map<String, String> env) =>
-          _transportOf(transports, _reply),
+      transportFactory:
+          (String command, List<String> args, Map<String, String> env) =>
+              _transportOf(transports, _reply),
     );
   });
 
@@ -63,7 +63,8 @@ void main() {
 
       expect(browser.sessionId, 's1');
       expect(browser.isActive, isTrue);
-      expect(browser.toolNames, containsAll(<String>['browser_navigate', 'browser_click']));
+      expect(browser.toolNames,
+          containsAll(<String>['browser_navigate', 'browser_click']));
       expect(transports, hasLength(1));
       expect(transports.single.connected, isTrue);
     });
@@ -90,15 +91,17 @@ void main() {
     test('call 转发到 tools/call 并映射为 ToolResult', () async {
       final SessionBrowser browser =
           await provider.initializeFor(Session(id: 's1'));
-      final ToolResult result = await browser.call('browser_navigate', <String, Object?>{
+      final ToolResult result =
+          await browser.call('browser_navigate', <String, Object?>{
         'url': 'https://example.com',
       });
 
       expect(result.isError, isFalse);
       expect(result.content, contains('ok from server'));
       final FakeTransport transport = transports.single;
-      final String? toolName =
-          transport.sent.lastWhere((m) => m.method == 'tools/call').params?['name'] as String?;
+      final String? toolName = transport.sent
+          .lastWhere((m) => m.method == 'tools/call')
+          .params?['name'] as String?;
       expect(toolName, 'browser_navigate');
     });
 
@@ -116,13 +119,14 @@ void main() {
         return _reply(method, params);
       });
       final PlaywrightMcpProvider failingProvider = PlaywrightMcpProvider(
-        transportFactory: (String command, List<String> args,
-                Map<String, String> env) =>
-            failing,
+        transportFactory:
+            (String command, List<String> args, Map<String, String> env) =>
+                failing,
       );
       final SessionBrowser browser =
           await failingProvider.initializeFor(Session(id: 's1'));
-      final ToolResult result = await browser.call('browser_navigate', <String, Object?>{});
+      final ToolResult result =
+          await browser.call('browser_navigate', <String, Object?>{});
 
       expect(result.isError, isTrue);
       expect(result.error?.code, 'MCP_TOOL_ERROR');
@@ -154,9 +158,9 @@ void main() {
       final FakeTransport broken = FakeTransport()
         ..connectError = StateError('cannot launch browser');
       final PlaywrightMcpProvider brokenProvider = PlaywrightMcpProvider(
-        transportFactory: (String command, List<String> args,
-                Map<String, String> env) =>
-            broken,
+        transportFactory:
+            (String command, List<String> args, Map<String, String> env) =>
+                broken,
       );
       await expectLater(
         brokenProvider.initializeFor(Session(id: 's1')),

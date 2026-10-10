@@ -79,8 +79,8 @@ void main() {
       tools: registry,
     );
     final SpawnTeammateTool tool = SpawnTeammateTool(team);
-    final ToolResult result = await tool.call(_ctx('spawn_teammate',
-        <String, Object?>{'name': 'reviewer'}));
+    final ToolResult result = await tool
+        .call(_ctx('spawn_teammate', <String, Object?>{'name': 'reviewer'}));
     expect(result.isError, false);
     expect(team.members.length, 1);
     expect(team.members.single.name, 'reviewer');
@@ -104,7 +104,8 @@ void main() {
     final ToolResult created = await create.call(_ctx('team_task_create',
         <String, Object?>{'description': '审查代码', 'assignee': 'm1'}));
     expect(created.isError, false);
-    final String taskId = (created.value as Map<String, Object?>)['id']! as String;
+    final String taskId =
+        (created.value as Map<String, Object?>)['id']! as String;
 
     final ToolResult listed = await list.call(_ctx('team_task_list'));
     expect((listed.value as List).length, 1);
@@ -115,12 +116,12 @@ void main() {
 
     // 需要先 spawn 成员才能 claim
     await team.spawn(name: 'm1');
-    final ToolResult updated = await update.call(_ctx('team_task_update',
-        <String, Object?>{
-          'task_id': taskId,
-          'teammate_id': 'm1',
-          'status': 'claimed',
-        }));
+    final ToolResult updated =
+        await update.call(_ctx('team_task_update', <String, Object?>{
+      'task_id': taskId,
+      'teammate_id': 'm1',
+      'status': 'claimed',
+    }));
     expect(updated.isError, false);
     ctx.dispose();
   });

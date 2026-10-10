@@ -36,8 +36,7 @@ class ScriptedLlm implements LlmProvider {
     List<LlmMessage> messages, {
     Map<String, dynamic>? options,
     List<Map<String, dynamic>>? tools,
-  }) =>
-      const Stream<LlmStreamEvent>.empty();
+  }) => const Stream<LlmStreamEvent>.empty();
 
   @override
   void close() {}
@@ -52,12 +51,11 @@ LlmResult callTool(
   String id,
   String name, [
   Map<String, Object?> args = const <String, Object?>{},
-]) =>
-    LlmResult(
-      content: '',
-      provider: 'scripted',
-      model: 'm',
-      toolCalls: <LlmToolCall>[
-        LlmToolCall(id: id, name: name, arguments: jsonEncode(args)),
-      ],
-    );
+]) => LlmResult(
+  content: '',
+  provider: 'scripted',
+  model: 'm',
+  toolCalls: <LlmToolCall>[
+    LlmToolCall(id: id, name: name, arguments: jsonEncode(args)),
+  ],
+);

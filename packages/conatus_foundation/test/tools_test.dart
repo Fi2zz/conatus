@@ -305,20 +305,19 @@ void main() {
       parent.guard((ToolCall call) => '不允许');
       final ToolRegistry guarded = ToolRegistry()..register(const _EchoTool());
       parent.copyPipelineTo(guarded);
-      final ToolResult denied = await guarded.call(const ToolCall(name: 'echo'));
+      final ToolResult denied =
+          await guarded.call(const ToolCall(name: 'echo'));
       expect(denied.error!.code, 'TOOL_DENIED', reason: '守卫已复制');
     });
 
     test('copyPipelineTo 可按 tag 排除中间件', () async {
       final ToolRegistry parent = ToolRegistry();
       final List<String> order = <String>[];
-      parent.use(
-          (ToolCall call, Future<ToolResult> Function() next) async {
+      parent.use((ToolCall call, Future<ToolResult> Function() next) async {
         order.add('keep');
         return next();
       }, tag: 'keep');
-      parent.use(
-          (ToolCall call, Future<ToolResult> Function() next) async {
+      parent.use((ToolCall call, Future<ToolResult> Function() next) async {
         order.add('skip');
         return next();
       }, tag: 'skip');

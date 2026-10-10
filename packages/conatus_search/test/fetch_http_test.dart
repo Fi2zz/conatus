@@ -23,8 +23,8 @@ void main() {
 
   test('按 maxChars 截断', () async {
     final HttpFetcher fetcher = HttpFetcher(
-      client: MockClient(
-          (http.Request request) async => http.Response('<p>abcdefghij</p>', 200)),
+      client: MockClient((http.Request request) async =>
+          http.Response('<p>abcdefghij</p>', 200)),
     );
 
     final FetchedPage page = await fetcher.fetch('https://e.com', maxChars: 5);
@@ -34,7 +34,8 @@ void main() {
 
   test('非 200 抛 FetchException', () async {
     final HttpFetcher fetcher = HttpFetcher(
-      client: MockClient((http.Request request) async => http.Response('', 404)),
+      client:
+          MockClient((http.Request request) async => http.Response('', 404)),
     );
 
     await expectLater(

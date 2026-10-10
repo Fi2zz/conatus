@@ -75,8 +75,7 @@ class TypedEditValidator {
       return ValidationResult.invalid('节点类型 ${node.type} 未在 schema 中定义');
     }
     for (final MapEntry<String, Object?> entry in fields.entries) {
-      final SchemaField? field =
-          _findField(allowed, entry.key);
+      final SchemaField? field = _findField(allowed, entry.key);
       if (field == null) {
         return ValidationResult.invalid('字段 ${entry.key} 不在 schema 中');
       }
@@ -138,8 +137,11 @@ class TypedEditValidator {
     return const ValidationResult();
   }
 
-  ValidationResult _requireNode(OntologyLayer layer, String id, String message) =>
-      layer.node(id) == null ? ValidationResult.invalid(message) : const ValidationResult();
+  ValidationResult _requireNode(
+          OntologyLayer layer, String id, String message) =>
+      layer.node(id) == null
+          ? ValidationResult.invalid(message)
+          : const ValidationResult();
 
   ValidationResult _requireRelation(
           OntologyLayer layer, String id, String message) =>
@@ -165,7 +167,8 @@ class TypedEditValidator {
       SchemaFieldType.string => value is String,
       SchemaFieldType.stringArray =>
         value is List && value.every((Object? item) => item is String),
-      SchemaFieldType.datetime => value is String && DateTime.tryParse(value) != null,
+      SchemaFieldType.datetime =>
+        value is String && DateTime.tryParse(value) != null,
     };
   }
 }

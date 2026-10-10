@@ -41,14 +41,15 @@ void main() {
     expect(turn.reply, '你好，有什么可以帮你？');
     expect(turn.steps, isEmpty);
     expect(h.llm.requests, isEmpty, reason: '命中意图不应调用模型');
-    expect(
-      h.session.events.map((SessionEvent e) => e.type),
-      <String>[kUserMessageEvent, 'intent/routed', kAssistantMessageEvent],
+    expect(h.session.events.map((SessionEvent e) => e.type), <String>[
+      kUserMessageEvent,
+      'intent/routed',
+      kAssistantMessageEvent,
+    ]);
+    h.expectEvent(
+      'intent.matched',
+      data: <String, Object?>{'name': 'greeting', 'source': 'regex'},
     );
-    h.expectEvent('intent.matched', data: <String, Object?>{
-      'name': 'greeting',
-      'source': 'regex',
-    });
     h.expectNoEvent('llm.request');
   });
 
@@ -67,9 +68,7 @@ void main() {
       h.session.events.map((SessionEvent e) => e.type),
       isNot(contains('intent/routed')),
     );
-    h.expectEvent('intent.missed', data: <String, Object?>{
-      'input': '今天天气怎么样',
-    });
+    h.expectEvent('intent.missed', data: <String, Object?>{'input': '今天天气怎么样'});
   });
 
   test('工具动作命中：预置调用后由模型收口', () async {

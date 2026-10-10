@@ -106,6 +106,7 @@ class OntologyManifestTool extends Tool {
     final OntologyLayer? layer = ontology.current;
     if (layer == null) return ToolResult.failure('本体尚未构建');
     final String manifest = buildManifest(layer);
-    return ToolResult.success(manifest, value: <String, Object?>{'manifest': manifest});
+    return ToolResult.success(manifest,
+        value: <String, Object?>{'manifest': manifest});
   }
 }

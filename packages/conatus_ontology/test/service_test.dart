@@ -62,7 +62,8 @@ const List<DataSource> _sources = <DataSource>[
   ),
 ];
 
-DefaultOntologyService _service(_ScriptedProvider llm) => DefaultOntologyService(
+DefaultOntologyService _service(_ScriptedProvider llm) =>
+    DefaultOntologyService(
       llm: llm,
       store: MemoryStore(),
       pairedEvaluator: PairedEvaluator(
@@ -81,14 +82,12 @@ void main() {
         '[{"name": "订单金额", "definition": "d", "aliases": ["amount"]}]',
       ]);
       final DefaultOntologyService service = _service(llm);
-      final OntologyLayer layer =
-          await service.build(sources: _sources);
+      final OntologyLayer layer = await service.build(sources: _sources);
 
       expect(service.current, same(layer));
       expect(service.versions, hasLength(1));
 
-      final List<NodeSummary> summaries =
-          await service.browse(type: 'term');
+      final List<NodeSummary> summaries = await service.browse(type: 'term');
       expect(summaries, hasLength(1));
       expect(summaries.single.label, '订单金额');
 
@@ -101,7 +100,8 @@ void main() {
     });
 
     test('未构建时 browse/resolve 返回空', () async {
-      final DefaultOntologyService service = _service(_ScriptedProvider(<String>[]));
+      final DefaultOntologyService service =
+          _service(_ScriptedProvider(<String>[]));
       expect(await service.browse(), isEmpty);
       expect(await service.resolve('x'), isNull);
       await expectLater(service.evolve(trajectories: const <SessionEvent>[]),
@@ -122,9 +122,7 @@ void main() {
           backbones: const <BackboneConfig>[],
           resolver: (BackboneConfig b) => Evaluator(
               run: (String input) async => const AgentTurn(
-                  reply: 'ok',
-                  messages: <LlmMessage>[],
-                  steps: <AgentStep>[])),
+                  reply: 'ok', messages: <LlmMessage>[], steps: <AgentStep>[])),
         ),
         evalCases: const <EvalCase>[],
       );
@@ -137,9 +135,7 @@ void main() {
           backbones: const <BackboneConfig>[],
           resolver: (BackboneConfig b) => Evaluator(
               run: (String input) async => const AgentTurn(
-                  reply: 'ok',
-                  messages: <LlmMessage>[],
-                  steps: <AgentStep>[])),
+                  reply: 'ok', messages: <LlmMessage>[], steps: <AgentStep>[])),
         ),
         evalCases: const <EvalCase>[],
       );

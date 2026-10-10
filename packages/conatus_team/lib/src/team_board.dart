@@ -60,8 +60,7 @@ class TeamBoard {
     final TeamTask task = _require(taskId);
     _assertState(task, TeamTaskStatus.pending, 'claim');
     if (task.assigneeId != null && task.assigneeId != teammateId) {
-      throw TeamException(
-          'assigned-to-other', '任务 "$taskId" 不属于 $teammateId');
+      throw TeamException('assigned-to-other', '任务 "$taskId" 不属于 $teammateId');
     }
     _assertDeps(task, _doneIds());
     _checkVersion(task, version);
@@ -148,8 +147,8 @@ class TeamBoard {
 
   void _checkVersion(TeamTask task, int? expected) {
     if (expected != null && expected != task.version) {
-      throw TeamException(
-          'version-mismatch', '任务 "${task.id}" 版本 ${task.version}，期望 $expected');
+      throw TeamException('version-mismatch',
+          '任务 "${task.id}" 版本 ${task.version}，期望 $expected');
     }
   }
 

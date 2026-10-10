@@ -6,8 +6,10 @@ import 'package:test/test.dart';
 
 void main() {
   test('newUuidV4 输出 8-4-4-4-12 小写十六进制', () {
-    expect(newUuidV4(), matches(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-'
-        r'[0-9a-f]{4}-[0-9a-f]{12}$'));
+    expect(
+        newUuidV4(),
+        matches(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-'
+            r'[0-9a-f]{4}-[0-9a-f]{12}$'));
   });
 
   test('newUuidV4 置 version 4 与 RFC 4122 variant 位', () {

@@ -19,10 +19,10 @@ class CompositeNotifier implements AlertNotifier {
 
   @override
   Future<void> notify(Alert alert) async {
-    await Future.wait(notifiers.map((AlertNotifier n) =>
-        n.notify(alert).catchError((Object error) {
-      stderr.writeln('[${n.name}] 通知失败: $error');
-    })));
+    await Future.wait(notifiers
+        .map((AlertNotifier n) => n.notify(alert).catchError((Object error) {
+              stderr.writeln('[${n.name}] 通知失败: $error');
+            })));
   }
 
   @override

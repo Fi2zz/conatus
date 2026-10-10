@@ -5,7 +5,7 @@ import 'package:conatus_search/conatus_search.dart';
 
 class FakeSearchProvider implements SearchProvider {
   FakeSearchProvider({Map<String, List<SearchResult>>? results})
-      : _results = results ?? <String, List<SearchResult>>{};
+    : _results = results ?? <String, List<SearchResult>>{};
 
   final Map<String, List<SearchResult>> _results;
 

@@ -15,9 +15,12 @@ void main() {
     });
 
     test('其余模型接收诊断', () {
-      expect(imageSupportFor('doubao', 'doubao-pro-32k'), ImageSupport.diagnostic);
-      expect(imageSupportFor('deepseek', 'deepseek-chat'), ImageSupport.diagnostic);
-      expect(imageSupportFor('unknown', 'unknown-model'), ImageSupport.diagnostic);
+      expect(
+          imageSupportFor('doubao', 'doubao-pro-32k'), ImageSupport.diagnostic);
+      expect(imageSupportFor('deepseek', 'deepseek-chat'),
+          ImageSupport.diagnostic);
+      expect(
+          imageSupportFor('unknown', 'unknown-model'), ImageSupport.diagnostic);
     });
   });
 }

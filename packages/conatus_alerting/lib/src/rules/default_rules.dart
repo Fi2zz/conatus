@@ -43,7 +43,8 @@ List<AlertRule> defaultAlertRules() => <AlertRule>[
         condition: (event, ctx) {
           if (event.name != 'tool.failed') return false;
           ctx.record('tool.failed');
-          return ctx.countInWindow('tool.failed', const Duration(minutes: 1)) > 5;
+          return ctx.countInWindow('tool.failed', const Duration(minutes: 1)) >
+              5;
         },
       ),
       AlertRule(

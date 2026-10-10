@@ -151,9 +151,8 @@ SearchProviderSet buildSearchProviders({
       ));
       continue;
     }
-    final Credential? credential = spec.credentialKey.isEmpty
-        ? null
-        : credentials.get(spec.credentialKey);
+    final Credential? credential =
+        spec.credentialKey.isEmpty ? null : credentials.get(spec.credentialKey);
     if (spec.credentialKey.isNotEmpty && credential == null) {
       statuses.add(SearchSourceStatus(
         name: name,

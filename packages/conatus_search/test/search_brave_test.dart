@@ -5,8 +5,7 @@ import 'package:http/testing.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('解析 web.results[].description，携带 X-Subscription-Token 与查询参数',
-      () async {
+  test('解析 web.results[].description，携带 X-Subscription-Token 与查询参数', () async {
     http.Request? captured;
     final BraveSearchProvider provider = BraveSearchProvider(
       apiKey: 'brave-secret',
@@ -44,8 +43,8 @@ void main() {
   test('web 缺失返回空列表', () async {
     final BraveSearchProvider provider = BraveSearchProvider(
       apiKey: 'k',
-      client: MockClient(
-          (http.Request request) async => http.Response('{"type": "search"}', 200)),
+      client: MockClient((http.Request request) async =>
+          http.Response('{"type": "search"}', 200)),
     );
 
     expect(await provider.search('q'), isEmpty);
@@ -69,8 +68,8 @@ void main() {
   test('非 200 抛 SearchException', () async {
     final BraveSearchProvider provider = BraveSearchProvider(
       apiKey: 'k',
-      client: MockClient(
-          (http.Request request) async => http.Response('{}', 429)),
+      client:
+          MockClient((http.Request request) async => http.Response('{}', 429)),
     );
 
     await expectLater(

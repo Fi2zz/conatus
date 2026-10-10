@@ -104,8 +104,7 @@ class Teammate {
   factory Teammate.fromJson(Map<String, Object?> json) => Teammate(
         id: '${json['id'] ?? ''}',
         name: '${json['name'] ?? ''}',
-        role: TeamRole.values.asNameMap()['${json['role']}'] ??
-            TeamRole.member,
+        role: TeamRole.values.asNameMap()['${json['role']}'] ?? TeamRole.member,
         status: TeammateStatus.values.asNameMap()['${json['status']}'] ??
             TeammateStatus.idle,
         tools: <String>[

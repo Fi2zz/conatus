@@ -74,8 +74,8 @@ void main() {
   test('非 200 抛 FetchException', () async {
     final FirecrawlFetcher fetcher = FirecrawlFetcher(
       apiKey: 'k',
-      client: MockClient(
-          (http.Request request) async => http.Response('{}', 402)),
+      client:
+          MockClient((http.Request request) async => http.Response('{}', 402)),
     );
 
     await expectLater(

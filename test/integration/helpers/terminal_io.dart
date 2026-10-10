@@ -72,10 +72,12 @@ class TerminalOutput implements IOSink {
     final String current = _buffer.toString();
     final int lastNewline = current.lastIndexOf('\n');
     if (lastNewline >= 0) {
-      _lines.addAll(current
-          .substring(0, lastNewline)
-          .split('\n')
-          .where((String line) => line.isNotEmpty));
+      _lines.addAll(
+        current
+            .substring(0, lastNewline)
+            .split('\n')
+            .where((String line) => line.isNotEmpty),
+      );
       _buffer.clear();
       _buffer.write(current.substring(lastNewline + 1));
     }

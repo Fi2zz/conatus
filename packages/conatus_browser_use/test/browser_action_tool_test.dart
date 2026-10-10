@@ -24,8 +24,10 @@ void main() {
 
     test('riskLevel 由风险表声明', () {
       expect(tool.riskLevel, ToolRisk.medium);
-      expect(BrowserActionTool(browser, 'browser_evaluate').riskLevel, ToolRisk.high);
-      expect(BrowserActionTool(browser, 'browser_snapshot').riskLevel, ToolRisk.low);
+      expect(BrowserActionTool(browser, 'browser_evaluate').riskLevel,
+          ToolRisk.high);
+      expect(BrowserActionTool(browser, 'browser_snapshot').riskLevel,
+          ToolRisk.low);
     });
 
     test('call 转发参数并返回浏览器结果', () async {
@@ -41,8 +43,8 @@ void main() {
     });
 
     test('浏览器失败结果原样返回', () async {
-      browser.result = ToolResult.failure('boom',
-          error: const ToolError('E', 'boom'));
+      browser.result =
+          ToolResult.failure('boom', error: const ToolError('E', 'boom'));
       final ToolResult result = await tool.call(const ToolContext(
         ToolCall(name: 'browser_click'),
       ));

@@ -34,28 +34,33 @@ Future<void> main() async {
   // 显式装配「豆包 → DeepSeek」回退链：框架不提供缺省回退，用哪个提供商由调用方
   // 决定（Key 经凭据服务解析，缺省读环境变量）。
   final Credentials credentials = EnvCredentials();
-  provideLlm(app, llm: FallbackLlm(<LlmProvider>[
-    OpenAiCompatibleProvider(
-      name: 'doubao',
-      baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
-      model: 'doubao-seed-1-8-251228',
-      credentialKey: 'ARK_API_KEY',
-      credentials: credentials,
-    ),
-    OpenAiCompatibleProvider(
-      name: 'deepseek',
-      baseUrl: 'https://api.deepseek.com',
-      model: 'deepseek-flash',
-      credentialKey: 'DEEPSEEK_API_KEY',
-      credentials: credentials,
-    ),
-  ]));
+  provideLlm(
+    app,
+    llm: FallbackLlm(<LlmProvider>[
+      OpenAiCompatibleProvider(
+        name: 'doubao',
+        baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
+        model: 'doubao-seed-1-8-251228',
+        credentialKey: 'ARK_API_KEY',
+        credentials: credentials,
+      ),
+      OpenAiCompatibleProvider(
+        name: 'deepseek',
+        baseUrl: 'https://api.deepseek.com',
+        model: 'deepseek-flash',
+        credentialKey: 'DEEPSEEK_API_KEY',
+        credentials: credentials,
+      ),
+    ]),
+  );
 
   final SystemPrompt prompt = provideSystemPrompt(app);
-  prompt.section(PromptSection(
-    name: 'persona',
-    text: () => '你是智能音箱里的助手。回答简短口语化，需要实时信息时调用工具。',
-  ));
+  prompt.section(
+    PromptSection(
+      name: 'persona',
+      text: () => '你是智能音箱里的助手。回答简短口语化，需要实时信息时调用工具。',
+    ),
+  );
   provideTimePrompt(app);
 
   final SessionStore sessions = provideSessions(app);
@@ -88,8 +93,10 @@ Future<void> main() async {
   final PlanMode planMode = providePlanMode(app, session: session);
   final AgentLoop agent = provideAgentLoop(app, session: session);
 
-  print('语音 Plan Mode 已启动（每条任务先规划、语音确认后执行）。'
-      '输入 "exit" 结束。');
+  print(
+    '语音 Plan Mode 已启动（每条任务先规划、语音确认后执行）。'
+    '输入 "exit" 结束。',
+  );
   while (true) {
     final String line = await ask.ask('你 >');
     if (line.trim().toLowerCase() == 'exit') break;
@@ -127,7 +134,7 @@ class VoiceApproval implements Approval {
       '对',
       '是',
       'ok',
-      'yes'
+      'yes',
     },
     this.negativeWords = const <String>{'不', '不用', '不行', '换个', '算了', 'no'},
     this.listenWindow = const Duration(seconds: 5),
@@ -171,8 +178,9 @@ class VoiceApproval implements Approval {
   @override
   Future<bool> request(ApprovalRequest request) async {
     if (!_pending.isClosed) _pending.add(request);
-    final String detail =
-        request.description.isEmpty ? '' : '（${request.description}）';
+    final String detail = request.description.isEmpty
+        ? ''
+        : '（${request.description}）';
     return _confirm('是否允许执行 "${request.toolName}"？$detail');
   }
 
@@ -189,8 +197,11 @@ class VoiceApproval implements Approval {
     try {
       final String answer = await _listen().timeout(timeout);
       stdout.writeln('识别 > $answer');
-      return classifyVoiceAnswer(answer,
-          affirmativeWords: affirmativeWords, negativeWords: negativeWords);
+      return classifyVoiceAnswer(
+        answer,
+        affirmativeWords: affirmativeWords,
+        negativeWords: negativeWords,
+      );
     } on TimeoutException {
       stdout.writeln('聆听超时，视为拒绝。');
       return false;
@@ -203,10 +214,12 @@ class VoiceApproval implements Approval {
     final List<int> bytes = <int>[];
     final Completer<void> done = Completer<void>();
     await source.start();
-    final StreamSubscription<List<int>> sub =
-        source.bytes.listen(bytes.addAll, onDone: () {
-      if (!done.isCompleted) done.complete();
-    });
+    final StreamSubscription<List<int>> sub = source.bytes.listen(
+      bytes.addAll,
+      onDone: () {
+        if (!done.isCompleted) done.complete();
+      },
+    );
     Timer(listenWindow, () async {
       await source.stop();
     });
@@ -227,8 +240,10 @@ class VoiceApproval implements Approval {
 /// 剩余步骤用一句「后面还有 N 步」带过；想听细节可以再问。
 String summarizePlan(Plan plan) {
   final int total = plan.steps.length;
-  final String firstFew =
-      plan.steps.take(3).map((PlanStep s) => s.text).join('，然后');
+  final String firstFew = plan.steps
+      .take(3)
+      .map((PlanStep s) => s.text)
+      .join('，然后');
   if (total <= 3) return '我打算分 $total 步完成：$firstFew。可以吗？';
   return '我打算分 $total 步完成，前几步是：$firstFew，'
       '后面还有 ${total - 3} 步。可以吗？';
@@ -249,9 +264,9 @@ bool classifyVoiceAnswer(
 
 /// 播放合成音频：macOS 用 afplay；其他平台落盘并打印路径。
 Future<void> _playAudio(List<int> bytes) async {
-  final File file =
-      await File('${Directory.systemTemp.path}/conatus_plan_mode.mp3')
-          .writeAsBytes(bytes, flush: true);
+  final File file = await File(
+    '${Directory.systemTemp.path}/conatus_plan_mode.mp3',
+  ).writeAsBytes(bytes, flush: true);
   if (!Platform.isMacOS) {
     stdout.writeln('已写出音频：${file.path}（当前平台请自行播放）');
     return;

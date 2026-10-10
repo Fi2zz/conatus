@@ -17,13 +17,13 @@ class FakeShellExecutor implements ShellExecutor {
 
   @override
   ShellExecSpec resolve(ShellExecRequest request) => ShellExecSpec(
-        command: request.command,
-        workdir: request.workdir ?? '/tmp',
-        timeoutMs: request.timeoutMs ?? 30000,
-        stdoutMaxBytes: request.stdoutMaxBytes ?? 1 << 20,
-        stdin: request.stdin,
-        env: request.env,
-      );
+    command: request.command,
+    workdir: request.workdir ?? '/tmp',
+    timeoutMs: request.timeoutMs ?? 30000,
+    stdoutMaxBytes: request.stdoutMaxBytes ?? 1 << 20,
+    stdin: request.stdin,
+    env: request.env,
+  );
 
   @override
   Future<ShellRunResult> run(ShellExecSpec spec) async {

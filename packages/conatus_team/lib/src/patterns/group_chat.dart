@@ -65,9 +65,8 @@ class GroupChatPattern implements TeamPattern {
   }
 
   /// 否定词紧邻收敛词（如「还没结论」「未完成」「不同意」）时不收敛。
-  bool _negatedBeforeKeyword(String text) => RegExp(
-          r'(没|未|无|不)[^，。！？,.;!?]{0,4}(结论|完成|同意)')
-      .hasMatch(text);
+  bool _negatedBeforeKeyword(String text) =>
+      RegExp(r'(没|未|无|不)[^，。！？,.;!?]{0,4}(结论|完成|同意)').hasMatch(text);
 
   List<String> _asNames(Object? raw) {
     if (raw is! List) return const <String>[];

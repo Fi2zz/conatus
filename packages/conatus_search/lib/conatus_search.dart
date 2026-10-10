@@ -18,8 +18,7 @@ export 'src/search_registry.dart'
         buildSearchProviders,
         kDefaultSearchOrder,
         kSearchProviderSpecs;
-export 'src/search_tavily.dart'
-    show TavilySearchProvider, kTavilyCredentialKey;
+export 'src/search_tavily.dart' show TavilySearchProvider, kTavilyCredentialKey;
 export 'src/search_types.dart'
     show SearchException, SearchProvider, SearchResult;
 export 'src/web_tools.dart' show FetchUrlTool, WebSearchTool, provideWebTools;

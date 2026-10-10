@@ -217,7 +217,8 @@ class SpawnAgentTool extends Tool {
         rounds: turn.steps.length,
         toolCalls: <String>[for (final AgentStep s in turn.steps) s.call.name],
       );
-      report?.call(SubAgentFinished(result.status, result.rounds, used.toList()));
+      report
+          ?.call(SubAgentFinished(result.status, result.rounds, used.toList()));
       return result;
     } on AgentCancelled {
       report?.call(SubAgentFinished('failed', 0, used.toList()));
@@ -246,9 +247,7 @@ class SpawnAgentTool extends Tool {
 
   /// 一轮的简短回执：只报体量与累计工具数，不复制正文。
   String _preview(int contentLength, int toolCount) =>
-      contentLength > 0
-          ? '输出 $contentLength 字符'
-          : '思考中（工具已 $toolCount 次）';
+      contentLength > 0 ? '输出 $contentLength 字符' : '思考中（工具已 $toolCount 次）';
 
   Set<String> _allowedTools(List<Object?>? requested) {
     if (requested != null && requested.isNotEmpty) {

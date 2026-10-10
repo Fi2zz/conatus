@@ -20,8 +20,8 @@ import 'cron_types.dart';
 /// 自行决定如何渲染投递内容。
 ///
 /// 返回 false 表示当前无法投递，运行时不会写运行戳，下个 tick 重试。
-typedef CronDelivery =
-    Future<bool> Function(String recordId, String framing, CronTask task);
+typedef CronDelivery = Future<bool> Function(
+    String recordId, String framing, CronTask task);
 
 /// 默认 tick 间隔（秒）。
 const int kDefaultCronTickSeconds = 15;

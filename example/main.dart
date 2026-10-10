@@ -21,15 +21,19 @@ Future<void> main() async {
 
   // ── 基础设施：工具 / LLM / 会话 / 提示词 / 记忆 / 压缩 ──────────
   provideTools(app);
-  app.effect(() => app.tools.fn(
-        'get_time',
-        description: '返回当前本地时间（RFC 3339，带时区偏移）',
-        handler: (ToolContext ctx) async {
-          final DateTime now = DateTime.now();
-          return ToolResult.success('${now.toIso8601String()}'
-              '${formatClockOffset(now.timeZoneOffset)}');
-        },
-      ));
+  app.effect(
+    () => app.tools.fn(
+      'get_time',
+      description: '返回当前本地时间（RFC 3339，带时区偏移）',
+      handler: (ToolContext ctx) async {
+        final DateTime now = DateTime.now();
+        return ToolResult.success(
+          '${now.toIso8601String()}'
+          '${formatClockOffset(now.timeZoneOffset)}',
+        );
+      },
+    ),
+  );
 
   // 可观测性：控制台导出 + 工具埋点（tool.called）。
   provideTelemetry(app, telemetry: ConsoleTelemetry());
@@ -37,45 +41,52 @@ Future<void> main() async {
 
   // fs 能力缝 + read_file 工具 + 大结果驱逐（超阈值落盘，模型按路径读回）。
   provideFileSystemLocal(app);
-  app.effect(() => app.tools.fn(
-        'read_file',
-        description: '读取文件内容',
-        params: <ParamSpec>[
-          ParamSpec.string('path', required: true, description: '文件路径'),
-        ],
-        pathParams: <String>['path'],
-        handler: (ToolContext ctx) async {
-          final FileSystem fs = app.require<FileSystem>('fs');
-          try {
-            final FsTarget target = await fs.resolve(ctx.str('path'));
-            return ToolResult.success(await fs.readText(target));
-          } on FsError catch (e) {
-            return ToolResult.failure(e.message,
-                error: ToolError(e.code.code, e.message));
-          }
-        },
-      ));
+  app.effect(
+    () => app.tools.fn(
+      'read_file',
+      description: '读取文件内容',
+      params: <ParamSpec>[
+        ParamSpec.string('path', required: true, description: '文件路径'),
+      ],
+      pathParams: <String>['path'],
+      handler: (ToolContext ctx) async {
+        final FileSystem fs = app.require<FileSystem>('fs');
+        try {
+          final FsTarget target = await fs.resolve(ctx.str('path'));
+          return ToolResult.success(await fs.readText(target));
+        } on FsError catch (e) {
+          return ToolResult.failure(
+            e.message,
+            error: ToolError(e.code.code, e.message),
+          );
+        }
+      },
+    ),
+  );
   provideToolResultEviction(app);
 
   // 显式装配「豆包 → DeepSeek」回退链：框架不提供缺省回退，用哪个提供商由调用方
   // 决定（Key 经凭据服务解析，缺省读环境变量）。
   final Credentials credentials = EnvCredentials();
-  provideLlm(app, llm: FallbackLlm(<LlmProvider>[
-    OpenAiCompatibleProvider(
-      name: 'doubao',
-      baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
-      model: 'doubao-seed-1-8-251228',
-      credentialKey: 'ARK_API_KEY',
-      credentials: credentials,
-    ),
-    OpenAiCompatibleProvider(
-      name: 'deepseek',
-      baseUrl: 'https://api.deepseek.com',
-      model: 'deepseek-flash',
-      credentialKey: 'DEEPSEEK_API_KEY',
-      credentials: credentials,
-    ),
-  ]));
+  provideLlm(
+    app,
+    llm: FallbackLlm(<LlmProvider>[
+      OpenAiCompatibleProvider(
+        name: 'doubao',
+        baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
+        model: 'doubao-seed-1-8-251228',
+        credentialKey: 'ARK_API_KEY',
+        credentials: credentials,
+      ),
+      OpenAiCompatibleProvider(
+        name: 'deepseek',
+        baseUrl: 'https://api.deepseek.com',
+        model: 'deepseek-flash',
+        credentialKey: 'DEEPSEEK_API_KEY',
+        credentials: credentials,
+      ),
+    ]),
+  );
 
   // 工具失败时自省并重试（默认 onError）。
   provideReflection(app);
@@ -87,10 +98,12 @@ Future<void> main() async {
   final Session session = sessions.create(id: 'cli');
 
   final SystemPrompt prompt = provideSystemPrompt(app);
-  prompt.section(PromptSection(
-    name: 'persona',
-    text: () => '你是"助手"，一位耐心的助手。需要实时信息时调用工具；否则直接简洁回答。',
-  ));
+  prompt.section(
+    PromptSection(
+      name: 'persona',
+      text: () => '你是"助手"，一位耐心的助手。需要实时信息时调用工具；否则直接简洁回答。',
+    ),
+  );
   provideTimePrompt(app); // 日期锚点：模型不必调工具就知道今天
 
   provideMemory(app);

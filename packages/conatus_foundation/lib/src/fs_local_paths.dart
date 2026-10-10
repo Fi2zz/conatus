@@ -73,8 +73,7 @@ Future<String?> _identityViaAncestor(String displayPath) async {
     trailing.add(_basename(current));
     current = parent;
     try {
-      final String realParent =
-          await Directory(current).resolveSymbolicLinks();
+      final String realParent = await Directory(current).resolveSymbolicLinks();
       final String rest = trailing.reversed.join(Platform.pathSeparator);
       return _normalize('$realParent${Platform.pathSeparator}$rest');
     } on FileSystemException {

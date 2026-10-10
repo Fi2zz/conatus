@@ -139,8 +139,8 @@ void main() {
     test('输出紧凑清单', () async {
       final DefaultOntologyService service = await _service();
       final OntologyManifestTool tool = OntologyManifestTool(ontology: service);
-      final ToolResult result = await tool.call(
-          const ToolContext(ToolCall(name: 'ontology_manifest')));
+      final ToolResult result = await tool
+          .call(const ToolContext(ToolCall(name: 'ontology_manifest')));
       expect(result.isError, isFalse);
       expect(result.content, contains('<ontology-manifest'));
       expect(result.content, contains('营业收入'));
@@ -149,8 +149,8 @@ void main() {
     test('未构建时返回失败', () async {
       final OntologyManifestTool tool =
           OntologyManifestTool(ontology: _stubService());
-      final ToolResult result = await tool.call(
-          const ToolContext(ToolCall(name: 'ontology_manifest')));
+      final ToolResult result = await tool
+          .call(const ToolContext(ToolCall(name: 'ontology_manifest')));
       expect(result.isError, isTrue);
     });
   });

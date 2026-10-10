@@ -42,8 +42,7 @@ void main() {
       expect(
         credentials.keys,
         containsAll(
-          environment.keys
-              .where((String key) => environment[key]!.isNotEmpty),
+          environment.keys.where((String key) => environment[key]!.isNotEmpty),
         ),
       );
     });

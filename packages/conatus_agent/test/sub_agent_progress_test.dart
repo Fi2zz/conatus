@@ -246,8 +246,10 @@ void main() {
     test('传了工厂时子 Agent 走派生实例，不动主模型', () async {
       final Context host = Context.root();
       addTearDown(host.dispose);
-      final _ScriptedProvider main0 = _ScriptedProvider(<LlmResult>[_text('x')]);
-      final _ScriptedProvider child0 = _ScriptedProvider(<LlmResult>[_text('ok')]);
+      final _ScriptedProvider main0 =
+          _ScriptedProvider(<LlmResult>[_text('x')]);
+      final _ScriptedProvider child0 =
+          _ScriptedProvider(<LlmResult>[_text('ok')]);
       final SpawnAgentTool spawn = SpawnAgentTool(
         host: host,
         llm: main0,
@@ -270,15 +272,15 @@ void main() {
     test('每次委托都拿到全新的派生实例', () async {
       final Context host = Context.root();
       addTearDown(host.dispose);
-      final _ScriptedProvider main0 = _ScriptedProvider(<LlmResult>[_text('x')]);
+      final _ScriptedProvider main0 =
+          _ScriptedProvider(<LlmResult>[_text('x')]);
       final List<LlmProvider> derived = <LlmProvider>[];
       final SpawnAgentTool spawn = SpawnAgentTool(
         host: host,
         llm: main0,
         tools: _parentTools(),
         childLlm: (LlmProvider base) {
-          final LlmProvider child =
-              _ScriptedProvider(<LlmResult>[_text('ok')]);
+          final LlmProvider child = _ScriptedProvider(<LlmResult>[_text('ok')]);
           derived.add(child);
           return child;
         },
@@ -294,7 +296,8 @@ void main() {
       expect(derived, hasLength(2));
       expect(identical(derived[0], derived[1]), isFalse,
           reason: '预算计数器是有状态的，实例必须每次新建');
-    });  });
+    });
+  });
 
   group('buildChildRegistry', () {
     test('按白名单取工具并包上代理', () async {

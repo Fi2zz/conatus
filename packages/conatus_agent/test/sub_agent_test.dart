@@ -344,7 +344,8 @@ void main() {
       );
       final AutoApproval gate = AutoApproval(false);
       host.provide('approval', gate);
-      instrumentApproval(host, approval: gate, tools: parent, threshold: ToolRisk.low);
+      instrumentApproval(host,
+          approval: gate, tools: parent, threshold: ToolRisk.low);
       final _ScriptedProvider provider =
           _ScriptedProvider(<LlmResult>[_call('c1', 'write'), _text('done')]);
       final SpawnAgentTool spawn = SpawnAgentTool(
@@ -373,8 +374,8 @@ void main() {
       final ToolRegistry parent = _parentTools();
       final AutoApproval gate = AutoApproval(false);
       host.provide('approval', gate);
-      final _ScriptedProvider provider =
-          _ScriptedProvider(<LlmResult>[_call('c1', 'get_time'), _text('done')]);
+      final _ScriptedProvider provider = _ScriptedProvider(
+          <LlmResult>[_call('c1', 'get_time'), _text('done')]);
       final SpawnAgentTool spawn = SpawnAgentTool(
         host: host,
         llm: provider,

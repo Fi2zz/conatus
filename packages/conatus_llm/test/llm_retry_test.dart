@@ -64,7 +64,8 @@ class _ScriptedProvider implements LlmProvider {
   void close() {}
 }
 
-Future<LlmResult> Function() _boom(LlmException error) => () async => throw error;
+Future<LlmResult> Function() _boom(LlmException error) =>
+    () async => throw error;
 
 LlmResult _ok(String content) =>
     LlmResult(content: content, provider: 'p', model: 'm');
@@ -102,14 +103,15 @@ void main() {
     });
 
     test('显式标注的类别优先于状态码推断', () {
-      const LlmException config = LlmException('p', '缺少 API Key',
-          kind: LlmErrorKind.config);
+      const LlmException config =
+          LlmException('p', '缺少 API Key', kind: LlmErrorKind.config);
       expect(config.errorKind, LlmErrorKind.config);
       expect(config.isRetryable, isFalse);
     });
 
     test('未标注时按状态码推断', () {
-      const LlmException rateLimited = LlmException('p', 'busy', statusCode: 429);
+      const LlmException rateLimited =
+          LlmException('p', 'busy', statusCode: 429);
       expect(rateLimited.errorKind, LlmErrorKind.rateLimit);
       expect(rateLimited.isRetryable, isTrue);
     });
@@ -135,8 +137,8 @@ void main() {
         );
       }
       expect(
-        isRetryableError(const LlmException('p', 'no key',
-            kind: LlmErrorKind.config)),
+        isRetryableError(
+            const LlmException('p', 'no key', kind: LlmErrorKind.config)),
         isFalse,
       );
     });
@@ -192,7 +194,8 @@ void main() {
   group('RetryingLlm 非流式', () {
     test('429 重试到成功，中途按退避等待', () async {
       final _Sleeper sleeper = _Sleeper();
-      final _ScriptedProvider inner = _ScriptedProvider('p', <Future<LlmResult> Function()>[
+      final _ScriptedProvider inner =
+          _ScriptedProvider('p', <Future<LlmResult> Function()>[
         _boom(_rateLimited()),
         _boom(const LlmException('p', 'boom', statusCode: 503)),
         () async => _ok('成功'),
@@ -214,7 +217,8 @@ void main() {
 
     test('401 不重试：换 Key 无意义的失败直接上抛', () async {
       final _Sleeper sleeper = _Sleeper();
-      final _ScriptedProvider inner = _ScriptedProvider('p', <Future<LlmResult> Function()>[
+      final _ScriptedProvider inner =
+          _ScriptedProvider('p', <Future<LlmResult> Function()>[
         _boom(const LlmException('p', 'unauthorized', statusCode: 401)),
       ]);
       final RetryingLlm llm = RetryingLlm(inner, sleep: sleeper.call);
@@ -229,7 +233,8 @@ void main() {
 
     test('次数用尽后上抛最后一次的错误', () async {
       final _Sleeper sleeper = _Sleeper();
-      final _ScriptedProvider inner = _ScriptedProvider('p', <Future<LlmResult> Function()>[
+      final _ScriptedProvider inner =
+          _ScriptedProvider('p', <Future<LlmResult> Function()>[
         _boom(const LlmException('p', 'boom', statusCode: 500)),
       ]);
       final RetryingLlm llm = RetryingLlm(
@@ -249,7 +254,8 @@ void main() {
 
     test('RetryPolicy.none 只试一次', () async {
       final _Sleeper sleeper = _Sleeper();
-      final _ScriptedProvider inner = _ScriptedProvider('p', <Future<LlmResult> Function()>[
+      final _ScriptedProvider inner =
+          _ScriptedProvider('p', <Future<LlmResult> Function()>[
         _boom(const LlmException('p', 'boom', statusCode: 500)),
       ]);
       final RetryingLlm llm = RetryingLlm(
@@ -268,7 +274,8 @@ void main() {
     test('onRetry 通报尝试序号与等待时长', () async {
       final _Sleeper sleeper = _Sleeper();
       final List<LlmRetryAttempt> seen = <LlmRetryAttempt>[];
-      final _ScriptedProvider inner = _ScriptedProvider('p', <Future<LlmResult> Function()>[
+      final _ScriptedProvider inner =
+          _ScriptedProvider('p', <Future<LlmResult> Function()>[
         _boom(_rateLimited(after: const Duration(seconds: 3))),
         () async => _ok('ok'),
       ]);
@@ -291,7 +298,8 @@ void main() {
     });
 
     test('透传 name 与 close', () async {
-      final _ScriptedProvider inner = _ScriptedProvider('my-provider', <Future<LlmResult> Function()>[
+      final _ScriptedProvider inner =
+          _ScriptedProvider('my-provider', <Future<LlmResult> Function()>[
         () async => _ok('x'),
       ]);
       var closed = false;
@@ -309,7 +317,8 @@ void main() {
   group('RetryingLlm 流式', () {
     test('尚未产出任何事件时可重试', () async {
       final _Sleeper sleeper = _Sleeper();
-      final _ScriptedProvider inner = _ScriptedProvider('p', <Future<LlmResult> Function()>[
+      final _ScriptedProvider inner =
+          _ScriptedProvider('p', <Future<LlmResult> Function()>[
         _boom(const LlmException('p', 'boom', statusCode: 502)),
         () async => _ok('重试后成功'),
       ]);
@@ -361,13 +370,15 @@ void main() {
           RetryingLlm(primary,
               policy: const RetryPolicy(maxAttempts: 2, jitter: 0),
               sleep: primarySleeper.call,
-              onRetry: (LlmRetryAttempt a) => events.add('retry:${a.provider}')),
+              onRetry: (LlmRetryAttempt a) =>
+                  events.add('retry:${a.provider}')),
           RetryingLlm(backup,
               policy: const RetryPolicy(maxAttempts: 2, jitter: 0),
               sleep: backupSleeper.call),
         ],
-        onFallback: (LlmFallbackEvent e) => events.add('fallback:${e.fromProvider}'
-            '->${e.toProvider}'),
+        onFallback: (LlmFallbackEvent e) =>
+            events.add('fallback:${e.fromProvider}'
+                '->${e.toProvider}'),
       );
 
       final LlmResult result =
@@ -489,9 +500,8 @@ void main() {
       final provider = doubaoProviderForTest(apiKey: '');
       await expectLater(
         provider.chat(<LlmMessage>[const LlmMessage('user', 'hi')]),
-        throwsA(isA<LlmException>()
-            .having((LlmException e) => e.errorKind, 'errorKind',
-                LlmErrorKind.config)),
+        throwsA(isA<LlmException>().having(
+            (LlmException e) => e.errorKind, 'errorKind', LlmErrorKind.config)),
       );
     });
   });

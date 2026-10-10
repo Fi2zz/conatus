@@ -130,7 +130,8 @@ ToolRegistry buildChildRegistry(
   SubAgentProgressReporter? reporter,
   Set<String> excludeTags = const <String>{},
 }) {
-  final ToolRegistry child = ToolRegistry(defaultTimeout: source.defaultTimeout);
+  final ToolRegistry child =
+      ToolRegistry(defaultTimeout: source.defaultTimeout);
   source.copyPipelineTo(child, excludeTags: excludeTags);
   for (final String name in allowed) {
     final Tool? tool = source.get(name);

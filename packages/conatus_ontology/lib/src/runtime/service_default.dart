@@ -156,12 +156,12 @@ class DefaultOntologyService implements OntologyService {
     await _store.save(published);
     _current = published;
     _changes.add(OntologyPublished(candidate, published));
-    _telemetry?.emit(TelemetryEvent('ontology.published',
-        data: <String, Object?>{
-          'version': newVersion,
-          'parent': candidate.parentVersion,
-          'improvement': result.improvement,
-        }));
+    _telemetry
+        ?.emit(TelemetryEvent('ontology.published', data: <String, Object?>{
+      'version': newVersion,
+      'parent': candidate.parentVersion,
+      'improvement': result.improvement,
+    }));
     return true;
   }
 

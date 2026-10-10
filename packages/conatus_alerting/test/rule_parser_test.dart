@@ -30,8 +30,18 @@ void main() {
       expect(rule.description, 'LLM 慢');
 
       final AlertContext ctx = AlertContext();
-      expect(rule.condition(TelemetryEvent('llm.request', data: <String, Object?>{'durationMs': 35000}), ctx), isTrue);
-      expect(rule.condition(TelemetryEvent('llm.request', data: <String, Object?>{'durationMs': 5000}), ctx), isFalse);
+      expect(
+          rule.condition(
+              TelemetryEvent('llm.request',
+                  data: <String, Object?>{'durationMs': 35000}),
+              ctx),
+          isTrue);
+      expect(
+          rule.condition(
+              TelemetryEvent('llm.request',
+                  data: <String, Object?>{'durationMs': 5000}),
+              ctx),
+          isFalse);
     });
 
     test('解析窗口计数条件', () {
@@ -74,7 +84,9 @@ void main() {
           },
         ],
       });
-      expect(rules.single.condition(TelemetryEvent('tool.called'), AlertContext()), isFalse);
+      expect(
+          rules.single.condition(TelemetryEvent('tool.called'), AlertContext()),
+          isFalse);
     });
 
     test('字段比较支持各运算符', () {
@@ -99,18 +111,39 @@ void main() {
             rule.condition;
         switch (rule.name) {
           case 'op->':
-            expect(condition(TelemetryEvent('e', data: <String, Object?>{'n': 6}), AlertContext()), isTrue);
-            expect(condition(TelemetryEvent('e', data: <String, Object?>{'n': 5}), AlertContext()), isFalse);
+            expect(
+                condition(TelemetryEvent('e', data: <String, Object?>{'n': 6}),
+                    AlertContext()),
+                isTrue);
+            expect(
+                condition(TelemetryEvent('e', data: <String, Object?>{'n': 5}),
+                    AlertContext()),
+                isFalse);
           case 'op->=':
-            expect(condition(TelemetryEvent('e', data: <String, Object?>{'n': 5}), AlertContext()), isTrue);
+            expect(
+                condition(TelemetryEvent('e', data: <String, Object?>{'n': 5}),
+                    AlertContext()),
+                isTrue);
           case 'op-<':
-            expect(condition(TelemetryEvent('e', data: <String, Object?>{'n': 4}), AlertContext()), isTrue);
+            expect(
+                condition(TelemetryEvent('e', data: <String, Object?>{'n': 4}),
+                    AlertContext()),
+                isTrue);
           case 'op-<=':
-            expect(condition(TelemetryEvent('e', data: <String, Object?>{'n': 5}), AlertContext()), isTrue);
+            expect(
+                condition(TelemetryEvent('e', data: <String, Object?>{'n': 5}),
+                    AlertContext()),
+                isTrue);
           case 'op-==':
-            expect(condition(TelemetryEvent('e', data: <String, Object?>{'n': 5}), AlertContext()), isTrue);
+            expect(
+                condition(TelemetryEvent('e', data: <String, Object?>{'n': 5}),
+                    AlertContext()),
+                isTrue);
           case 'op-!=':
-            expect(condition(TelemetryEvent('e', data: <String, Object?>{'n': 6}), AlertContext()), isTrue);
+            expect(
+                condition(TelemetryEvent('e', data: <String, Object?>{'n': 6}),
+                    AlertContext()),
+                isTrue);
         }
       }
     });
@@ -131,13 +164,19 @@ void main() {
         ],
       });
       expect(rules.single.severity, AlertSeverity.warning);
-      expect(rules.single.condition(TelemetryEvent('e', data: <String, Object?>{'n': 6}), AlertContext()), isFalse);
+      expect(
+          rules.single.condition(
+              TelemetryEvent('e', data: <String, Object?>{'n': 6}),
+              AlertContext()),
+          isFalse);
     });
 
     test('condition 缺失抛 ArgumentError', () {
       expect(
         () => RuleParser.parse(<String, Object?>{
-          'rules': <Object?>[<String, Object?>{'name': 'r', 'severity': 'info'}],
+          'rules': <Object?>[
+            <String, Object?>{'name': 'r', 'severity': 'info'}
+          ],
         }),
         throwsArgumentError,
       );

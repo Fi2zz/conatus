@@ -216,7 +216,8 @@ class _CuaDriverDesktopSession implements DesktopSession {
 
   @override
   Future<Screenshot> capture({ScreenRegion? region}) async {
-    final McpToolResult raw = await client.callTool('screenshot', <String, Object?>{
+    final McpToolResult raw =
+        await client.callTool('screenshot', <String, Object?>{
       if (region != null) 'region': region.toJson(),
     });
     final List<int> bytes = _extractBytes(raw);

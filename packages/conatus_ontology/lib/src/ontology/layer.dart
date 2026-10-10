@@ -53,8 +53,10 @@ class OntologyLayer {
     return null;
   }
 
-  List<OntologyNode> nodesOfType(String type) =>
-      <OntologyNode>[for (final OntologyNode item in nodes) if (item.type == type) item];
+  List<OntologyNode> nodesOfType(String type) => <OntologyNode>[
+        for (final OntologyNode item in nodes)
+          if (item.type == type) item
+      ];
 
   List<Mapping> mappingsOf(String termId) => <Mapping>[
         for (final OntologyNode item in nodes)
@@ -80,7 +82,9 @@ class OntologyLayer {
   Map<String, Object?> toJson() => <String, Object?>{
         'version': version,
         'parentVersion': parentVersion,
-        'nodes': <Map<String, Object?>>[for (final OntologyNode node in nodes) node.toJson()],
+        'nodes': <Map<String, Object?>>[
+          for (final OntologyNode node in nodes) node.toJson()
+        ],
         'relations': <Map<String, Object?>>[
           for (final SemanticRelation relation in relations) relation.toJson(),
         ],

@@ -45,7 +45,11 @@ class _ScriptedProvider implements LlmProvider {
 OntologyLayer _layer() => OntologyLayer(
       version: 'v0',
       nodes: <OntologyNode>[
-        Term(id: 't1', createdAt: DateTime.utc(2026), name: '收入', definition: 'd'),
+        Term(
+            id: 't1',
+            createdAt: DateTime.utc(2026),
+            name: '收入',
+            definition: 'd'),
       ],
       relations: const <SemanticRelation>[],
       references: const <StructuralReference>[],
@@ -81,17 +85,16 @@ void main() {
     test('构造 prompt 并归因到正确层', () async {
       final _ScriptedProvider llm = _ScriptedProvider(<String>[
         '[{"target": "schema", "errorType": "constraint_violation", '
-        '"evidence": ["t1"], "suggestedEdits": [{"edit": "add_node", "node": {"type": "term", "id": "t2", "createdAt": "2026-01-01T00:00:00.000Z", "name": "x", "definition": "d", "aliases": [], "evidence": []}}]}]',
+            '"evidence": ["t1"], "suggestedEdits": [{"edit": "add_node", "node": {"type": "term", "id": "t2", "createdAt": "2026-01-01T00:00:00.000Z", "name": "x", "definition": "d", "aliases": [], "evidence": []}}]}]',
       ]);
       final AttributionEngine engine = AttributionEngine(llm: llm);
-      const SemanticDiagnosis diagnosis = SemanticDiagnosis(
-          <SemanticError>[
-            SemanticError(
-                description: 'd',
-                manifestation: 'm',
-                fixDirection: 'f',
-                traceIds: <String>['t1']),
-          ]);
+      const SemanticDiagnosis diagnosis = SemanticDiagnosis(<SemanticError>[
+        SemanticError(
+            description: 'd',
+            manifestation: 'm',
+            fixDirection: 'f',
+            traceIds: <String>['t1']),
+      ]);
       final List<Attribution> result =
           await engine.attribute(diagnosis, _layer());
       expect(result, hasLength(1));

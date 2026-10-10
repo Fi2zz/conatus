@@ -62,7 +62,8 @@ class AlertingImpl implements Alerting {
       _ctx.registerCooldown(rule.name, rule.cooldown);
     }
     _subscription = telemetry.events.listen(_check);
-    _pruneTimer = Timer.periodic(const Duration(minutes: 1), (_) => _ctx.prune());
+    _pruneTimer =
+        Timer.periodic(const Duration(minutes: 1), (_) => _ctx.prune());
   }
 
   /// 事件流来源。

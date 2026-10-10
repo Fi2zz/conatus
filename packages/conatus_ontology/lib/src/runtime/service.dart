@@ -53,7 +53,8 @@ abstract class OntologyService {
   Future<void> restore();
 
   /// 浏览本体层，返回节点摘要。
-  Future<List<NodeSummary>> browse({String? type, String? query, int limit = 20});
+  Future<List<NodeSummary>> browse(
+      {String? type, String? query, int limit = 20});
 
   /// 解析术语（按名/别名），返回完整记录与关联对象。
   Future<ResolvedSemantics?> resolve(String term);
@@ -103,7 +104,8 @@ OntologyService provideOntology(
   Telemetry? telemetry,
   Database? database,
 }) {
-  final OntologyService? provided = ontology ?? ctx.get<OntologyService>('ontology');
+  final OntologyService? provided =
+      ontology ?? ctx.get<OntologyService>('ontology');
   if (provided != null) return provided;
   if (ctx.has('ontology')) {
     throw StateError('ontology 服务已注册但类型不符');

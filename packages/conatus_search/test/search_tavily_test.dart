@@ -73,8 +73,8 @@ void main() {
   test('非 200 抛 SearchException', () async {
     final TavilySearchProvider provider = TavilySearchProvider(
       apiKey: 'k',
-      client: MockClient(
-          (http.Request request) async => http.Response('{}', 401)),
+      client:
+          MockClient((http.Request request) async => http.Response('{}', 401)),
     );
 
     await expectLater(

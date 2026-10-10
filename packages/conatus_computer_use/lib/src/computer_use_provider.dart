@@ -110,11 +110,11 @@ Future<void> _bootstrap(
     desktop = await provider.initialize();
   } catch (_) {
     release();
-    sink?.emit(TelemetryEvent('computer.provider.released',
-        data: <String, Object?>{
-          'provider': provider.name,
-          'reason': 'startup-failed',
-        }));
+    sink?.emit(
+        TelemetryEvent('computer.provider.released', data: <String, Object?>{
+      'provider': provider.name,
+      'reason': 'startup-failed',
+    }));
     return;
   }
   registerDesktopTools(

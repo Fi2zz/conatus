@@ -28,8 +28,7 @@ export 'src/browser_tool_risk.dart' show browserToolRisk;
 export 'src/browser_use_provider.dart'
     show initializeBrowserFor, provideBrowserUse;
 export 'src/provider.dart' show BrowserUseProvider;
-export 'src/providers/chrome_devtools_mcp.dart'
-    show ChromeDevToolsMcpProvider;
+export 'src/providers/chrome_devtools_mcp.dart' show ChromeDevToolsMcpProvider;
 export 'src/providers/playwright_mcp.dart' show PlaywrightMcpProvider;
 export 'src/providers/stagehand.dart' show StagehandProvider;
 export 'src/registry.dart'

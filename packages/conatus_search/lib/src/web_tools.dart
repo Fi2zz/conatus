@@ -87,8 +87,7 @@ class WebSearchTool extends Tool {
     if (skipped.isEmpty) return buffer.toString();
     buffer.write('\n未配置的搜索源：');
     buffer.write(skipped
-        .map((SearchSourceStatus status) =>
-            '${status.name}（${status.reason}）')
+        .map((SearchSourceStatus status) => '${status.name}（${status.reason}）')
         .join('；'));
     return buffer.toString();
   }

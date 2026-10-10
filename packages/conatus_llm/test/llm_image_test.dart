@@ -62,7 +62,9 @@ void main() {
         client: _captureClient(bodies),
       );
       await provider.chat(
-        <LlmMessage>[const LlmMessage('user', '看这张图', images: [_image])],
+        <LlmMessage>[
+          const LlmMessage('user', '看这张图', images: [_image])
+        ],
       );
 
       final List<dynamic> messages = bodies.single['messages'] as List<dynamic>;
@@ -81,7 +83,9 @@ void main() {
         client: _captureClient(bodies),
       );
       await provider.chat(
-        <LlmMessage>[const LlmMessage('user', '看这张图', images: [_image])],
+        <LlmMessage>[
+          const LlmMessage('user', '看这张图', images: [_image])
+        ],
       );
 
       final List<dynamic> input = bodies.single['input'] as List<dynamic>;

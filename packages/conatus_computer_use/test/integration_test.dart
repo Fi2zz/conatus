@@ -25,8 +25,8 @@ void main() {
       expect(ctx.tools.names,
           containsAll(<String>['screen_capture', 'mouse_click']));
 
-      final ToolResult result = await ctx.tools
-          .call(const ToolCall(name: 'mouse_click', arguments: <String, Object?>{'x': 1}));
+      final ToolResult result = await ctx.tools.call(const ToolCall(
+          name: 'mouse_click', arguments: <String, Object?>{'x': 1}));
       expect(result.isError, isFalse);
     });
 
@@ -80,8 +80,8 @@ void main() {
       await pumpEventQueue();
 
       await ctx.tools.call(const ToolCall(name: 'mouse_click'));
-      final Iterable<String> names = telemetry.recent
-          .map((TelemetryEvent event) => event.name);
+      final Iterable<String> names =
+          telemetry.recent.map((TelemetryEvent event) => event.name);
       expect(names, contains('computer.provider.registered'));
       expect(names, contains('computer.action.called'));
       expect(names, contains('computer.action.completed'));
@@ -162,8 +162,7 @@ void main() {
       );
 
       // 参数 schema 透传给模型（本次修复的核心行为）。
-      final Map<String, Object?>? schema =
-          ctx.tools.describeOne('mouse_click');
+      final Map<String, Object?>? schema = ctx.tools.describeOne('mouse_click');
       expect(schema?['parameters'], isA<Map<String, Object?>>());
       expect(
         (schema?['parameters'] as Map<String, Object?>)['required'],
@@ -174,7 +173,8 @@ void main() {
           .call(const ToolCall(name: 'mouse_click', callId: 'event-7'));
       expect(result.isError, isFalse);
 
-      final List<SessionEvent> events = await log.read('trigger-session').toList();
+      final List<SessionEvent> events =
+          await log.read('trigger-session').toList();
       expect(events, hasLength(1));
       expect(events.single.type, 'computer/action');
       expect((events.single.data as Map)['tool'], 'mouse_click');

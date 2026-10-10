@@ -17,15 +17,15 @@ class BrowserCall {
 /// 通过 [stub] 预设某工具的返回文本；未预设时默认成功（`ok`）。
 /// 所有工具调用记录在 [actions]，供断言。
 class FakeBrowserUseProvider implements BrowserUseProvider {
-  FakeBrowserUseProvider({
-    List<String>? toolNames,
-  }) : _toolNames = toolNames ??
-            <String>[
-              'browser_navigate',
-              'browser_snapshot',
-              'browser_submit',
-              'browser_click',
-            ];
+  FakeBrowserUseProvider({List<String>? toolNames})
+    : _toolNames =
+          toolNames ??
+          <String>[
+            'browser_navigate',
+            'browser_snapshot',
+            'browser_submit',
+            'browser_click',
+          ];
 
   final List<String> _toolNames;
   final Map<String, String> _results = <String, String>{};

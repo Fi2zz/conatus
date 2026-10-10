@@ -112,7 +112,10 @@ TelemetryEvent _eventFromJson(Map<String, Object?> json) {
 }
 
 Map<String, Object?> _mapOf(Object? value) => value is Map
-    ? <String, Object?>{for (final MapEntry<Object?, Object?> e in value.entries) '${e.key}': e.value}
+    ? <String, Object?>{
+        for (final MapEntry<Object?, Object?> e in value.entries)
+          '${e.key}': e.value
+      }
     : const <String, Object?>{};
 
 DateTime? _parseDate(Object? raw) =>

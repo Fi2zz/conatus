@@ -51,7 +51,11 @@ void main() {
     test('非法负载返回空列表', () {
       expect(imagesFromJson(null), isEmpty);
       expect(imagesFromJson(['not-a-map']), isEmpty);
-      expect(imagesFromJson([{'mimeType': 'image/png'}]), isEmpty);
+      expect(
+          imagesFromJson([
+            {'mimeType': 'image/png'}
+          ]),
+          isEmpty);
     });
   });
 

@@ -36,7 +36,8 @@ class _NoopTeamTaskTracker implements TeamTaskTracker {
     required String teammateId,
     required String name,
     required String leadId,
-  }) async => null;
+  }) async =>
+      null;
 
   @override
   Future<void> completeMember(String teammateId, {Object? result}) async {}

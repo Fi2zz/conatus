@@ -3,7 +3,6 @@ library;
 
 import 'dart:async';
 
-
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
@@ -111,7 +110,8 @@ void main() {
           acts.whereType<TeammateToolResult>().single;
       expect(result.tool, 'get_time');
       expect(result.failed, isFalse);
-      expect(acts.whereType<TeammateText>().map((TeammateText t) => t.text).join(),
+      expect(
+          acts.whereType<TeammateText>().map((TeammateText t) => t.text).join(),
           contains('12:00'));
     });
 
@@ -128,7 +128,8 @@ void main() {
       await team.wait(mate.id);
       await pumpEventQueue();
 
-      final List<TeammateActed> acted = events.whereType<TeammateActed>().toList();
+      final List<TeammateActed> acted =
+          events.whereType<TeammateActed>().toList();
       expect(acted, isNotEmpty);
       expect(acted.every((TeammateActed e) => e.teammateId == mate.id), isTrue);
     });
@@ -150,7 +151,8 @@ void main() {
   group('activityLine 屏上回执', () {
     test('工具调用 / 结果', () {
       expect(activityLine(const TeammateToolCall('rg')).text, '→ rg');
-      expect(activityLine(const TeammateToolResult('rg')).text, startsWith('✓ rg'));
+      expect(activityLine(const TeammateToolResult('rg')).text,
+          startsWith('✓ rg'));
       expect(
         activityLine(const TeammateToolResult('rg', failed: true)).failed,
         isTrue,

@@ -9,9 +9,12 @@ import 'relation.dart';
 /// 把一组编辑应用到层，产出新层（发布时用）。
 OntologyLayer applyEdits(OntologyLayer layer, List<TypedEdit> edits) {
   final List<OntologyNode> nodes = <OntologyNode>[...layer.nodes];
-  final List<SemanticRelation> relations = <SemanticRelation>[...layer.relations];
-  final List<StructuralReference> references =
-      <StructuralReference>[...layer.references];
+  final List<SemanticRelation> relations = <SemanticRelation>[
+    ...layer.relations
+  ];
+  final List<StructuralReference> references = <StructuralReference>[
+    ...layer.references
+  ];
 
   for (final TypedEdit edit in edits) {
     switch (edit) {
@@ -19,8 +22,8 @@ OntologyLayer applyEdits(OntologyLayer layer, List<TypedEdit> edits) {
         nodes.add(node);
       case RemoveNode(:final String nodeId):
         nodes.removeWhere((OntologyNode n) => n.id == nodeId);
-        references.removeWhere((StructuralReference r) =>
-            r.fromId == nodeId || r.toId == nodeId);
+        references.removeWhere(
+            (StructuralReference r) => r.fromId == nodeId || r.toId == nodeId);
       case UpdateNodeFields(:final String nodeId, :final fields):
         _updateNodeFields(nodes, nodeId, fields);
       case AddRelation(:final SemanticRelation relation):
@@ -30,8 +33,7 @@ OntologyLayer applyEdits(OntologyLayer layer, List<TypedEdit> edits) {
       case AddReference(:final StructuralReference reference):
         references.add(reference);
       case RemoveReference(:final String referenceId):
-        references.removeWhere(
-            (StructuralReference r) => r.id == referenceId);
+        references.removeWhere((StructuralReference r) => r.id == referenceId);
       case MergeTerms(:final String sourceTermId, :final String targetTermId):
         _mergeTerms(nodes, relations, references, sourceTermId, targetTermId);
       case SplitTerm(:final String sourceTermId, :final List<Term> newTerms):

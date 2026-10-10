@@ -29,16 +29,15 @@ OntologyLayer _layer() => OntologyLayer(
             name: '收入',
             definition: 'd'),
         Mapping(
-            id: 'm1',
-            createdAt: DateTime.utc(2026),
-            termId: 't1',
-            source: 's'),
+            id: 'm1', createdAt: DateTime.utc(2026), termId: 't1', source: 's'),
       ],
       relations: const <SemanticRelation>[
-        SemanticRelation(id: 'r1', fromTermId: 't1', toTermId: 't1', kind: 'is_a'),
+        SemanticRelation(
+            id: 'r1', fromTermId: 't1', toTermId: 't1', kind: 'is_a'),
       ],
       references: const <StructuralReference>[
-        StructuralReference(id: 's1', fromId: 't1', toId: 'm1', kind: 'mapped_to'),
+        StructuralReference(
+            id: 's1', fromId: 't1', toId: 'm1', kind: 'mapped_to'),
       ],
       schema: schema,
       createdAt: DateTime.utc(2026),
@@ -83,10 +82,10 @@ void main() {
 
   group('RemoveNode / UpdateNodeFields', () {
     test('删除存在的节点通过，删除缺失的拒绝', () {
-      expect(
-          _validator.validate(const RemoveNode('t1'), _layer()).isValid, isTrue);
-      expect(
-          _validator.validate(const RemoveNode('nope'), _layer()).isValid, isFalse);
+      expect(_validator.validate(const RemoveNode('t1'), _layer()).isValid,
+          isTrue);
+      expect(_validator.validate(const RemoveNode('nope'), _layer()).isValid,
+          isFalse);
     });
 
     test('更新合法字段通过', () {
@@ -105,7 +104,8 @@ void main() {
 
     test('更新缺失节点拒绝', () {
       final ValidationResult result = _validator.validate(
-          const UpdateNodeFields('nope', <String, Object?>{'name': 'x'}), _layer());
+          const UpdateNodeFields('nope', <String, Object?>{'name': 'x'}),
+          _layer());
       expect(result.isValid, isFalse);
     });
   });
@@ -137,34 +137,40 @@ void main() {
     });
 
     test('删除存在的关系/引用通过，缺失拒绝', () {
+      expect(_validator.validate(const RemoveRelation('r1'), _layer()).isValid,
+          isTrue);
       expect(
-          _validator.validate(const RemoveRelation('r1'), _layer()).isValid, isTrue);
+          _validator.validate(const RemoveRelation('nope'), _layer()).isValid,
+          isFalse);
+      expect(_validator.validate(const RemoveReference('s1'), _layer()).isValid,
+          isTrue);
       expect(
-          _validator.validate(const RemoveRelation('nope'), _layer()).isValid, isFalse);
-      expect(
-          _validator.validate(const RemoveReference('s1'), _layer()).isValid, isTrue);
-      expect(
-          _validator.validate(const RemoveReference('nope'), _layer()).isValid, isFalse);
+          _validator.validate(const RemoveReference('nope'), _layer()).isValid,
+          isFalse);
     });
   });
 
   group('MergeTerms / SplitTerm', () {
     test('合并两个存在的不同 Term 通过', () {
-      final ValidationResult result = _validator.validate(
-          const MergeTerms('t1', 't1'), _layer());
+      final ValidationResult result =
+          _validator.validate(const MergeTerms('t1', 't1'), _layer());
       expect(result.isValid, isFalse);
     });
 
     test('拆分产出空列表拒绝', () {
-      final ValidationResult result = _validator.validate(
-          const SplitTerm('t1', <Term>[]), _layer());
+      final ValidationResult result =
+          _validator.validate(const SplitTerm('t1', <Term>[]), _layer());
       expect(result.isValid, isFalse);
     });
 
     test('拆分缺失源拒绝', () {
       final ValidationResult result = _validator.validate(
           SplitTerm('nope', <Term>[
-            Term(id: 'a', createdAt: DateTime.utc(2026), name: 'x', definition: 'd'),
+            Term(
+                id: 'a',
+                createdAt: DateTime.utc(2026),
+                name: 'x',
+                definition: 'd'),
           ]),
           _layer());
       expect(result.isValid, isFalse);
@@ -189,7 +195,11 @@ void main() {
         const RemoveReference('s'),
         const MergeTerms('a', 'b'),
         SplitTerm('a', <Term>[
-          Term(id: 'x', createdAt: DateTime.utc(2026), name: 'n', definition: 'd'),
+          Term(
+              id: 'x',
+              createdAt: DateTime.utc(2026),
+              name: 'n',
+              definition: 'd'),
         ]),
       ];
       for (final TypedEdit edit in edits) {
@@ -244,8 +254,16 @@ void main() {
     test('SplitTerm 用新 Terms 替换源', () {
       final OntologyLayer next = applyEdits(_layer(), <TypedEdit>[
         SplitTerm('t1', <Term>[
-          Term(id: 'a', createdAt: DateTime.utc(2026), name: 'A', definition: 'd'),
-          Term(id: 'b', createdAt: DateTime.utc(2026), name: 'B', definition: 'd'),
+          Term(
+              id: 'a',
+              createdAt: DateTime.utc(2026),
+              name: 'A',
+              definition: 'd'),
+          Term(
+              id: 'b',
+              createdAt: DateTime.utc(2026),
+              name: 'B',
+              definition: 'd'),
         ]),
       ]);
       expect(next.node('t1'), isNull);

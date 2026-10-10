@@ -25,7 +25,8 @@ class Attribution {
         target: _parseTarget(json['target']! as String),
         errorType: json['errorType']! as String,
         evidence: <String>[
-          for (final Object? id in (json['evidence'] ?? const <Object?>[]) as List)
+          for (final Object? id
+              in (json['evidence'] ?? const <Object?>[]) as List)
             id! as String,
         ],
         suggestedEdits: <TypedEdit>[
@@ -114,8 +115,7 @@ List<Attribution> parseAttributions(String content) {
   if (decoded is! List) throw const FormatException('归因结果必须是 JSON 数组');
   return <Attribution>[
     for (final Object? item in decoded)
-      if (item is Map)
-        Attribution.fromJson(Map<String, Object?>.from(item)),
+      if (item is Map) Attribution.fromJson(Map<String, Object?>.from(item)),
   ];
 }
 

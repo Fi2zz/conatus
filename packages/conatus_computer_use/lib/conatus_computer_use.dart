@@ -30,8 +30,7 @@ library;
 export 'src/computer_use_provider.dart'
     show provideComputerUse, registerDesktopTools;
 export 'src/desktop.dart' show DesktopSession;
-export 'src/desktop_action_tool.dart'
-    show DesktopActionTool, desktopToolRisk;
+export 'src/desktop_action_tool.dart' show DesktopActionTool, desktopToolRisk;
 export 'src/image_routing.dart' show ImageSupport, imageSupportFor;
 export 'src/provider.dart' show ComputerUseProvider;
 export 'src/providers/cua_driver_mcp.dart' show CuaDriverMcpProvider;

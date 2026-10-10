@@ -140,9 +140,9 @@ void main() {
     setUp(() {
       transports = <FakeTransport>[];
       provider = CuaDriverMcpProvider(
-        transportFactory: (String command, List<String> args,
-                Map<String, String> env) =>
-            _transportOf(transports, _reply),
+        transportFactory:
+            (String command, List<String> args, Map<String, String> env) =>
+                _transportOf(transports, _reply),
       );
     });
 
@@ -174,8 +174,9 @@ void main() {
       expect(result.isError, isFalse);
       expect(result.content, contains('ok from cua'));
       final FakeTransport transport = transports.single;
-      final String? tool =
-          transport.sent.lastWhere((m) => m.method == 'tools/call').params?['name'] as String?;
+      final String? tool = transport.sent
+          .lastWhere((m) => m.method == 'tools/call')
+          .params?['name'] as String?;
       expect(tool, 'mouse_click');
     });
 
@@ -194,7 +195,8 @@ void main() {
     test('长内容结果不追加 structuredContent（避免树 JSON 冗余）', () async {
       final DesktopSession session = await provider.initialize();
 
-      final ToolResult result = await session.call('get_window_state', <String, Object?>{
+      final ToolResult result =
+          await session.call('get_window_state', <String, Object?>{
         'pid': 1,
       });
 
@@ -220,12 +222,11 @@ void main() {
       final CuaDriverMcpProvider persistent = CuaDriverMcpProvider(
         imageSupport: ImageSupport.persistent,
         attachmentStore: store,
-        transportFactory: (String command, List<String> args,
-                Map<String, String> env) =>
-            _transportOf(transports, _reply),
+        transportFactory:
+            (String command, List<String> args, Map<String, String> env) =>
+                _transportOf(transports, _reply),
       );
-      final Screenshot shot =
-          await (await persistent.initialize()).capture();
+      final Screenshot shot = await (await persistent.initialize()).capture();
 
       expect(shot.attachmentRef, isNotNull);
       expect(await store.load(shot.attachmentRef!), <int>[1, 2, 3, 4]);
@@ -235,12 +236,11 @@ void main() {
       final InMemoryAttachmentStore store = InMemoryAttachmentStore();
       final CuaDriverMcpProvider diagnostic = CuaDriverMcpProvider(
         attachmentStore: store,
-        transportFactory: (String command, List<String> args,
-                Map<String, String> env) =>
-            _transportOf(transports, _reply),
+        transportFactory:
+            (String command, List<String> args, Map<String, String> env) =>
+                _transportOf(transports, _reply),
       );
-      final Screenshot shot =
-          await (await diagnostic.initialize()).capture();
+      final Screenshot shot = await (await diagnostic.initialize()).capture();
 
       expect(shot.attachmentRef, isNull);
       expect(store.refs, isEmpty);
@@ -261,9 +261,9 @@ void main() {
       final FakeTransport broken = FakeTransport()
         ..connectError = StateError('cannot launch cua-driver');
       final CuaDriverMcpProvider brokenProvider = CuaDriverMcpProvider(
-        transportFactory: (String command, List<String> args,
-                Map<String, String> env) =>
-            broken,
+        transportFactory:
+            (String command, List<String> args, Map<String, String> env) =>
+                broken,
       );
       await expectLater(brokenProvider.initialize(), throwsStateError);
     });
@@ -308,8 +308,11 @@ void main() {
 
       test('launch_app 失败时不追加 bring_to_front', () async {
         final DesktopSession session = await provider.initialize();
-        final ToolResult result = await session.call('launch_app',
-            <String, Object?>{'bundle_id': 'com.apple.calculator', 'fail': true});
+        final ToolResult result = await session.call(
+            'launch_app', <String, Object?>{
+          'bundle_id': 'com.apple.calculator',
+          'fail': true
+        });
 
         expect(result.isError, isTrue);
         expect(toolCallNames(transports.single.sent), <Object?>['launch_app']);
@@ -317,8 +320,11 @@ void main() {
 
       test('launch_app 无 pid 时不追加 bring_to_front', () async {
         final DesktopSession session = await provider.initialize();
-        final ToolResult result = await session.call('launch_app',
-            <String, Object?>{'bundle_id': 'com.example.agent', 'no_pid': true});
+        final ToolResult result = await session.call(
+            'launch_app', <String, Object?>{
+          'bundle_id': 'com.example.agent',
+          'no_pid': true
+        });
 
         expect(result.isError, isFalse);
         expect(toolCallNames(transports.single.sent), <Object?>['launch_app']);
@@ -326,7 +332,8 @@ void main() {
 
       test('bring_to_front 失败时合并注明但不判整个操作失败', () async {
         final DesktopSession session = await provider.initialize();
-        final ToolResult result = await session.call('launch_app', <String, Object?>{
+        final ToolResult result =
+            await session.call('launch_app', <String, Object?>{
           'bundle_id': 'com.apple.calculator',
           'front_fail': true,
         });
@@ -340,9 +347,9 @@ void main() {
       test('activateLaunchedApp: false 时不追加 bring_to_front', () async {
         final CuaDriverMcpProvider background = CuaDriverMcpProvider(
           activateLaunchedApp: false,
-          transportFactory: (String command, List<String> args,
-                  Map<String, String> env) =>
-              _transportOf(transports, _reply),
+          transportFactory:
+              (String command, List<String> args, Map<String, String> env) =>
+                  _transportOf(transports, _reply),
         );
         final DesktopSession session = await background.initialize();
         final ToolResult result = await session.call('launch_app',

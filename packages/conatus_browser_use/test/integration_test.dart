@@ -28,8 +28,8 @@ void main() {
       expect(ctx.tools.names,
           containsAll(<String>['browser_navigate', 'browser_click']));
 
-      final ToolResult result = await ctx.tools
-          .call(const ToolCall(name: 'browser_navigate', arguments: <String, Object?>{
+      final ToolResult result = await ctx.tools.call(
+          const ToolCall(name: 'browser_navigate', arguments: <String, Object?>{
         'url': 'https://example.com',
       }));
       expect(result.isError, isFalse);
@@ -109,8 +109,7 @@ void main() {
       expect(result.isError, isFalse);
     });
 
-    test('session log：操作记录为 browser/action 事件并串 parentEventId',
-        () async {
+    test('session log：操作记录为 browser/action 事件并串 parentEventId', () async {
       final Context ctx = Context.root();
       provideTools(ctx);
       final Session session = Session(id: 's1');
@@ -146,8 +145,8 @@ void main() {
       await pumpEventQueue();
 
       await ctx.tools.call(const ToolCall(name: 'browser_navigate'));
-      final Iterable<String> names = telemetry.recent
-          .map((TelemetryEvent event) => event.name);
+      final Iterable<String> names =
+          telemetry.recent.map((TelemetryEvent event) => event.name);
       expect(names, contains('browser.provider.registered'));
       expect(names, contains('browser.session.initialized'));
       expect(names, contains('browser.action.called'));
@@ -190,7 +189,8 @@ void main() {
       provideTools(ctx);
       provideBrowserUse(ctx, provider: MockBrowserUseProvider());
       expect(
-        () => provideBrowserUse(ctx, provider: MockBrowserUseProvider(name: 'b')),
+        () =>
+            provideBrowserUse(ctx, provider: MockBrowserUseProvider(name: 'b')),
         throwsStateError,
       );
     });

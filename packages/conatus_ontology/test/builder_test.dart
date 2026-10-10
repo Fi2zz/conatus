@@ -86,8 +86,8 @@ void main() {
 
   group('extractCandidates', () {
     test('构造 prompt 并返回候选', () async {
-      final _ScriptedProvider llm = _ScriptedProvider(
-          <String>['[{"name": "营业收入", "definition": "d"}]']);
+      final _ScriptedProvider llm =
+          _ScriptedProvider(<String>['[{"name": "营业收入", "definition": "d"}]']);
       final List<Term> terms = await extractCandidates(llm, _sources);
       expect(terms, hasLength(1));
       expect(llm.requests, hasLength(1));
@@ -211,8 +211,7 @@ void main() {
       expect(result.layer.nodesOfType('constraint'), isNotEmpty);
       expect(result.layer.nodesOfType('evidence'), isNotEmpty);
       expect(
-        result.layer.references
-            .where((r) => r.kind == 'mapped_to'),
+        result.layer.references.where((r) => r.kind == 'mapped_to'),
         isNotEmpty,
       );
     });

@@ -126,7 +126,8 @@ class RetryPolicy {
     if (jitter <= 0) return _cap(delay);
     final double factor =
         1 - jitter + 2 * jitter * (random?.nextDouble() ?? _pseudoRandom());
-    return _cap(Duration(milliseconds: (delay.inMilliseconds * factor).round()));
+    return _cap(
+        Duration(milliseconds: (delay.inMilliseconds * factor).round()));
   }
 
   /// 无 [Random] 注入时的确定性抖动源（0.5 = 不偏移），保证默认行为可预期。
@@ -228,7 +229,7 @@ class RetryingLlm implements LlmProvider {
       );
 
   Future<LlmResult> _retrying(Future<LlmResult> Function() attempt) async {
-    for (int i = 1; ; i++) {
+    for (int i = 1;; i++) {
       try {
         return await attempt();
       } catch (error) {
@@ -241,7 +242,7 @@ class RetryingLlm implements LlmProvider {
   Stream<LlmStreamEvent> _retryingStream(
     Stream<LlmStreamEvent> Function() attempt,
   ) async* {
-    for (int i = 1; ; i++) {
+    for (int i = 1;; i++) {
       bool emitted = false;
       try {
         await for (final LlmStreamEvent event in attempt()) {

@@ -39,8 +39,7 @@ class TraceBuilder {
 
   /// 为一个 Session 构建完整 trace（含全部轮次的根 span，按开始时间排序）。
   Future<List<Span>> buildTrace(String sessionId) async {
-    final List<SessionEvent> events =
-        await sessionLog.read(sessionId).toList();
+    final List<SessionEvent> events = await sessionLog.read(sessionId).toList();
     final _SpanBuilder builder = _SpanBuilder();
     for (final SessionEvent event in events) {
       builder.on(event);
@@ -102,8 +101,7 @@ class _SpanBuilder {
     final Map<String, Object?> extra = <String, Object?>{};
     final Object? model = dataOf(event)['model'];
     if (model != null) extra['model'] = model;
-    _done.add(
-        span.close(event.time, status: SpanStatus.ok, attributes: extra));
+    _done.add(span.close(event.time, status: SpanStatus.ok, attributes: extra));
   }
 
   void _onToolCall(SessionEvent event) {

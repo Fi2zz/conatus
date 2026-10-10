@@ -78,7 +78,9 @@ void main() {
           <String>['duckduckgo']);
       expect(identical(ctx.search, service), isTrue);
       expect(
-        service.statuses.firstWhere((SearchSourceStatus s) => s.name == 'exa').reason,
+        service.statuses
+            .firstWhere((SearchSourceStatus s) => s.name == 'exa')
+            .reason,
         '未提供凭据服务',
       );
     });
@@ -109,7 +111,9 @@ void main() {
       expect(service.providers.map((SearchProvider p) => p.name),
           <String>['exa', 'duckduckgo']);
       expect(
-        service.statuses.firstWhere((SearchSourceStatus s) => s.name == 'tavily').reason,
+        service.statuses
+            .firstWhere((SearchSourceStatus s) => s.name == 'tavily')
+            .reason,
         '缺少 TAVILY_API_KEY',
       );
     });
@@ -119,8 +123,8 @@ void main() {
       addTearDown(ctx.dispose);
       provideCredentials(
         ctx,
-        credentials:
-            InMemoryCredentials(initial: <String, String>{'BRAVE_API_KEY': 'b'}),
+        credentials: InMemoryCredentials(
+            initial: <String, String>{'BRAVE_API_KEY': 'b'}),
       );
 
       final SearchService service = provideSearch(ctx);

@@ -11,13 +11,9 @@ OntologyLayer _sampleLayer() {
     nodes: <OntologyNode>[
       Term(id: 't1', createdAt: now, name: '营业收入', definition: '主营收入'),
       Term(id: 't2', createdAt: now, name: '营业成本', definition: '主营成本'),
-      Mapping(
-          id: 'm1', createdAt: now, termId: 't1', source: 'sales.orders'),
+      Mapping(id: 'm1', createdAt: now, termId: 't1', source: 'sales.orders'),
       Constraint(
-          id: 'c1',
-          createdAt: now,
-          expression: 'amount >= 0',
-          scope: 't1'),
+          id: 'c1', createdAt: now, expression: 'amount >= 0', scope: 't1'),
     ],
     relations: <SemanticRelation>[
       const SemanticRelation(

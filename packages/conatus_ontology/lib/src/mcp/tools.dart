@@ -13,9 +13,11 @@ import '../tools/ontology_tools.dart';
 /// 注册三个本体工具到上下文工具注册表。
 ///
 /// 返回 [Disposer]，调用后注销全部工具。
-Disposer registerOntologyTools(Context ctx, {required OntologyService ontology}) {
+Disposer registerOntologyTools(Context ctx,
+    {required OntologyService ontology}) {
   final ToolRegistry tools = ctx.require<ToolRegistry>('tools');
-  final Disposer browse = tools.register(BrowseSemanticsTool(ontology: ontology));
+  final Disposer browse =
+      tools.register(BrowseSemanticsTool(ontology: ontology));
   final Disposer resolve =
       tools.register(ResolveSemanticsTool(ontology: ontology));
   final Disposer manifest =

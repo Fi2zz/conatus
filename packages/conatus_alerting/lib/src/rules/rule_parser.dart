@@ -20,15 +20,15 @@ class RuleParser {
   static List<AlertRule> parse(Map<String, Object?> json) {
     final List<Object?> rules = _listOf(json['rules']);
     return <AlertRule>[
-      for (final Object? raw in rules)
-        _parseRule(_mapOf(raw, 'rules[]')),
+      for (final Object? raw in rules) _parseRule(_mapOf(raw, 'rules[]')),
     ];
   }
 
   static AlertRule _parseRule(Map<String, Object?> json) {
     final String name = '${json['name'] ?? ''}';
     final AlertSeverity severity = _parseSeverity('${json['severity'] ?? ''}');
-    final Duration cooldown = Duration(seconds: json['cooldown'] as int? ?? 300);
+    final Duration cooldown =
+        Duration(seconds: json['cooldown'] as int? ?? 300);
     final bool Function(TelemetryEvent, AlertContext) condition =
         _parseCondition(_mapOf(json['condition'], 'condition'));
 

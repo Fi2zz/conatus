@@ -189,7 +189,8 @@ void main() {
       provideApproval(ctx, approval: gate);
 
       final ToolResult result = await tools.call(
-        const ToolCall(name: 'read', arguments: <String, Object?>{'path': '/etc/passwd'}),
+        const ToolCall(
+            name: 'read', arguments: <String, Object?>{'path': '/etc/passwd'}),
       );
 
       // read 是 low，按旧逻辑会被直接放行；声明路径参数后必须经过审批。
@@ -214,7 +215,8 @@ void main() {
       provideApproval(ctx, approval: _PreapprovedApproval(seen));
 
       final ToolResult result = await tools.call(
-        const ToolCall(name: 'read', arguments: <String, Object?>{'path': '/data/a.txt'}),
+        const ToolCall(
+            name: 'read', arguments: <String, Object?>{'path': '/data/a.txt'}),
       );
 
       expect(result.content, '内容');
@@ -279,8 +281,7 @@ class _NestedPathTool extends Tool {
   List<String> get pathParams => const <String>['input.file'];
 
   @override
-  Future<ToolResult> call(ToolContext context) async =>
-      ToolResult.success('');
+  Future<ToolResult> call(ToolContext context) async => ToolResult.success('');
 }
 
 /// 记录请求并按固定结果批准的替身。

@@ -25,11 +25,10 @@ class _FakeAdapter implements EvolutionAdapter {
     required OntologyLayer ontology,
     required BackboneConfig backbone,
     required EvalCase testCase,
-  }) async => RolloutResult(
+  }) async =>
+      RolloutResult(
         turn: const AgentTurn(
-            reply: 'SELECT 1',
-            messages: <LlmMessage>[],
-            steps: <AgentStep>[]),
+            reply: 'SELECT 1', messages: <LlmMessage>[], steps: <AgentStep>[]),
         expected: testCase.expectedOutput ?? '',
       );
 
@@ -51,7 +50,8 @@ void main() {
   group('EvolutionAdapter 契约', () {
     test('rollout 与 evaluate 可用', () async {
       final _FakeAdapter adapter = _FakeAdapter();
-      const EvalCase evalCase = EvalCase(id: 'c1', input: 'q', expectedOutput: 'SELECT 1');
+      const EvalCase evalCase =
+          EvalCase(id: 'c1', input: 'q', expectedOutput: 'SELECT 1');
       final RolloutResult result = await adapter.rollout(
         ontology: _layer(),
         backbone: const BackboneConfig(provider: 'p', model: 'm'),
@@ -72,7 +72,8 @@ void main() {
 
     test('Execution Accuracy：结果一致得 1 分，否则 0 分', () {
       const BirdAdapter adapter = BirdAdapter();
-      const EvalCase evalCase = EvalCase(id: 'c1', input: 'q', expectedOutput: '1');
+      const EvalCase evalCase =
+          EvalCase(id: 'c1', input: 'q', expectedOutput: '1');
       const RolloutResult hit = RolloutResult(
         turn: AgentTurn(
             reply: '1', messages: <LlmMessage>[], steps: <AgentStep>[]),

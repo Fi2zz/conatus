@@ -95,8 +95,7 @@ void main() {
     });
 
     test('finished 非终态，可再接新任务', () {
-      final Teammate finished =
-          base.copyWith(status: TeammateStatus.finished);
+      final Teammate finished = base.copyWith(status: TeammateStatus.finished);
       expect(finished.isTerminal, isFalse);
       expect(
         finished.copyWith(status: TeammateStatus.working).status,

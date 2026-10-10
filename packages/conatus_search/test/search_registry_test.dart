@@ -61,8 +61,8 @@ void main() {
   });
 
   test('默认顺序是 tavily → exa → brave → duckduckgo', () {
-    expect(kDefaultSearchOrder,
-        <String>['tavily', 'exa', 'brave', 'duckduckgo']);
+    expect(
+        kDefaultSearchOrder, <String>['tavily', 'exa', 'brave', 'duckduckgo']);
   });
 
   test('内置表覆盖四个源，duckduckgo 免 Key', () {

@@ -45,7 +45,8 @@ class Term extends OntologyNode {
         name: json['name']! as String,
         definition: json['definition']! as String,
         aliases: <String>[
-          for (final Object? alias in json['aliases']! as List) alias! as String,
+          for (final Object? alias in json['aliases']! as List)
+            alias! as String,
         ],
         domain: json['domain'] as String?,
         evidence: _stringList(json['evidence']),

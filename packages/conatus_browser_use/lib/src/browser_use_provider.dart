@@ -114,11 +114,11 @@ Future<SessionBrowser> attachBrowserSession(
   Telemetry? telemetry,
 }) async {
   final SessionBrowser browser = await provider.initializeFor(session);
-  telemetry?.emit(TelemetryEvent('browser.session.initialized',
-      data: <String, Object?>{
-        'session': session.id,
-        'provider': provider.name,
-      }));
+  telemetry?.emit(
+      TelemetryEvent('browser.session.initialized', data: <String, Object?>{
+    'session': session.id,
+    'provider': provider.name,
+  }));
   final List<Disposer> toolDisposers = <Disposer>[];
   for (final String name in browser.toolNames) {
     toolDisposers.add(ctx.effect(() => tools.register(BrowserActionTool(
@@ -149,7 +149,8 @@ Future<void> _releaseBrowser(
 }
 
 BrowserUseProvider _providerOf(Context ctx) {
-  final BrowserUseRegistry service = ctx.require<BrowserUseRegistry>('browserUse');
+  final BrowserUseRegistry service =
+      ctx.require<BrowserUseRegistry>('browserUse');
   final BrowserUseRegistryImpl impl = service is BrowserUseRegistryImpl
       ? service
       : throw StateError('browserUse 服务无法解析 Provider（非默认实现）');

@@ -78,7 +78,10 @@ class BrowserActionTool extends Tool {
     return center.create(
       kind: TaskKind.custom,
       description: '浏览器操作: $toolName',
-      metadata: <String, Object?>{'sessionId': browser.sessionId, 'tool': toolName},
+      metadata: <String, Object?>{
+        'sessionId': browser.sessionId,
+        'tool': toolName
+      },
     );
   }
 
@@ -101,12 +104,12 @@ class BrowserActionTool extends Tool {
   }
 
   void _emitCalled(Map<String, Object?> args) {
-    telemetry?.emit(TelemetryEvent('browser.action.called',
-        data: <String, Object?>{
-          'tool': toolName,
-          'session': browser.sessionId,
-          'args': args,
-        }));
+    telemetry
+        ?.emit(TelemetryEvent('browser.action.called', data: <String, Object?>{
+      'tool': toolName,
+      'session': browser.sessionId,
+      'args': args,
+    }));
     if (_isNavigation) {
       telemetry?.emit(TelemetryEvent('browser.navigation',
           data: <String, Object?>{'session': browser.sessionId}));
@@ -118,11 +121,11 @@ class BrowserActionTool extends Tool {
   }
 
   void _emitResult(ToolResult result) {
-    telemetry?.emit(TelemetryEvent('browser.action.completed',
-        data: <String, Object?>{
-          'tool': toolName,
-          'isError': result.isError,
-        }));
+    telemetry?.emit(
+        TelemetryEvent('browser.action.completed', data: <String, Object?>{
+      'tool': toolName,
+      'isError': result.isError,
+    }));
   }
 
   void _emitFailed(Object error) {

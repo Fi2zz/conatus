@@ -25,7 +25,8 @@ class OntologyVariant {
     this.reason,
   });
 
-  factory OntologyVariant.fromJson(Map<String, Object?> json) => OntologyVariant(
+  factory OntologyVariant.fromJson(Map<String, Object?> json) =>
+      OntologyVariant(
         id: json['id']! as String,
         parentVersion: json['parentVersion']! as String,
         edits: <TypedEdit>[

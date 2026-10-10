@@ -62,7 +62,8 @@ String _searchText(OntologyNode node) {
   final StringBuffer buffer = StringBuffer(node.id);
   switch (node) {
     case Term():
-      buffer.write(' ${node.name} ${node.definition} ${node.aliases.join(' ')}');
+      buffer
+          .write(' ${node.name} ${node.definition} ${node.aliases.join(' ')}');
     case Mapping():
       buffer.write(' ${node.termId} ${node.source}');
     case Constraint():

@@ -52,11 +52,10 @@ List<TypedEdit> parseTypedEdits(String content) {
   ];
 }
 
-String _describeAttributions(List<Attribution> attributions) =>
-    attributions
-        .map((Attribution attribution) =>
-            '- [${attribution.target.name}] ${attribution.errorType}')
-        .join('\n');
+String _describeAttributions(List<Attribution> attributions) => attributions
+    .map((Attribution attribution) =>
+        '- [${attribution.target.name}] ${attribution.errorType}')
+    .join('\n');
 
 String _describeLayer(OntologyLayer layer) {
   final StringBuffer buffer = StringBuffer('version=${layer.version}');

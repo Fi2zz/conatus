@@ -68,8 +68,7 @@ class TaskCenterTeamTracker implements TeamTaskTracker {
   }) async {
     final String? taskId = _taskByTeammate[teammateId];
     if (taskId == null) return;
-    await _safeUpdate(taskId,
-        status: status, result: result, error: error);
+    await _safeUpdate(taskId, status: status, result: result, error: error);
     _taskByTeammate.remove(teammateId);
   }
 
@@ -81,8 +80,7 @@ class TaskCenterTeamTracker implements TeamTaskTracker {
     Object? error,
   }) async {
     try {
-      await _tasks.update(taskId,
-          status: status, result: result, error: error);
+      await _tasks.update(taskId, status: status, result: result, error: error);
     } on TaskException catch (e) {
       if (e.code != 'already-terminal' && e.code != 'not-found') rethrow;
     }

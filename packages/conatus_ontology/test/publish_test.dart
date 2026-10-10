@@ -54,10 +54,7 @@ OntologyVariant _variant() {
     parentVersion: 'ontology_v0',
     edits: <TypedEdit>[
       AddNode(Term(
-          id: 't2',
-          createdAt: DateTime.utc(2026),
-          name: 'x',
-          definition: 'd')),
+          id: 't2', createdAt: DateTime.utc(2026), name: 'x', definition: 'd')),
     ],
     createdAt: DateTime.utc(2026),
   );
@@ -80,8 +77,8 @@ Future<DefaultOntologyService> _service({
     pairedEvaluator: PairedEvaluator(
       backbones: const <BackboneConfig>[_backbone],
       resolver: (BackboneConfig b) => Evaluator(
-        run: (String input) async =>
-            const AgentTurn(reply: 'ok', messages: <LlmMessage>[], steps: <AgentStep>[]),
+        run: (String input) async => const AgentTurn(
+            reply: 'ok', messages: <LlmMessage>[], steps: <AgentStep>[]),
         judge: (EvalCase evalCase, EvalResult result) {
           final bool isCandidateRound = judgeCalls++ >= evalCases.length;
           return isCandidateRound && candidatePasses;
@@ -139,7 +136,8 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       expect(events.single, isA<OntologyPublished>());
       expect(
-        telemetry.recent.any((TelemetryEvent e) => e.name == 'ontology.published'),
+        telemetry.recent
+            .any((TelemetryEvent e) => e.name == 'ontology.published'),
         isTrue,
       );
     });

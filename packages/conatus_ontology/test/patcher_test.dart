@@ -45,7 +45,11 @@ class _ScriptedProvider implements LlmProvider {
 OntologyLayer _layer() => OntologyLayer(
       version: 'v0',
       nodes: <OntologyNode>[
-        Term(id: 't1', createdAt: DateTime.utc(2026), name: '收入', definition: 'd'),
+        Term(
+            id: 't1',
+            createdAt: DateTime.utc(2026),
+            name: '收入',
+            definition: 'd'),
       ],
       relations: const <SemanticRelation>[],
       references: const <StructuralReference>[],

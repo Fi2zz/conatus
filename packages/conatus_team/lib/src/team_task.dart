@@ -110,8 +110,8 @@ class TeamTask {
             '$item',
         ],
         version: (json['version'] as num?)?.toInt() ?? 0,
-        createdAt: DateTime.tryParse('${json['createdAt']}') ??
-            fallbackCreatedAt,
+        createdAt:
+            DateTime.tryParse('${json['createdAt']}') ?? fallbackCreatedAt,
         result: json['result'],
         error: json['error']);
   }

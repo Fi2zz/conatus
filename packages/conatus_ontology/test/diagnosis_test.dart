@@ -65,9 +65,15 @@ void main() {
       ]);
       final List<SessionEvent> traces = <SessionEvent>[
         SessionEvent.create(
-            sessionId: 's1', type: kUserMessageEvent, seq: 0, data: <String, Object?>{'text': '查营收'}),
+            sessionId: 's1',
+            type: kUserMessageEvent,
+            seq: 0,
+            data: <String, Object?>{'text': '查营收'}),
         SessionEvent.create(
-            sessionId: 's1', type: kToolResultEvent, seq: 1, data: <String, Object?>{'text': '错误'}),
+            sessionId: 's1',
+            type: kToolResultEvent,
+            seq: 1,
+            data: <String, Object?>{'text': '错误'}),
       ];
       final SemanticDiagnosis result = await diagnose(llm, traces);
       expect(result.errors, hasLength(1));

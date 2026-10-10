@@ -50,13 +50,21 @@ class WebhookNotifier implements AlertNotifier {
         <String, Object?>{
           'color': _colorOf(alert.severity),
           'fields': <Object?>[
-            <String, Object?>{'title': '规则', 'value': alert.rule, 'short': true},
+            <String, Object?>{
+              'title': '规则',
+              'value': alert.rule,
+              'short': true
+            },
             <String, Object?>{
               'title': '严重级别',
               'value': alert.severity.name,
               'short': true,
             },
-            <String, Object?>{'title': '事件', 'value': alert.event.name, 'short': true},
+            <String, Object?>{
+              'title': '事件',
+              'value': alert.event.name,
+              'short': true
+            },
           ],
         },
       ],
@@ -65,7 +73,10 @@ class WebhookNotifier implements AlertNotifier {
       await _client
           .post(
             url,
-            headers: <String, String>{'Content-Type': 'application/json', ...headers},
+            headers: <String, String>{
+              'Content-Type': 'application/json',
+              ...headers
+            },
             body: jsonEncode(body),
           )
           .timeout(timeout);
