@@ -10,7 +10,19 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: dart-lang/setup-dart@v1
+        with:
+          # 钉版本的理由同 workspace-integration：format / analyze 的输出随
+          # SDK 版本变化，不钉会让「代码回归」与「SDK 行为变化」分不开。
+          sdk: "3.12.2"
       - run: dart pub get
+
+      # format 关卡：只查 git 跟踪的文件（不含子模块与生成物）。
+      # 漂移基线已于 2026-10-10 全仓清零，此后新增漂移在此拦截。
+      - name: Check formatting
+        run: git ls-files '*.dart' | xargs dart format --output=none --set-exit-if-changed
+
+      - run: dart analyze --fatal-infos
+
       - name: Run unit tests
         run: |
           dart test
@@ -58,8 +70,9 @@ jobs:
       - name: 子模块（conatus_code）测试
         run: dart test packages/conatus_code
 
-      - name: 根集成测试
-        run: dart test test/integration/
+      # 根集成测试**不在这里跑**：integration-test job（ubuntu）已覆盖
+      # （E-1 去重）。本 job 的价值是子模块的 workspace 形态，macOS runner
+      # 成本高，不重复买同一份信号。
 
   # 消费链验证：模拟外部用户以 git 源依赖根包，防 path 依赖 / 导出链回归
   # （全部包 publish_to: none 后，git 源是唯一分发通道，这条链断了等于断供）。
