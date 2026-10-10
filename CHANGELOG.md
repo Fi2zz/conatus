@@ -4,6 +4,11 @@
 
 ## [未发布]
 
+**后台任务（E-15，conatus_code）**：kill 改走进程树终结（新增
+`conatus_foundation` 的 `killProcessTree`），修复 `bash -c "a & b"` 杀掉 bash
+后孙进程孤儿化；沙箱路径不再依赖未验证的「sandbox-exec 杀子进程树」假设；
+`/background output` 与工具统一 8000 字符截尾口径。
+
 **安全（E-11 / E-12，conatus_code）**：项目上下文读取前校验 canonical 路径
 （符号链接指向工作区外一律不读，防把外部配置 / 私钥拼进 system prompt 外发）；
 检查点归档 / index 写后收紧为 0600、会话目录与影子仓库目录 0700（对齐

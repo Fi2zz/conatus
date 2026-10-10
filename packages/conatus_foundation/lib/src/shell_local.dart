@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:conatus_core/conatus_core.dart';
+import 'process_kill.dart';
 import 'shell.dart';
 
 /// 面向模型的终端环境：关闭颜色、分页器与交互特性，避免输出被转义码污染。
@@ -66,7 +67,7 @@ class LocalShellExecutor implements ShellExecutor {
     _writeStdin(process, spec.stdin);
     final Future<void>? cancel = spec.cancelSignal;
     if (cancel != null) {
-      unawaited(cancel.then((_) => process.kill(ProcessSignal.sigkill)));
+      unawaited(cancel.then((_) => killProcessTree(process.pid)));
     }
     final _BoundedCollector stdout =
         _BoundedCollector(process.stdout, spec.stdoutMaxBytes)..start();
@@ -75,7 +76,7 @@ class LocalShellExecutor implements ShellExecutor {
     bool timedOut = false;
     final Timer timer = Timer(Duration(milliseconds: spec.timeoutMs), () {
       timedOut = true;
-      process.kill(ProcessSignal.sigkill);
+      unawaited(killProcessTree(process.pid));
     });
     final int exitCode = await process.exitCode;
     timer.cancel();
@@ -180,7 +181,8 @@ class _LocalShellProcess implements ShellProcess {
   bool kill() {
     if (_status != ShellProcessStatus.running) return false;
     _status = ShellProcessStatus.killed;
-    _process.kill(ProcessSignal.sigkill);
+    // 连后代一起杀：`bash -c "a & b"` 里的 `a` 不会随 bash 一起死（E-15）。
+    unawaited(killProcessTree(_process.pid));
     return true;
   }
 

@@ -4,6 +4,11 @@
 
 ## [未发布]
 
+- **进程树终结（E-15）**：新增 `killProcessTree`（`process_kill.dart`）——用
+  `pgrep -P` 递归收后代、先后代后根，修复「`bash -c "a & b"` 杀掉 bash 后孙
+  进程孤儿化继续跑」；`LocalShellExecutor` 的后台 `kill`、前台超时、取消信号
+  均改走它。
+
 - **安全（E-13）会话 JSONL 落盘权限收紧**：`JsonlSessionPersistence` 首写即把
   会话文件设为 0600（属主读写），不再随 umask（通常 0644）暴露给同机其他用户；
   新增 `restrictFilePermissions` / `restrictDirectoryPermissions`

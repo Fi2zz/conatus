@@ -51,6 +51,7 @@ export 'src/memory_tools.dart'
         provideMemoryTools,
         provideRememberTool;
 export 'src/memory_types.dart' show MemoryEntry;
+export 'src/process_kill.dart' show childPids, killProcessTree;
 export 'src/prompt_types.dart'
     show
         AssembledContext,
