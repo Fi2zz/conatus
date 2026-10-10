@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:conatus_core/conatus_core.dart';
 import 'conatus_home.dart';
+import 'file_permissions.dart';
 import 'session_types.dart';
 
 /// 会话持久化端口。
@@ -33,6 +34,9 @@ class JsonlSessionPersistence implements SessionPersistence {
   final String dir;
 
   File _file(String id) => File('$dir${Platform.pathSeparator}$id.jsonl');
+
+  /// 本进程内已确认收紧过权限的会话文件路径（每个会话只 chmod 一次）。
+  final Set<String> _restricted = <String>{};
 
   @override
   Future<List<String>> list() async {
@@ -67,11 +71,23 @@ class JsonlSessionPersistence implements SessionPersistence {
   Future<void> append(String id, SessionEvent event) async {
     final File file = _file(id);
     await file.parent.create(recursive: true);
+    await _restrictPermissions(file);
     await file.writeAsString(
       '${jsonEncode(event.toJson())}\n',
       mode: FileMode.append,
       flush: true,
     );
+  }
+
+  /// 确保 [file] 存在且权限已收紧；同一文件每个进程只做一次。
+  ///
+  /// 顺序是「先建空文件 → chmod 600 → 再 append」，而不是「先 append 再
+  /// chmod」：后者会让首行内容在收紧前短暂以 0644 落盘，形成明文窗口。
+  /// 旧版本遗留的 0644 文件也会在本次追加时补收紧一次。
+  Future<void> _restrictPermissions(File file) async {
+    if (!_restricted.add(file.path)) return;
+    if (!file.existsSync()) await file.create(recursive: true);
+    await restrictFilePermissions(file.path);
   }
 
   @override

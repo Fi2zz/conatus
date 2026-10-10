@@ -7,7 +7,7 @@ conatus 的基础设施插件（仅依赖 `conatus_core`，零外部依赖）：
 - `loader` — 按名注册的插件工厂 + 配置树
 - `tools` — `Tool` 基类 + `ParamSpec` + 注册表 / 受控执行管线 / 分组 / 分级
 - `shell` / `fs` — 命令执行与文件系统能力缝 + 本地实现
-- `session` — append-only 事件日志 + 会话仓库 + JSONL 持久化（`SessionEvent` 带 `id` / `sessionId` / `parentEventId`，`toJson()` 对负载自动脱敏；`Session` 支持 `read` / `fork` / `replay`）
+- `session` — append-only 事件日志 + 会话仓库 + JSONL 持久化（`SessionEvent` 带 `id` / `sessionId` / `parentEventId`，`toJson()` 对负载自动脱敏；`Session` 支持 `read` / `fork` / `replay`）；JSONL 落盘即收紧为 0600（会话含完整对话与工具输出，可能夹带密钥）
 - `session-log` — 多会话只追加日志（内存 / 追加式 JSONL / Database 三后端），支持 `fork` / `replay`
 - `system-prompt` — prompt 段与动态上下文装配（`render` / `renderContexts`）
 - `time-context` — 日粒度日期锚点（`provideTimePrompt`：日期 + 星期 + 时区）

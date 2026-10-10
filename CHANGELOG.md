@@ -4,6 +4,11 @@
 
 ## [未发布]
 
+**安全（E-13）**：`conatus_foundation` 的会话 JSONL 落盘权限收紧为 0600
+（`JsonlSessionPersistence` 首写即 chmod，旧文件下次追加时补收紧）——会话文件
+含完整对话与工具输出，此前默认随 umask 0644 可被同机其他用户读取。新增通用
+`restrictFilePermissions` 缝，与 conatus_code 的 config.toml 600 策略对齐。
+
 **安全（E-10）**：`conatus_mcp` 的 `mcpToolRisk` 未声明风险的缺省从 `medium`
 提级为 `high`（标签无法识别同样按 `high`）。原因：审批阈值缺省是 `high`
 （`instrumentApproval` 与宿主默认权限模式），`medium` 不进审批——与文档承诺的
