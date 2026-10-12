@@ -4,6 +4,15 @@
 
 ## [未发布]
 
+**`conatus_doc` 增量**：`OpStreamCompiler`（token 流 → op 流编译管道，
+ops 围栏块 JSON 协议）；会话层 fork 接线——`DocEngine.forkAt` 在装配
+SessionLog 时以补丁事件 id 为切点做 `SessionLog.fork`，新增
+`rebuildDocEngine` 重建引擎（含切点映射）。
+
+**`conatus_core`**：`EffectScope` 新增稳定身份 `id` 与可逆性元数据
+`EffectReversibility`（internal / regenerable / compensable / oneWayDoor），
+不改变 dispose 语义；verify_reversibility 全量通过（7 变异体全部杀死）。
+
 **新增实验性包 `conatus_doc`**：人机双写范式的文档补丁引擎（设计文档见
 `docs/人机双写范式设计文档.md`）——稳定块模型、`PatchLog` 只追加补丁序列
 （supersede 生效规则 + 作废标记）、fold 折叠、游标三操作（预览 / 分叉 /

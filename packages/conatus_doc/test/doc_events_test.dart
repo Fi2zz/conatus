@@ -81,5 +81,73 @@ void main() {
       expect(rebuilt.length, 1);
       ctx.dispose();
     });
+
+    test('forkAt 做会话层 fork：切点事件之前的历史进新会话', () async {
+      final SessionLog store = InMemorySessionLog();
+      final DocEngine engine = DocEngine(
+        PatchLog(),
+        sessionLog: store,
+        sessionId: 's1',
+      );
+      await engine.commit(const DocPatch(
+        id: 'p1',
+        author: PatchAuthor.ai,
+        ops: <PatchOp>[InsertBlockOp(blockId: 'b1', text: '一')],
+      ));
+      await engine.commit(const DocPatch(
+        id: 'p2',
+        author: PatchAuthor.ai,
+        ops: <PatchOp>[InsertBlockOp(blockId: 'b2', text: '二', afterId: 'b1')],
+      ));
+
+      final DocEngine branch = await engine.forkAt(1, newSessionId: 's2');
+      await branch.commit(const DocPatch(
+        id: 'p3',
+        author: PatchAuthor.ai,
+        ops: <PatchOp>[InsertBlockOp(blockId: 'b3', text: '支线', afterId: 'b1')],
+      ));
+
+      // 新会话只含切点前历史 + 支线补丁；源会话不受影响
+      final PatchLog forked = await rebuildPatchLog(store, 's2');
+      expect(
+          forked.effective().map((DocPatch p) => p.id), <String>['p1', 'p3']);
+      final PatchLog origin = await rebuildPatchLog(store, 's1');
+      expect(origin.length, 2);
+    });
+
+    test('rebuildDocEngine 重建后 fork 切点映射仍可用', () async {
+      final SessionLog store = InMemorySessionLog();
+      final DocEngine engine = DocEngine(
+        PatchLog(),
+        sessionLog: store,
+        sessionId: 's1',
+      );
+      await engine.commit(const DocPatch(
+        id: 'p1',
+        author: PatchAuthor.ai,
+        ops: <PatchOp>[InsertBlockOp(blockId: 'b1', text: '一')],
+      ));
+      await engine.commit(const DocPatch(
+        id: 'p2',
+        author: PatchAuthor.ai,
+        ops: <PatchOp>[InsertBlockOp(blockId: 'b2', text: '二', afterId: 'b1')],
+      ));
+
+      final DocEngine rebuilt = await rebuildDocEngine(store, 's1');
+      final DocEngine branch = await rebuilt.forkAt(1, newSessionId: 's2');
+      expect(foldPatches(branch.log.effective()).text, '一');
+      expect(await store.list(), contains('s2'));
+    });
+
+    test('纯内存引擎的 forkAt 退化为文档层分叉', () async {
+      final DocEngine engine = DocEngine(PatchLog());
+      await engine.commit(const DocPatch(
+        id: 'p1',
+        author: PatchAuthor.ai,
+        ops: <PatchOp>[InsertBlockOp(blockId: 'b1', text: '一')],
+      ));
+      final DocEngine branch = await engine.forkAt(1);
+      expect(branch.log.length, 1);
+    });
   });
 }

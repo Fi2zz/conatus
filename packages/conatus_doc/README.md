@@ -29,6 +29,9 @@ state(t) = fold(截至 t 生效的补丁集)
   检出锚点块已消失的悬浮批注。
 - `DependencyIndex`：显式 deps ∪ 隐式块依赖（触及他补丁创建的块即依赖）；
   `collectOrphaned` 级联找出失锚补丁，交人处置，不自动猜。
+- `OpStreamCompiler`：token 流 → op 流编译管道——模型在 ops 围栏块内
+  输出 `PatchOp` JSON 数组，逐段喂入、闭合即产出（`compileOpsBlock`
+  处理完整文本）。
 
 ## 用法
 
@@ -61,8 +64,9 @@ final branch = engine.forkAt(1);      // 从该刻开支线
 
 装配进上下文（`provideDoc`）后，提交 / 作废 / 截断 / 批注会同步落
 `doc/patch`、`doc/void`、`doc/truncate`、`doc/annotation` 事件到
-`SessionLog`（缺省取 `'sessionLog'` 服务），`rebuildPatchLog` 可从事件流
-重建序列。会话层 fork（eventId 切点映射）属后续增量。
+`SessionLog`（缺省取 `'sessionLog'` 服务）；`forkAt` 同时做会话层 fork
+（切点 = 切线处补丁落定的事件 id，分支会话只含切点前历史），
+`rebuildDocEngine` 可从事件流重建引擎（含切点映射）。
 
 ## 与设计文档的对应
 
@@ -75,5 +79,5 @@ final branch = engine.forkAt(1);      // 从该刻开支线
 | §4.6 游标 | `previewAt` / `forkLog` / `truncateLog` |
 | §2.4 人的编辑是一等事件 | `doc/patch` 事件（作者字段区分人机） |
 
-不在本包：检查点（fold 重建通路在 compaction）、token 流 → op 流编译、
-CRDT 并发、prompt-as-patch、会话层 fork 接线。
+不在本包：检查点（fold 重建通路在 compaction）、CRDT 并发、
+prompt-as-patch。

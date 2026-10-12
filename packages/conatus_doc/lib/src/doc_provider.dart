@@ -22,13 +22,22 @@ extension DocContext on Context {
 /// 落 `doc/*` 事件（故事层持久化）；未装配时为纯内存引擎。
 class DocEngine {
   /// 以 [log] 与可选的 SessionLog 桥构造。
-  DocEngine(this._log, {SessionLog? sessionLog, String? sessionId})
-      : _sessionLog = sessionLog,
-        _sessionId = sessionId;
+  ///
+  /// [eventIds] 是与 `log.patches` 对齐的会话事件 id 序列（fork 切点映射），
+  /// 一般由 [rebuildDocEngine] 重建时填入，日常构造不必传。
+  DocEngine(
+    this._log, {
+    SessionLog? sessionLog,
+    String? sessionId,
+    List<String?>? eventIds,
+  })  : _sessionLog = sessionLog,
+        _sessionId = sessionId,
+        _eventIds = eventIds ?? <String?>[];
 
   final PatchLog _log;
   final SessionLog? _sessionLog;
   final String? _sessionId;
+  final List<String?> _eventIds;
 
   /// 底层补丁序列。
   PatchLog get log => _log;
@@ -36,11 +45,12 @@ class DocEngine {
   /// 当前文档状态（生效补丁集的 fold）。
   DocumentState get state => foldPatches(_log.effective());
 
-  /// 提交补丁（追加 + 落事件）。
+  /// 提交补丁（追加 + 落事件，并记录事件 id 作为 fork 切点）。
   Future<void> commit(DocPatch patch) async {
     _log.append(patch);
-    await _record(
+    final SessionEvent? event = await _record(
         (SessionLog log, String sid) => recordDocPatch(log, sid, patch));
+    _eventIds.add(event?.id);
   }
 
   /// 追加锚点批注（追加 + 落事件）。
@@ -69,23 +79,57 @@ class DocEngine {
   /// 预览 [upto]（不含）时刻的文档状态。
   DocumentState previewAt(int upto) => foldPatches(_log.effective(upto: upto));
 
-  /// 文档层分叉：从 [upto]（不含）起新故事线。
+  /// 分叉：从 [upto]（不含）起新故事线。
   ///
-  /// 会话层 fork（SessionLog.fork 的 eventId 切点映射）属后续增量。
-  DocEngine forkAt(int upto) => DocEngine(
-        _log.forkAt(upto),
-        sessionLog: _sessionLog,
-        sessionId: _sessionId,
-      );
+  /// 装配了 SessionLog 且切点可得时，同时做**会话层 fork**：切点是第
+  /// `upto - 1` 个补丁落定的事件 id，新引擎挂在分叉会话上，后续提交落进
+  /// 新会话。切点不可得（纯内存 / 事件 id 缺失）时退化为纯文档层分叉。
+  Future<DocEngine> forkAt(int upto, {String? newSessionId}) async {
+    final PatchLog branch = _log.forkAt(upto);
+    final String? cut = _cutEventId(upto);
+    final SessionLog? log = _sessionLog;
+    final String? sid = _sessionId;
+    if (log == null || sid == null || cut == null) {
+      return DocEngine(branch);
+    }
+    final String forked = await log.fork(sid, cut, newId: newSessionId);
+    return DocEngine(
+      branch,
+      sessionLog: log,
+      sessionId: forked,
+      eventIds: _eventIds.sublist(0, upto),
+    );
+  }
 
-  Future<void> _record(
-    Future<void> Function(SessionLog, String) write,
+  String? _cutEventId(int upto) {
+    if (upto <= 0 || upto > _eventIds.length) return null;
+    return _eventIds[upto - 1];
+  }
+
+  Future<SessionEvent?> _record(
+    Future<SessionEvent> Function(SessionLog, String) write,
   ) async {
     final SessionLog? log = _sessionLog;
     final String? sid = _sessionId;
-    if (log == null || sid == null) return;
-    await write(log, sid);
+    if (log == null || sid == null) return null;
+    return write(log, sid);
   }
+}
+
+/// 从会话事件流重建引擎：补丁序列（含批注与作废标记）+ fork 切点映射。
+Future<DocEngine> rebuildDocEngine(SessionLog log, String sessionId) async {
+  final PatchLog rebuilt = PatchLog();
+  final List<String?> eventIds = <String?>[];
+  await log.replay(sessionId, (SessionEvent event) {
+    if (event.type == kDocPatchEvent) eventIds.add(event.id);
+    applyDocEvent(rebuilt, event);
+  });
+  return DocEngine(
+    rebuilt,
+    sessionLog: log,
+    sessionId: sessionId,
+    eventIds: eventIds,
+  );
 }
 
 /// 提供 [DocEngine] 为 `'doc'` 服务。

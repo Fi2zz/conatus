@@ -70,7 +70,7 @@ Future<void> main() async {
 
   _section('5. traveling：预览过去 / 分叉支线');
   print('预览前 2 个补丁时刻：「${doc.previewAt(2).text}」');
-  final DocEngine branch = doc.forkAt(2);
+  final DocEngine branch = await doc.forkAt(2);
   await branch.commit(
     const DocPatch(
       id: 'ai-branch',
