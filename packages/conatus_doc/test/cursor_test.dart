@@ -23,8 +23,7 @@ void main() {
       final PatchLog log = PatchLog()
         ..append(ai('p1', 'b1', '一'))
         ..append(ai('p2', 'b2', '二'));
-      final PatchLog branch = forkLog(log, 1)
-        ..append(ai('p3', 'b3', '支线'));
+      final PatchLog branch = forkLog(log, 1)..append(ai('p3', 'b3', '支线'));
       expect(foldPatches(branch.effective()).text, contains('支线'));
       expect(log.length, 2);
     });

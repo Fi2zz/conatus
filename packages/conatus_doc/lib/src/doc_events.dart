@@ -103,8 +103,7 @@ Future<PatchLog> rebuildPatchLog(SessionLog log, String sessionId) async {
 }
 
 const Map<String, void Function(PatchLog, Map<String, Object?>)>
-    _eventAppliers =
-    <String, void Function(PatchLog, Map<String, Object?>)>{
+    _eventAppliers = <String, void Function(PatchLog, Map<String, Object?>)>{
   kDocPatchEvent: _applyPatch,
   kDocVoidEvent: _applyVoid,
   kDocTruncateEvent: _applyTruncate,

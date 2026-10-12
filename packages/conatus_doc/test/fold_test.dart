@@ -37,8 +37,8 @@ void main() {
         ]),
         ai('p2', const <PatchOp>[MoveBlockOp(blockId: 'b3')]),
       ]);
-      expect(state.blocks.map((DocBlock b) => b.id),
-          <String>['b3', 'b1', 'b2']);
+      expect(
+          state.blocks.map((DocBlock b) => b.id), <String>['b3', 'b1', 'b2']);
     });
 
     test('失锚操作静默跳过', () {

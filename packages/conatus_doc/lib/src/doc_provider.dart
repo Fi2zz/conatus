@@ -39,7 +39,8 @@ class DocEngine {
   /// 提交补丁（追加 + 落事件）。
   Future<void> commit(DocPatch patch) async {
     _log.append(patch);
-    await _record((SessionLog log, String sid) => recordDocPatch(log, sid, patch));
+    await _record(
+        (SessionLog log, String sid) => recordDocPatch(log, sid, patch));
   }
 
   /// 追加锚点批注（追加 + 落事件）。
@@ -53,7 +54,8 @@ class DocEngine {
   /// 作废单个补丁（丢弃失锚补丁等场景）。
   Future<void> discard(String patchId) async {
     _log.voidPatch(patchId);
-    await _record((SessionLog log, String sid) => recordDocVoid(log, sid, patchId));
+    await _record(
+        (SessionLog log, String sid) => recordDocVoid(log, sid, patchId));
   }
 
   /// 截断：作废 [index] 之后的全部补丁。
@@ -65,8 +67,7 @@ class DocEngine {
   }
 
   /// 预览 [upto]（不含）时刻的文档状态。
-  DocumentState previewAt(int upto) =>
-      foldPatches(_log.effective(upto: upto));
+  DocumentState previewAt(int upto) => foldPatches(_log.effective(upto: upto));
 
   /// 文档层分叉：从 [upto]（不含）起新故事线。
   ///

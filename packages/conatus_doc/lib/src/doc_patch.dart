@@ -50,7 +50,9 @@ class DocPatch {
   Map<String, Object?> toJson() => <String, Object?>{
         'id': id,
         'author': author.name,
-        'ops': <Map<String, Object?>>[for (final PatchOp op in ops) op.toJson()],
+        'ops': <Map<String, Object?>>[
+          for (final PatchOp op in ops) op.toJson()
+        ],
         'reversibility': reversibility.name,
         if (deps.isNotEmpty) 'deps': deps.toList(),
         if (supersedes != null) 'supersede': supersedes,

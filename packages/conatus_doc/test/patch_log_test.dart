@@ -11,8 +11,7 @@ DocPatch patch(String id, List<PatchOp> ops, {String? supersedes}) => DocPatch(
 void main() {
   group('PatchLog', () {
     test('只追加：id 重复抛 ArgumentError', () {
-      final PatchLog log = PatchLog()
-        ..append(patch('p1', const <PatchOp>[]));
+      final PatchLog log = PatchLog()..append(patch('p1', const <PatchOp>[]));
       expect(() => log.append(patch('p1', const <PatchOp>[])),
           throwsArgumentError);
       expect(log.length, 1);
@@ -31,8 +30,7 @@ void main() {
       final PatchLog log = PatchLog()
         ..append(patch('p1', const <PatchOp>[]))
         ..append(patch('p2', const <PatchOp>[], supersedes: 'p1'));
-      expect(log.effective(upto: 1).map((DocPatch p) => p.id),
-          <String>['p1']);
+      expect(log.effective(upto: 1).map((DocPatch p) => p.id), <String>['p1']);
     });
 
     test('作废的 supersede 补丁不再压制旧补丁', () {

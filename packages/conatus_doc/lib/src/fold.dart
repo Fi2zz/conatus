@@ -13,12 +13,10 @@ class DocumentState {
   final List<DocBlock> blocks;
 
   /// 全文（块间以换行相接）。
-  String get text =>
-      blocks.map((DocBlock b) => b.text).join('\n');
+  String get text => blocks.map((DocBlock b) => b.text).join('\n');
 
   /// 块 [id] 是否存在。
-  bool containsBlock(String id) =>
-      blocks.any((DocBlock b) => b.id == id);
+  bool containsBlock(String id) => blocks.any((DocBlock b) => b.id == id);
 }
 
 /// 把 [patches] 按追加序折叠为文档状态。

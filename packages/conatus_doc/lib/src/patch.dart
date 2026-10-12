@@ -101,8 +101,7 @@ class ReplaceBlockOp extends PatchOp {
       <String, Object?>{'kind': 'replace', 'blockId': blockId, 'text': text};
 
   /// 从 JSON 反序列化。
-  factory ReplaceBlockOp.fromJson(Map<String, Object?> json) =>
-      ReplaceBlockOp(
+  factory ReplaceBlockOp.fromJson(Map<String, Object?> json) => ReplaceBlockOp(
         blockId: json['blockId'] as String,
         text: json['text'] as String? ?? '',
       );
