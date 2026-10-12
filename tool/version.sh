@@ -4,12 +4,12 @@
 #
 #   bash tool/version.sh    # 检查：版本冻结在位、无残留的托管版本约束
 #
-# 背景：全部 23 个包 `publish_to: none`，不再发布 pub.dev；版本演进由 git tag
+# 背景：全部 24 个包 `publish_to: none`，不再发布 pub.dev；版本演进由 git tag
 # 承载（见 README 安装指引与 CHANGELOG）。各 pubspec 的 `version:` 冻结为同一
 # 历史值，仅作快照标识；包间依赖一律为 path，不再有 `^x.y.z` 约束需要同步。
 #
 # 检查内容（fail-closed，任一不过非零退出）：
-#   1. 根包与 22 个模块包的 version 完全一致（子模块 conatus_code 独立版本，排除）；
+#   1. 根包与 23 个模块包的 version 完全一致（子模块是独立仓库独立版本，排除）；
 #   2. 全仓（除子模块）不存在 `conatus_*: ^...` 形式的包间版本约束。
 #
 set -euo pipefail
@@ -19,7 +19,8 @@ cd "$ROOT"
 
 PUBSPECS=(pubspec.yaml)
 for f in packages/*/pubspec.yaml; do
-  case "$f" in *conatus_code*) continue;; esac # 子模块：独立仓库独立版本
+  # 子模块（含自己的 .git）：独立仓库独立版本，跳过
+  [ -e "${f%/pubspec.yaml}/.git" ] && continue
   PUBSPECS+=("$f")
 done
 
@@ -52,5 +53,5 @@ if [ -n "$stray" ]; then
   fail "存在残留的托管版本约束（见上）：包间依赖一律使用 path"
 fi
 
-printf '版本冻结校验通过：%s（%s 个包，包间均为 path 依赖；子模块 conatus_code 独立版本已排除）\n' \
+printf '版本冻结校验通过：%s（%s 个包，包间均为 path 依赖；子模块独立版本已排除）\n' \
   "$versions" "${#PUBSPECS[@]}"
