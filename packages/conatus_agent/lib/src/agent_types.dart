@@ -26,6 +26,10 @@ const String kLlmResponseEvent = 'llm/response';
 /// 工具调用事件类型（Session Log 的派生事件，早于工具执行）。
 const String kToolCallEvent = 'tool/call';
 
+/// 轮内插话来源：Agent Loop 每次组模型请求前调用，取回并**清空**排队的
+/// 用户插话；返回空列表表示没有。抛异常视为编程错误，向上传播不吞。
+typedef SteeringSource = Future<List<String>> Function();
+
 /// 一次工具调用在循环中的步骤记录。
 class AgentStep {
   const AgentStep({required this.call, required this.result});

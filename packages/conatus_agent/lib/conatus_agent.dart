@@ -20,6 +20,7 @@ export 'src/agent_types.dart'
     show
         AgentStep,
         AgentTurn,
+        SteeringSource,
         kAssistantMessageEvent,
         kLlmRequestEvent,
         kLlmResponseEvent,

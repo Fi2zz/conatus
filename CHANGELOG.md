@@ -4,6 +4,12 @@
 
 ## [未发布]
 
+**`conatus_agent` 增量**：Agent Loop 轮内注入缝——新增 `SteeringSource`
+typedef 与 `AgentLoop.steering` 后置挂载字段（参照 `goalDriver` 惯例）；
+step 循环组下一次模型请求前取回排队的用户插话，逐条写 `user/message`
+会话事件并进消息序列，AI 轮内即可看到。确定性路由快路径不注入；取消时
+已注入的消息留在会话里。
+
 **`conatus_doc` 增量**：`OpStreamCompiler`（token 流 → op 流编译管道，
 ops 围栏块 JSON 协议）；会话层 fork 接线——`DocEngine.forkAt` 在装配
 SessionLog 时以补丁事件 id 为切点做 `SessionLog.fork`，新增

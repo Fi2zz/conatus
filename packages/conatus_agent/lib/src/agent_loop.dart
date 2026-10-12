@@ -93,6 +93,10 @@ class AgentLoop {
   /// 不续行）。由 `provideGoal` 在 `goal` 与 `agentLoop` 齐备时后置挂载。
   GoalRoundDriver? goalDriver;
 
+  /// 轮内插话来源；非空时，每次组模型请求前取回排队的用户插话注入会话
+  /// （缺省 null，不注入）。与 [goalDriver] 一样由宿主后置挂载。
+  SteeringSource? steering;
+
   /// 每轮生命周期钩子（TaskCenter 等运行时追踪接入）；缺省 null，不追踪。
   /// 与 [goalDriver] 一样由插件在 `agentLoop` 可用时经 `ctx.inject` 后置挂载。
   AgentTurnTracker? turnTracker;
@@ -206,6 +210,7 @@ class AgentLoop {
     }
     for (int step = 0; step < maxSteps; step++) {
       ensureSessionOpen(session);
+      await _injectSteering(session, messages);
       if (_needsReplan && planning && session != null) {
         _needsReplan = false;
         await runPlanningPhase(
@@ -275,6 +280,22 @@ class AgentLoop {
     }
     return _finish(
         session, messages, steps, usages, '（已达到最大步数 $maxSteps，未收口）', userInput);
+  }
+
+  /// 轮内注入：组下一次模型请求前取回排队的用户插话——逐条写会话
+  /// （`user/message` 事件）并进消息序列，AI 轮内即可看到。source 为 null
+  /// 或取回空列表时不动。确定性路由快路径（RouteReply）不经 step 循环，
+  /// 不注入；取消时已注入的消息留在会话里（说出去的话不收回）。
+  Future<void> _injectSteering(
+    Session? session,
+    List<LlmMessage> messages,
+  ) async {
+    final SteeringSource? source = steering;
+    if (source == null) return;
+    for (final String text in await source()) {
+      session?.append(kUserMessageEvent, data: <String, Object?>{'text': text});
+      messages.add(LlmMessage('user', text));
+    }
   }
 
   /// 把 [work] 与取消信号竞速：取消后立即以 [AgentCancelled] 结束，其迟到结果
