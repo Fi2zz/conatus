@@ -29,7 +29,7 @@ Agent 能力。
 ```
 ├── pubspec.yaml            # 伞包；workspace: packages/*（glob，SDK ^3.11.0 起支持）
 ├── lib/conatus.dart        # 伞包入口：只 re-export，不写实现
-├── packages/               # 23 个目录（见下方分类）
+├── packages/               # 24 个目录（见下方分类）
 ├── test/                   # 根包测试：integration/（跨包集成）+ integration_e2e_test.dart
 ├── example/                # 演示：main.dart（交互式 Agent，需 API Key）、
 │                           #        demo.dart（离线脚本化模型）、voice_plan_mode.dart
@@ -40,7 +40,7 @@ Agent 能力。
 └── docs/superpowers/       # superpowers 工作流的 plans/ 与 specs/
 ```
 
-### packages/ 分类（23 个目录）
+### packages/ 分类（24 个目录）
 
 | 类别 | 包 | 说明 |
 |------|----|------|
@@ -56,7 +56,7 @@ Agent 能力。
 | | `conatus_compaction` | 压缩能力缝：滚动摘要 + `compaction/*` 日志事件 |
 | | `conatus_agent` | Agent Loop 与产品化：plan / sub-agent / reflection / telemetry / eval / approval / skill / recovery |
 | | `conatus_tasks` | 任务中心：运行时任务追踪（任务树 + `list_tasks` / `cancel_task`） |
-| **实验性包 ×8**（进伞包导出，API 可能破坏性变更） | `conatus_alerting` / `conatus_browser_use` / `conatus_computer_use` / `conatus_intent` / `conatus_observability` / `conatus_team` / `conatus_workflow` / `conatus_ontology` | 告警 / 浏览器操作 / 桌面操作 / 意图路由 / 可观测性导出 / 多智能体协作 / 流程编排 / 自进化本体层（EvoOntology 适配） |
+| **实验性包 ×9**（进伞包导出，API 可能破坏性变更） | `conatus_alerting` / `conatus_browser_use` / `conatus_computer_use` / `conatus_doc` / `conatus_intent` / `conatus_observability` / `conatus_team` / `conatus_workflow` / `conatus_ontology` | 告警 / 浏览器操作 / 桌面操作 / 文档补丁引擎（人机双写故事层） / 意图路由 / 可观测性导出 / 多智能体协作 / 流程编排 / 自进化本体层（EvoOntology 适配） |
 | **子模块 ×1** | `conatus_code` | 独立仓库（github.com/Fi2zz/conatus_code）的终端编码智能体；根包仅在 `dev_dependencies` 以 git 源引用，workspace 内解析到本地成员。不开发它时无需拉取 |
 
 依赖方向自上而下无环：`conatus` → `conatus_agent` → `conatus_llm` / `conatus_foundation` /
@@ -183,7 +183,7 @@ filter 的作用：checkout 时恢复 `pubspec.yaml` 的 `resolution: workspace`
 
 ## 8. 发布与部署
 
-分发方式为 **git 源**：全部 23 个包 `publish_to: none`，不发布 pub.dev（也从未
+分发方式为 **git 源**：全部 24 个包 `publish_to: none`，不发布 pub.dev（也从未
 发布过），用户以 git 依赖伞包即获得全部子包（见 README「安装」）。
 
 1. 版本演进由 git tag 承载：`git tag v0.17.0 && git push --tags`；各 pubspec 的

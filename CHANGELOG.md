@@ -4,6 +4,12 @@
 
 ## [未发布]
 
+**新增实验性包 `conatus_doc`**：人机双写范式的文档补丁引擎（设计文档见
+`docs/人机双写范式设计文档.md`）——稳定块模型、`PatchLog` 只追加补丁序列
+（supersede 生效规则 + 作废标记）、fold 折叠、游标三操作（预览 / 分叉 /
+截断）、`splitPending` 按块收缩（编辑即裁剪）、锚点批注、依赖图级联失锚，
+以及 `SessionLog` 事件桥（`doc/patch` 等四类事件）与 `provideDoc` 装配。
+
 **后台任务（E-15，conatus_code）**：kill 改走进程树终结（新增
 `conatus_foundation` 的 `killProcessTree`），修复 `bash -c "a & b"` 杀掉 bash
 后孙进程孤儿化；沙箱路径不再依赖未验证的「sandbox-exec 杀子进程树」假设；

@@ -1,7 +1,7 @@
 /// 时空可组合性（Spatiotemporal Composability）编程范式的 Dart 实现。
 ///
 /// 本包是 monorepo 的**伞包（umbrella）**：自身不含实现，单入口再导出全部
-/// 22 个模块包（14 个稳定包 + 8 个实验性包），
+/// 23 个模块包（14 个稳定包 + 9 个实验性包），
 /// 使 `import 'package:conatus/conatus.dart';` 即完整公开 API。
 /// 实验性包 API 可能破坏性变更，生产依赖前见各包 README。
 ///
@@ -31,6 +31,7 @@
 /// * [conatus_alerting]     — 告警规则与通知能力缝
 /// * [conatus_browser_use]  — 浏览器操作（Browser Use）
 /// * [conatus_computer_use] — 桌面操作（Computer Use）
+/// * [conatus_doc]         — 文档补丁引擎（人机双写故事层数据内核）
 /// * [conatus_intent]       — 意图路由
 /// * [conatus_observability]— 可观测性导出（trace/span 构建）
 /// * [conatus_ontology]     — 自进化本体层（EvoOntology 适配）
@@ -47,6 +48,7 @@ export 'package:conatus_computer_use/conatus_computer_use.dart';
 export 'package:conatus_core/conatus_core.dart';
 export 'package:conatus_credentials/conatus_credentials.dart';
 export 'package:conatus_cron/conatus_cron.dart';
+export 'package:conatus_doc/conatus_doc.dart';
 export 'package:conatus_foundation/conatus_foundation.dart';
 export 'package:conatus_intent/conatus_intent.dart';
 export 'package:conatus_llm/conatus_llm.dart';
