@@ -11,6 +11,24 @@ library;
 /// 因此实现应当是幂等的。
 typedef Disposer = void Function();
 
+/// 效应的可逆性类别（回溯语义的元数据依据）。
+///
+/// 对应人机双写设计文档 §4.2 的可逆性分类：回滚引擎与 UI 时间轴据此决定
+/// 「恢复到过去」对一类效应意味着什么。
+enum EffectReversibility {
+  /// 纯内部状态：撤销函数即可完整回滚，零成本。
+  internal,
+
+  /// 可再生的衍生物：标记失效，用到时重新生成。
+  regenerable,
+
+  /// 外部可补偿：不能撤回，只能补偿（Saga 模式）。
+  compensable,
+
+  /// 单向门：物理不可逆，回溯到此为止。
+  oneWayDoor,
+}
+
 /// 收集一组可逆副作用，并按 LIFO（后进先出）顺序统一撤销。
 ///
 /// ```dart
@@ -29,6 +47,21 @@ typedef Disposer = void Function();
 /// 3. **抗异常**：单个撤销函数抛出异常不会阻断其余撤销；
 ///    所有异常被收集后由 [dispose] 返回。
 class EffectScope {
+  /// 以可选的稳定身份 [id] 与可逆性类别 [reversibility] 构造。
+  ///
+  /// [id] 缺省自动分配（进程内单调、跨作用域唯一）；[reversibility] 是
+  /// 纯元数据，不改变回滚行为，供回滚引擎与 UI 时间轴读取。
+  EffectScope({
+    String? id,
+    this.reversibility = EffectReversibility.internal,
+  }) : id = id ?? _nextEffectScopeId();
+
+  /// 作用域稳定身份。
+  final String id;
+
+  /// 可逆性类别（元数据，不影响 dispose 语义）。
+  final EffectReversibility reversibility;
+
   final List<Disposer> _disposers = <Disposer>[];
   bool _disposed = false;
 
@@ -82,3 +115,8 @@ class EffectScope {
     return errors;
   }
 }
+
+int _scopeSeq = 0;
+
+/// 分配进程内单调、跨作用域唯一的作用域 id。
+String _nextEffectScopeId() => 'scope-${_scopeSeq++}';
