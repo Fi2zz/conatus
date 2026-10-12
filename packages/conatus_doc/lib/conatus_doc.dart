@@ -12,6 +12,7 @@ export 'src/doc_events.dart';
 export 'src/doc_patch.dart';
 export 'src/doc_provider.dart';
 export 'src/fold.dart';
+export 'src/op_compiler.dart';
 export 'src/patch.dart';
 export 'src/patch_log.dart';
 export 'src/pending.dart';

@@ -13,17 +13,27 @@ Future<void> main() async {
   final Context app = Context.root(name: 'cowrite-demo');
   final DocEngine doc = provideDoc(app);
 
-  _section('1. AI 流式产出 → 待定补丁');
-  const DocPatch aiDraft = DocPatch(
+  _section('1. AI 流式产出 → token 流编译为补丁 ops');
+  const List<String> tokens = <String>[
+    '好的，我来起草三段。',
+    '```ops\n[{"kind":"insert","blockId":"b1","text":"从前有座山。"},',
+    '{"kind":"insert","blockId":"b2","text":"山里有座庙。","afterId":"b1"},',
+    '{"kind":"insert","blockId":"b3","text":"庙里有个老和尚。","afterId":"b2"}]',
+    '\n```\n写完了。',
+  ];
+  final OpStreamCompiler compiler = OpStreamCompiler();
+  final List<PatchOp> ops = <PatchOp>[
+    for (final String token in tokens) ...compiler.feed(token),
+  ];
+  final DocPatch aiDraft = DocPatch(
     id: 'ai-1',
     author: PatchAuthor.ai,
-    ops: <PatchOp>[
-      InsertBlockOp(blockId: 'b1', text: '从前有座山。'),
-      InsertBlockOp(blockId: 'b2', text: '山里有座庙。', afterId: 'b1'),
-      InsertBlockOp(blockId: 'b3', text: '庙里有个老和尚。', afterId: 'b2'),
-    ],
+    ops: ops,
   );
-  print('待定补丁 ai-1：3 个块（尚未进故事）');
+  print(
+    'token 流（${tokens.length} 段）编译出 ${ops.length} 个 op，'
+    '组成待定补丁 ai-1（尚未进故事）',
+  );
 
   _section('2. 人直接改 AI 的待定产出（编辑即裁剪）');
   final PendingSplit split = splitPending(aiDraft, const <PatchOp>[
