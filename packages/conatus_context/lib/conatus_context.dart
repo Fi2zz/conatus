@@ -1,0 +1,7 @@
+/// conatus 的上下文压缩：结构化压缩工具结果并把原文存入 CCR。
+library;
+
+export 'src/compression_result.dart' show ContextCompressionResult;
+export 'src/compression_stats.dart' show CompressionStats, KindStats;
+export 'src/content_kind.dart' show ContentKind;
+export 'src/context_compression_config.dart' show ContextCompressionConfig;
