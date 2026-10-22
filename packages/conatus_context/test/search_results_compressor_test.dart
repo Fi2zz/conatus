@@ -50,6 +50,16 @@ void main() {
     expect(d.output, contains('more files with'));
   });
 
+  test('非匹配行以省略提示保留', () {
+    final String input = <String>[
+      for (int i = 1; i <= 10; i++) 'lib/a.dart:$i:match $i',
+      '10 matches found in 1 file',
+    ].join('\n');
+    final CompressionDraft d =
+        const SearchResultsCompressor().compress(input, budget)!;
+    expect(d.output, contains('non-match lines omitted'));
+  });
+
   test('ripgrep 上下文格式与 Windows 路径可解析', () {
     final String input = <String>[
       r'C:\src\pre-commit.dart-12-before',

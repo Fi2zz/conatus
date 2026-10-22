@@ -9,7 +9,7 @@
 **根包 `conatus` 是伞包（umbrella）**：自身不含实现，统一再导出 `packages/` 下的
 全部 24 个模块包，因此 `import 'package:conatus/conatus.dart';` 是完整公开 API；也可以
 只依赖某个模块包（如 `conatus_core`、`conatus_agent`），以获得更小的依赖面。
-其中 9 个**实验性包**（API 可能随时变更）同样随伞包导出，生产环境依赖前
+其中 10 个**实验性包**（API 可能随时变更）同样随伞包导出，生产环境依赖前
 见下方「实验性包」小节与各包 README。
 
 `packages/conatus_code` 是独立的**子模块**（[Fi2zz/conatus_code](https://github.com/Fi2zz/conatus_code)）：
@@ -103,6 +103,7 @@ conatus_observability ▶ conatus_agent
 conatus_alerting ────▶ conatus_agent、conatus_tts、conatus_foundation
 conatus_browser_use ─▶ conatus_mcp、conatus_tasks、conatus_credentials、conatus_foundation
 conatus_computer_use ▶ conatus_mcp、conatus_tasks、conatus_credentials、conatus_foundation
+conatus_context ─────▶ conatus_foundation、conatus_llm
 conatus_doc ─────────▶ conatus_foundation
 conatus_team ────────▶ conatus_agent、conatus_llm、conatus_foundation
 conatus_intent ──────▶ conatus_agent、conatus_foundation
@@ -110,7 +111,7 @@ conatus_workflow ────▶ conatus_team、conatus_tasks、conatus_foundati
 conatus_ontology ──▶ conatus_agent、conatus_llm、conatus_foundation
 ```
 
-（`conatus_core` 为所有包的公共底座，各行从略。）后 9 行是实验性包：只被上层装配
+（`conatus_core` 为所有包的公共底座，各行从略。）后 10 行是实验性包：只被上层装配
 依赖，稳定包不反向依赖它们（`conatus_agent` / `conatus_mcp` / `conatus_tasks` 都
 不知道它们的存在）。
 
@@ -1095,7 +1096,7 @@ for (final step in turn.steps) print('${step.call.name}: ${step.result.content}'
 
 ## 实验性能力包
 
-以下 9 个包是实验性包（随伞包一并导出，也可只 import 各自包入口，如
+以下 10 个包是实验性包（随伞包一并导出，也可只 import 各自包入口，如
 `import 'package:conatus_alerting/conatus_alerting.dart';`）。API 可能在没有
 major 版本号变更的情况下发生破坏性改动，请勿在生产环境依赖。
 `ontology`（自进化本体层）与 `doc`（人机双写文档补丁引擎）无独立小节，
@@ -1698,6 +1699,10 @@ root.provide('x', 1);
 | `provideComputerUse(ctx, {provider, tools, taskCenter, approval, telemetry})` / `registerDesktopTools(ctx, desktop, {sessionId, sessionLog})` | 提供 `'computerUse'`：注册桌面工具 / 把操作记录到触发它的 Session 日志（`conatus_computer_use`） |
 | `ComputerUseProvider` / `CuaDriverMcpProvider` / `CuaDriverNativeProvider` / `DesktopSession` / `Screenshot` / `ScreenRegion` | 桌面 Provider 与值类型（Native 为未接入骨架） |
 | `imageSupportFor(provider, model)` / `AttachmentStore` / `InMemoryAttachmentStore` | 图像路由（持久化截图 / MCP 图像诊断）与截图存储 |
+| `provideContextCompression(ctx, {config, store, tools, fs, dir, compressors})` / `ctx.contextCompressor` | 提供 `'contextCompressor'`：工具结果压缩中间件 + `context_retrieve` / `context_stats`（`conatus_context`） |
+| `ContentKind` / `ContentDetection` / `detectContent` / `ContentCompressor` / `CompressionBudget` / `CompressionDraft` | 内容类型、检测器、压缩器能力缝与预算（`conatus_context`） |
+| `CcrStore` / `CcrMemoryStore` / `CcrFileStore` / `contextCacheDir` / `ccrIdOf` / `CcrMarker` / `parseCcrMarker` | CCR 存储、默认目录、身份与 `<<ctx:ID ...>>` 标记协议 |
+| `JsonArrayCompressor` / `BuildLogCompressor` / `SearchResultsCompressor` / `DiffCompressor` / `TabularCompressor` / `TextCompressor` / `defaultContentCompressors` / `compressMessages` | 六类结构化压缩器、默认集合与非 Agent 消息入口 |
 | `provideIntentRouter(ctx, {router, embedder, intents, vectorThreshold, telemetry, session, fastPath})` / `ctx.intentRouter` / `IntentRouterAdapter` | 提供 `'intentRouter'`，并（缺省）接到 Agent Loop 的 `'router'` 快路径（`conatus_intent`） |
 | `Intent` / `RoutedAction`：`DirectAction` / `ToolAction` / `DelegateAction` / `RouteResult` / `RouteSource` / `RouteContext` / `IntentEvent` / `IntentException` | 意图与三种动作、路由结果、上下文、变更事件与错误 |
 | `RegexMatcher` / `VectorMatcher` / `orderByPriority` | 正则匹配 / 向量匹配 / priority 降序稳定排序 |

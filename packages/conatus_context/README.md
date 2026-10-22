@@ -27,9 +27,9 @@ provideContextCompression(app);
 // 文件型 CCR：跨进程可读，按配置保留 TTL
 provideContextCompression(app, dir: contextCacheDir());
 
-// 与落盘驱逐器配合：先压缩，压完仍超限再落盘
-provideContextCompression(app);
+// 与落盘驱逐器配合：先装驱逐器，再装压缩（后注册者在内层，先处理原始结果）
 provideToolResultEviction(app, threshold: 80000);
+provideContextCompression(app);
 ```
 
 装配后：

@@ -67,6 +67,12 @@ void main() {
     expect(await s.get(b), isNull);
     expect(await s.get(a), 'a');
     expect(await s.get(c), 'c');
+    final List<String> files = (await fs.listDir(await fs.resolve(tmp.path)))
+        .map((FsDirEntry entry) => entry.name)
+        .where((String name) => name.endsWith('.txt'))
+        .toList();
+    expect(files, containsAll(<String>['$a.txt', '$c.txt']));
+    expect(files, isNot(contains('$b.txt')));
   });
 
   test('clear 后条目与文件都消失', () async {

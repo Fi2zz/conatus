@@ -43,9 +43,13 @@ class SearchResultsCompressor implements ContentCompressor {
     final List<String> lines = splitTextLines(input);
     final Map<String, _FileGroup> groups = <String, _FileGroup>{};
     int total = 0;
+    int nonMatch = 0;
     for (int i = 0; i < lines.length; i++) {
       final RegExpMatch? match = _searchLine.firstMatch(lines[i]);
-      if (match == null) continue;
+      if (match == null) {
+        if (lines[i].trim().isNotEmpty) nonMatch++;
+        continue;
+      }
       final String path = match.group(1)!;
       groups.putIfAbsent(path, () => _FileGroup(path)).matches.add(
             _Match(i, lines[i], int.parse(match.group(2)!), match.group(3)!),
@@ -57,9 +61,12 @@ class SearchResultsCompressor implements ContentCompressor {
     final Set<int> selected = _mandatory(kept);
     _fill(kept, selected, budget.maxLines);
     final int omitted = total - selected.length;
+    final String body = _render(kept, groups, selected, total, usesCrlf(input));
     return CompressionDraft(
-      _render(kept, groups, selected, total, usesCrlf(input)),
-      itemsOmitted: omitted,
+      nonMatch > 0
+          ? '$body\n[... $nonMatch non-match lines omitted ...]'
+          : body,
+      itemsOmitted: omitted + nonMatch,
       unit: 'matches',
     );
   }

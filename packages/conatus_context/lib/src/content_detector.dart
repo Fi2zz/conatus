@@ -7,6 +7,7 @@ library;
 import 'dart:convert';
 
 import 'content_kind.dart';
+import 'text_lines.dart';
 
 /// 一次检测的结论。
 class ContentDetection {
@@ -29,6 +30,13 @@ class ContentDetection {
 /// 检测函数签名，便于注入替身。
 typedef Detector = ContentDetection Function(String input);
 
+class _Rule {
+  const _Rule(this.matches, this.detection);
+
+  final bool Function(String text) matches;
+  final ContentDetection detection;
+}
+
 /// 检测内容类型。
 ContentDetection detectContent(String input) {
   final String text = input.startsWith('\uFEFF') ? input.substring(1) : input;
@@ -36,35 +44,44 @@ ContentDetection detectContent(String input) {
     return const ContentDetection(ContentKind.passthrough,
         confidence: 1, signals: <String>['empty']);
   }
-  if (_looksGitStatus(text)) {
-    return const ContentDetection(ContentKind.passthrough,
-        confidence: 0.99, signals: <String>['git-status']);
-  }
-  if (_looksDiff(text)) {
-    return const ContentDetection(ContentKind.diff, signals: <String>['diff']);
-  }
-  if (_looksSearch(text)) {
-    return const ContentDetection(ContentKind.searchResults,
-        signals: <String>['grep']);
-  }
-  if (_looksBuildLog(text)) {
-    return const ContentDetection(ContentKind.buildLog,
-        signals: <String>['build-log']);
-  }
-  if (_looksJsonArray(text)) {
-    return const ContentDetection(ContentKind.jsonArray,
-        signals: <String>['json-array']);
-  }
-  if (_looksTabular(text)) {
-    return const ContentDetection(ContentKind.tabular,
-        signals: <String>['table']);
-  }
-  if (_looksSourceCode(text)) {
-    return const ContentDetection(ContentKind.sourceCode,
-        confidence: 0.7, signals: <String>['source-code']);
+  for (final _Rule rule in _rules) {
+    if (rule.matches(text)) return rule.detection;
   }
   return const ContentDetection(ContentKind.text);
 }
+
+const List<_Rule> _rules = <_Rule>[
+  _Rule(
+    _looksGitStatus,
+    ContentDetection(ContentKind.passthrough,
+        confidence: 0.99, signals: <String>['git-status']),
+  ),
+  _Rule(
+    _looksDiff,
+    ContentDetection(ContentKind.diff, signals: <String>['diff']),
+  ),
+  _Rule(
+    _looksSearch,
+    ContentDetection(ContentKind.searchResults, signals: <String>['grep']),
+  ),
+  _Rule(
+    _looksBuildLog,
+    ContentDetection(ContentKind.buildLog, signals: <String>['build-log']),
+  ),
+  _Rule(
+    _looksJsonArray,
+    ContentDetection(ContentKind.jsonArray, signals: <String>['json-array']),
+  ),
+  _Rule(
+    _looksTabular,
+    ContentDetection(ContentKind.tabular, signals: <String>['table']),
+  ),
+  _Rule(
+    _looksSourceCode,
+    ContentDetection(ContentKind.sourceCode,
+        confidence: 0.7, signals: <String>['source-code']),
+  ),
+];
 
 bool _looksGitStatus(String text) {
   final bool header =
@@ -90,7 +107,7 @@ final RegExp _searchLine = RegExp(r'^(\S.*?)[:\-](\d+)[:\-](.*)$');
 
 bool _looksSearch(String text) {
   int matches = 0;
-  for (final String line in text.split('\n')) {
+  for (final String line in splitTextLines(text)) {
     if (_searchLine.hasMatch(line)) matches++;
     if (matches >= 3) return true;
   }
@@ -105,14 +122,14 @@ bool _looksBuildLog(String text) {
       .hasMatch(text)) {
     return true;
   }
-  final List<String> lines = text.split('\n');
-  if (lines.length < 8) return false;
+  final List<String> lines = splitTextLines(text);
+  if (lines.length < 10) return false;
   final int leveled = lines
       .where((String line) =>
           RegExp(r'(^|\s)(FATAL|ERROR|FAIL|WARNING|WARN|INFO|DEBUG|TRACE)\b')
               .hasMatch(line))
       .length;
-  return leveled >= 2;
+  return leveled >= 3;
 }
 
 bool _looksJsonArray(String text) {
@@ -127,8 +144,7 @@ bool _looksJsonArray(String text) {
 }
 
 bool _looksTabular(String text) {
-  final List<String> lines = text
-      .split('\n')
+  final List<String> lines = splitTextLines(text)
       .where((String line) => line.trim().isNotEmpty)
       .take(20)
       .toList();
@@ -155,8 +171,9 @@ bool _consistentColumns(List<String> lines, String delimiter) {
 }
 
 bool _looksSourceCode(String text) {
-  final List<String> lines =
-      text.split('\n').where((String line) => line.trim().isNotEmpty).toList();
+  final List<String> lines = splitTextLines(text)
+      .where((String line) => line.trim().isNotEmpty)
+      .toList();
   if (lines.length < 3) return false;
   final int indented = lines
       .where((String line) => line.startsWith(' ') || line.startsWith('\t'))

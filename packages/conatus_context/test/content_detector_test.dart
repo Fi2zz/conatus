@@ -55,6 +55,25 @@ void main() {
     expect(detectContent(input).kind, ContentKind.searchResults);
   });
 
+  test('CRLF 搜索结果仍识别为 searchResults', () {
+    const String input = 'lib/a.dart:12:foo\r\n'
+        'lib/a.dart:13:bar\r\n'
+        'lib/a.dart:14:baz\r\n';
+    expect(detectContent(input).kind, ContentKind.searchResults);
+  });
+
+  test('8 行含两个信号词的散文不误判为 buildLog', () {
+    const String input = '第一行提到 ERROR 这个词\n'
+        '第二行提到 WARN 这个词\n'
+        '第三行是普通描述\n'
+        '第四行是普通描述\n'
+        '第五行是普通描述\n'
+        '第六行是普通描述\n'
+        '第七行是普通描述\n'
+        '第八行是普通描述\n';
+    expect(detectContent(input).kind, ContentKind.text);
+  });
+
   test('unified diff 识别为 diff', () {
     const String input = 'diff --git a/a.dart b/a.dart\n'
         '--- a/a.dart\n'

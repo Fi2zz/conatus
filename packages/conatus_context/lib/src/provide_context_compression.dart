@@ -15,6 +15,12 @@ import 'context_retrieval_tool.dart';
 import 'context_router.dart';
 import 'context_stats_tool.dart';
 
+/// 本包自有工具：它们的结果不再参与压缩，避免取回原文时被再次压缩。
+const Set<String> _selfTools = <String>{
+  'context_retrieve',
+  'context_stats',
+};
+
 /// 装配后的服务句柄。
 class ContextCompressionService {
   const ContextCompressionService({
@@ -42,8 +48,9 @@ extension ContextCompressionContext on Context {
 
 /// 装配上下文压缩，返回服务句柄。
 ///
-/// 中间件标签为 `contextCompression`。若同时使用
-/// `tool-result-eviction`，应先调用本函数、再装驱逐器，使压缩先执行。
+/// 中间件标签为 `contextCompression`。若同时使用 `tool-result-eviction`，
+/// 应先装驱逐器、再调用本函数：后注册的中间件在内层，压缩先处理工具原始结果，
+/// 压缩后仍超限的内容再由外层驱逐器落盘。
 ContextCompressionService provideContextCompression(
   Context ctx, {
   ContextCompressionConfig? config,
@@ -77,7 +84,9 @@ ContextCompressionService provideContextCompression(
         tag: 'contextCompression',
       ));
   if (resolved.ccrEnabled) {
-    ctx.effect(() => registry.register(ContextRetrievalTool(ccr)));
+    ctx.effect(() => registry.register(
+          ContextRetrievalTool(ccr, onHit: stats.countCcrHit),
+        ));
   }
   ctx.effect(() => registry.register(ContextStatsTool(stats)));
   return service;
@@ -110,6 +119,7 @@ Future<ToolResult> _compressResult(
   ContextCompressionConfig config,
 ) async {
   final ToolResult result = await next();
+  if (_selfTools.contains(call.name)) return result;
   if (!config.enabled) return result;
   if (result.isError && !config.compressToolErrors) return result;
   final ContextCompressionResult compressed = await router.compress(

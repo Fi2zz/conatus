@@ -16,6 +16,13 @@ final RegExp _summaryPattern = RegExp(
 final RegExp _stackFrame = RegExp(r'^\s+(?:File "|at |\.\.\. )');
 final RegExp _stackBar = RegExp(r'^\s+\|');
 
+class _Selection {
+  const _Selection(this.indices, this.omitted);
+
+  final Set<int> indices;
+  final int omitted;
+}
+
 /// 构建/测试日志压缩器。
 class BuildLogCompressor implements ContentCompressor {
   const BuildLogCompressor();
@@ -27,15 +34,19 @@ class BuildLogCompressor implements ContentCompressor {
   CompressionDraft? compress(String input, CompressionBudget budget) {
     final List<String> lines = splitTextLines(input);
     if (lines.length < 10) return null;
-    final bool crlf = usesCrlf(input);
+    final _Selection? selection = _select(lines, budget);
+    if (selection == null) return null;
+    return CompressionDraft(
+      _render(lines, selection.indices, selection.omitted, usesCrlf(input)),
+      itemsOmitted: selection.omitted,
+      unit: 'lines',
+    );
+  }
+
+  _Selection? _select(List<String> lines, CompressionBudget budget) {
     final Set<int> errors = <int>{};
     final Set<int> stacks = <int>{};
     final Set<int> summaries = <int>{};
-    final Set<int> warnings = _dedupedWarnings(lines);
-    final Set<int> droppedWarnings = <int>{
-      for (int i = 0; i < lines.length; i++)
-        if (_level(lines[i]) == 'WARN' && !warnings.contains(i)) i,
-    };
     for (int i = 0; i < lines.length; i++) {
       final String? level = _level(lines[i]);
       if (level == 'ERROR' || level == 'FATAL' || level == 'FAIL') {
@@ -44,6 +55,11 @@ class BuildLogCompressor implements ContentCompressor {
       if (_isStack(lines[i])) stacks.add(i);
       if (_summaryPattern.hasMatch(lines[i])) summaries.add(i);
     }
+    final Set<int> warnings = _dedupedWarnings(lines);
+    final Set<int> droppedWarnings = <int>{
+      for (int i = 0; i < lines.length; i++)
+        if (_level(lines[i]) == 'WARN' && !warnings.contains(i)) i,
+    };
     final Set<int> keep = <int>{
       ...errors,
       ...stacks,
@@ -53,24 +69,14 @@ class BuildLogCompressor implements ContentCompressor {
     if (keep.isEmpty) return null;
     final int maxLines =
         budget.conservative ? budget.maxLines ~/ 2 : budget.maxLines;
-    final Set<int> seeds = <int>{
-      ...errors,
-      ...stacks,
-      ...summaries,
-    };
     final Set<int> selected = _withContext(
       lines.length,
       keep,
-      seeds,
+      <int>{...errors, ...stacks, ...summaries},
       maxLines,
       budget.conservative ? 1 : 2,
     )..removeAll(droppedWarnings);
-    final int omitted = lines.length - selected.length;
-    return CompressionDraft(
-      _render(lines, selected, omitted, crlf),
-      itemsOmitted: omitted,
-      unit: 'lines',
-    );
+    return _Selection(selected, lines.length - selected.length);
   }
 
   Set<int> _dedupedWarnings(List<String> lines) {

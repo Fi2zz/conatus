@@ -70,6 +70,12 @@ void main() {
     expect(value['contextCompressed'], true);
     expect(value['ok'], true);
     expect(app.contextCompressor, isNotNull);
+    final String id = parseCcrMarker(r.content)!.id;
+    final ToolResult retrieved = await app.tools.call(ToolCall(
+        name: 'context_retrieve', arguments: <String, Object?>{'id': id}));
+    expect(retrieved.isError, false);
+    expect(retrieved.content, isNot(contains('<<ctx:')));
+    expect(app.contextCompressor!.stats.ccrHits, 1);
   });
 
   test('value 不是 Map 时不抛异常', () async {

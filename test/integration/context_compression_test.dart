@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:conatus/conatus.dart';
 import 'package:test/test.dart';
@@ -23,6 +24,52 @@ class _BigJsonTool extends Tool {
 }
 
 void main() {
+  test('先压缩，压缩后仍超限再落盘', () async {
+    final Directory dir = Directory.systemTemp.createTempSync('ctx_evict');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final Context app = Context.root();
+    provideTools(app);
+    provideFileSystemLocal(app);
+    app.effect(() => app.tools.register(_BigJsonTool()));
+    provideToolResultEviction(app, threshold: 500, dir: dir.path);
+    provideContextCompression(
+      app,
+      config: const ContextCompressionConfig(minChars: 100),
+    );
+    addTearDown(app.dispose);
+
+    final ToolResult result = await app.tools.call(
+      const ToolCall(name: 'big_json'),
+    );
+    expect(result.isError, false);
+    final Map<String, Object?> value = result.value! as Map<String, Object?>;
+    expect(value['spilled'], true);
+    final String spilled = File(value['path']! as String).readAsStringSync();
+    expect(spilled, contains('<<ctx:'));
+
+    final String id = parseCcrMarker(spilled)!.id;
+    final StringBuffer recovered = StringBuffer();
+    int offset = 0;
+    while (true) {
+      final ToolResult chunk = await app.tools.call(
+        ToolCall(
+          name: 'context_retrieve',
+          arguments: <String, Object?>{
+            'id': id,
+            'offset': offset,
+            'limit': 400,
+          },
+        ),
+      );
+      expect(chunk.isError, false);
+      recovered.write(chunk.content);
+      final Map<String, Object?> meta = chunk.value! as Map<String, Object?>;
+      if (meta['truncated'] != true) break;
+      offset = (meta['offset']! as int) + (meta['returned']! as int);
+    }
+    expect(jsonDecode(recovered.toString()), isA<List<dynamic>>());
+  });
+
   test('大 JSON 工具结果在进入模型前被压缩，且不变式成立', () async {
     final TestHarness harness = await TestHarness.create(
       llmScript: <LlmResult>[callTool('c1', 'big_json'), text('done')],

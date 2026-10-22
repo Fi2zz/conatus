@@ -9,10 +9,13 @@ import 'ccr_store.dart';
 
 /// 取回一条被压缩内容的原文。
 class ContextRetrievalTool extends Tool {
-  ContextRetrievalTool(this.store);
+  ContextRetrievalTool(this.store, {this.onHit});
 
   /// 原文存储。
   final CcrStore store;
+
+  /// 命中回调，供统计计数。
+  final void Function()? onHit;
 
   @override
   String get name => 'context_retrieve';
@@ -38,6 +41,7 @@ class ContextRetrievalTool extends Tool {
         error: const ToolError('ccr_miss', '未找到该 id 的原文'),
       );
     }
+    onHit?.call();
     final int offset = math.max(0, context.integer('offset') ?? 0);
     if (offset > content.length) {
       return ToolResult.failure(

@@ -7,11 +7,7 @@ import 'dart:math' as math;
 import '../ccr_marker.dart';
 import '../content_compressor.dart';
 import '../content_kind.dart';
-
-final RegExp _errorWords = RegExp(
-  r'error|fatal|fail|exception|timeout|denied|panic|stack',
-  caseSensitive: false,
-);
+import '../json_signals.dart';
 
 /// 顶层 JSON 数组压缩器。
 class JsonArrayCompressor implements ContentCompressor {
@@ -63,8 +59,8 @@ class JsonArrayCompressor implements ContentCompressor {
       ...deduped.take(2),
       ...deduped.skip(math.max(0, deduped.length - 2)),
       for (final int index in deduped)
-        if (_errorSignal(items[index])) index,
-      ..._outlierIndices(items),
+        if (jsonItemHasErrorSignal(items[index])) index,
+      ...jsonOutlierIndices(items),
     };
     final List<int> candidates =
         deduped.where((int index) => !keep.contains(index)).toList();
@@ -107,50 +103,6 @@ class JsonArrayCompressor implements ContentCompressor {
     }
     if (value is List<Object?>) return value.map(_canonical).toList();
     return value;
-  }
-
-  bool _errorSignal(Object? item) {
-    if (item is String) return _errorWords.hasMatch(item);
-    if (item is! Map<String, Object?>) return false;
-    for (final MapEntry<String, Object?> entry in item.entries) {
-      if (_errorWords.hasMatch(entry.key)) return true;
-      final Object? value = entry.value;
-      if (value is String && _errorWords.hasMatch(value)) return true;
-      if (value is num && _statusLike(entry.key) && value >= 400) return true;
-    }
-    return false;
-  }
-
-  bool _statusLike(String key) =>
-      key == 'status' || key.endsWith('Code') || key == 'code';
-
-  Set<int> _outlierIndices(List<Object?> items) {
-    final Map<String, List<({int index, double value})>> values =
-        <String, List<({int index, double value})>>{};
-    for (int i = 0; i < items.length; i++) {
-      final Object? item = items[i];
-      if (item is! Map<String, Object?>) continue;
-      for (final MapEntry<String, Object?> entry in item.entries) {
-        final Object? value = entry.value;
-        if (value is num && value.isFinite) {
-          values
-              .putIfAbsent(entry.key, () => <({int index, double value})>[])
-              .add((index: i, value: value.toDouble()));
-        }
-      }
-    }
-    final Set<int> outliers = <int>{};
-    for (final List<({int index, double value})> list in values.values) {
-      if (list.length < 20) continue;
-      final List<({int index, double value})> sorted = list.toList()
-        ..sort((a, b) => a.value.compareTo(b.value));
-      final double low = sorted[((sorted.length - 1) * 0.01).floor()].value;
-      final double high = sorted[((sorted.length - 1) * 0.99).floor()].value;
-      for (final ({int index, double value}) point in sorted) {
-        if (point.value < low || point.value > high) outliers.add(point.index);
-      }
-    }
-    return outliers;
   }
 
   int _depth(Object? value) {

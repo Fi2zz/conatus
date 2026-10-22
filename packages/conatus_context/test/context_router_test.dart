@@ -32,6 +32,29 @@ class _ThrowingCompressor implements ContentCompressor {
       throw StateError('boom');
 }
 
+class _ThrowingStore implements CcrStore {
+  @override
+  Future<String> put(String content) async => throw StateError('disk');
+
+  @override
+  Future<String?> get(String id) async => null;
+
+  @override
+  Future<CcrEntry?> stat(String id) async => null;
+
+  @override
+  Future<void> remove(String id) async {}
+
+  @override
+  Future<void> clear() async {}
+
+  @override
+  int get hits => 0;
+
+  @override
+  int get length => 0;
+}
+
 ContextRouter _router({
   Set<String> protectedTools = const <String>{},
   Set<ContentKind> disabledKinds = const <ContentKind>{},
@@ -102,6 +125,40 @@ void main() {
     final ContextRouter router =
         _router(compressors: <ContentCompressor>[_ThrowingCompressor()]);
     final String input = List<String>.filled(1000, 'x').join();
+    final ContextCompressionResult r =
+        await router.compress(input, toolName: 't');
+    expect(r.applied, false);
+    expect(r.content, input);
+    expect(r.skippedReason, 'error');
+    expect(router.stats.failures, 1);
+  });
+
+  test('检测器抛错时 fail-open', () async {
+    final ContextRouter router = ContextRouter(
+      config: const ContextCompressionConfig(minChars: 10),
+      store: CcrMemoryStore(),
+      detector: (String _) => throw StateError('detector'),
+      compressors: <ContentCompressor>[_FakeCompressor()],
+    );
+    final String input = List<String>.filled(100, 'x').join();
+    final ContextCompressionResult r =
+        await router.compress(input, toolName: 't');
+    expect(r.applied, false);
+    expect(r.content, input);
+    expect(r.skippedReason, 'error');
+    expect(router.stats.failures, 1);
+  });
+
+  test('CCR 存储抛错时 fail-open', () async {
+    final ContextRouter router = ContextRouter(
+      config: const ContextCompressionConfig(minChars: 10),
+      store: _ThrowingStore(),
+      compressors: <ContentCompressor>[
+        _FakeCompressor(kind: ContentKind.jsonArray),
+      ],
+    );
+    final String input = jsonEncode(
+        List<Map<String, Object?>>.filled(50, <String, Object?>{'a': 'b'}));
     final ContextCompressionResult r =
         await router.compress(input, toolName: 't');
     expect(r.applied, false);

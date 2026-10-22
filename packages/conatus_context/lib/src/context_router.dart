@@ -49,11 +49,31 @@ class ContextRouter {
   }) async {
     final String? gate = _gate(input, toolName);
     if (gate != null) return _skip(input, ContentKind.text, gate);
-    final ContentKind kind = detector(input).kind;
+    final ContentKind kind;
+    try {
+      kind = detector(input).kind;
+    } on Object {
+      stats.recordFailure(ContentKind.text);
+      return _skip(input, ContentKind.text, 'error');
+    }
     if (_kindDisabled(kind)) return _skip(input, kind, 'disabled');
     final ContentCompressor? compressor = _compressors[kind];
     if (compressor == null) return _skip(input, kind, 'disabled');
-    return _run(compressor, input, kind, conservative);
+    return _attempt(compressor, input, kind, conservative);
+  }
+
+  Future<ContextCompressionResult> _attempt(
+    ContentCompressor compressor,
+    String input,
+    ContentKind kind,
+    bool conservative,
+  ) async {
+    try {
+      return await _run(compressor, input, kind, conservative);
+    } on Object {
+      stats.recordFailure(kind);
+      return _skip(input, kind, 'error');
+    }
   }
 
   String? _gate(String input, String toolName) {

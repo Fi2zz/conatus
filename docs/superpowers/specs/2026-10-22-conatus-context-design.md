@@ -57,9 +57,9 @@ headroom 的实测收益集中在这些结构上（JSON 数组约 52–97%、构
           └─ 更早窗口：layered_compaction 折叠成指针
 ```
 
-中间件注册顺序按「先注册者在最外层」包裹：`provideContextCompression` 应在
-`provideToolResultEviction` **之前**注册，使压缩先执行、压完仍超限的结果再交给落盘。
-包内不强制，README 给出建议顺序与差异说明。
+中间件按「后注册者在内层」包裹：`provideContextCompression` 应在
+`provideToolResultEviction` **之后**注册。两者都在 `next()` 返回后处理，后注册的压缩器
+先拿到工具原始结果，压缩完再由外层的驱逐器按阈值落盘。包内不强制，README 给出建议顺序。
 
 ## 4. 架构
 
