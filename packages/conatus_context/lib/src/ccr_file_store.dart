@@ -157,8 +157,7 @@ class CcrFileStore implements CcrStore {
     if (_loaded) return;
     _loaded = true;
     try {
-      final String text =
-          await fs.readText(await _target('index.json'));
+      final String text = await fs.readText(await _target('index.json'));
       final Object? decoded = jsonDecode(text);
       if (decoded is! Map<String, Object?>) return;
       final Object? entries = decoded['entries'];

@@ -30,8 +30,7 @@ void main() {
   });
 
   test('目录不存在时按空存储启动，put 时创建', () async {
-    final CcrFileStore s =
-        CcrFileStore(fs: fs, dir: '${tmp.path}/missing');
+    final CcrFileStore s = CcrFileStore(fs: fs, dir: '${tmp.path}/missing');
     expect(s.length, 0);
     final String id = await s.put('x');
     expect(await s.get(id), 'x');

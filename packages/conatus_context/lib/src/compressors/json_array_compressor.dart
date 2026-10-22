@@ -36,7 +36,9 @@ class JsonArrayCompressor implements ContentCompressor {
     final List<Object?> output = <Object?>[
       for (final int index in selected) decoded[index],
     ];
-    if (omitted > 0) output.add(_note(decoded.first, omitted, budget.retrievalId));
+    if (omitted > 0) {
+      output.add(_note(decoded.first, omitted, budget.retrievalId));
+    }
     return CompressionDraft(
       jsonEncode(output),
       itemsOmitted: omitted,
@@ -140,12 +142,10 @@ class JsonArrayCompressor implements ContentCompressor {
     final Set<int> outliers = <int>{};
     for (final List<({int index, double value})> list in values.values) {
       if (list.length < 20) continue;
-      final List<({int index, double value})> sorted =
-          list.toList()..sort((a, b) => a.value.compareTo(b.value));
-      final double low =
-          sorted[((sorted.length - 1) * 0.01).floor()].value;
-      final double high =
-          sorted[((sorted.length - 1) * 0.99).floor()].value;
+      final List<({int index, double value})> sorted = list.toList()
+        ..sort((a, b) => a.value.compareTo(b.value));
+      final double low = sorted[((sorted.length - 1) * 0.01).floor()].value;
+      final double high = sorted[((sorted.length - 1) * 0.99).floor()].value;
       for (final ({int index, double value}) point in sorted) {
         if (point.value < low || point.value > high) outliers.add(point.index);
       }

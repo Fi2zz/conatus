@@ -67,7 +67,8 @@ void main() {
     final ContextRouter disabled =
         _router(disabledKinds: <ContentKind>{ContentKind.jsonArray});
     final ContextCompressionResult r = await disabled.compress(
-        jsonEncode(List<Map<String, Object?>>.filled(5, <String, Object?>{'a': 1})),
+        jsonEncode(
+            List<Map<String, Object?>>.filled(5, <String, Object?>{'a': 1})),
         toolName: 't');
     expect(r.skippedReason, 'disabled');
   });
@@ -82,12 +83,11 @@ void main() {
   });
 
   test('应用压缩时存入原文并注入标记', () async {
-    final ContextRouter router = _router(
-        compressors: <ContentCompressor>[
+    final ContextRouter router = _router(compressors: <ContentCompressor>[
       _FakeCompressor(kind: ContentKind.jsonArray),
     ]);
-    final String input =
-        jsonEncode(List<Map<String, Object?>>.filled(50, <String, Object?>{'a': 'b'}));
+    final String input = jsonEncode(
+        List<Map<String, Object?>>.filled(50, <String, Object?>{'a': 'b'}));
     final ContextCompressionResult r =
         await router.compress(input, toolName: 't');
     expect(r.applied, true);
@@ -113,9 +113,8 @@ void main() {
   test('收益不足回退原文', () async {
     final ContextRouter router =
         _router(compressors: <ContentCompressor>[_IdentityCompressor()]);
-    final ContextCompressionResult r = await router.compress(
-        List<String>.filled(1000, 'x').join(),
-        toolName: 't');
+    final ContextCompressionResult r = await router
+        .compress(List<String>.filled(1000, 'x').join(), toolName: 't');
     expect(r.applied, false);
     expect(r.skippedReason, 'noSaving');
   });
@@ -128,8 +127,8 @@ void main() {
         _FakeCompressor(kind: ContentKind.jsonArray),
       ],
     );
-    final String input =
-        jsonEncode(List<Map<String, Object?>>.filled(50, <String, Object?>{'a': 'b'}));
+    final String input = jsonEncode(
+        List<Map<String, Object?>>.filled(50, <String, Object?>{'a': 'b'}));
     final ContextCompressionResult r =
         await router.compress(input, toolName: 't');
     expect(r.applied, true);

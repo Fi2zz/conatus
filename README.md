@@ -7,7 +7,7 @@
 
 本仓库是一个 [pub workspace](https://dart.dev/tools/pub/workspaces) monorepo。
 **根包 `conatus` 是伞包（umbrella）**：自身不含实现，统一再导出 `packages/` 下的
-全部 23 个模块包，因此 `import 'package:conatus/conatus.dart';` 是完整公开 API；也可以
+全部 24 个模块包，因此 `import 'package:conatus/conatus.dart';` 是完整公开 API；也可以
 只依赖某个模块包（如 `conatus_core`、`conatus_agent`），以获得更小的依赖面。
 其中 9 个**实验性包**（API 可能随时变更）同样随伞包导出，生产环境依赖前
 见下方「实验性包」小节与各包 README。
@@ -75,6 +75,7 @@ make clean      # 删除 packages/conatus_code/dist
 | `conatus_alerting` | 告警：订阅遥测事件流，声明式规则判定后主动通知 | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_tts`、`http` | [README](packages/conatus_alerting/README.md) |
 | `conatus_browser_use` | 浏览器操作：经 MCP 接 Playwright / Chrome DevTools，检查与交互网页 | `conatus_agent`、`conatus_core`、`conatus_credentials`、`conatus_foundation`、`conatus_mcp`、`conatus_tasks` | [README](packages/conatus_browser_use/README.md) |
 | `conatus_computer_use` | 桌面操作：经 MCP 接 Cua Driver，截屏 / 鼠标 / 键盘 | `conatus_agent`、`conatus_core`、`conatus_credentials`、`conatus_foundation`、`conatus_mcp`、`conatus_tasks` | [README](packages/conatus_computer_use/README.md) |
+| `conatus_context` | 上下文压缩：工具结果按内容类型结构化压缩 + CCR 可逆取回（`context_retrieve` / `context_stats`） | `conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_context/README.md) |
 | `conatus_doc` | 文档补丁引擎：人机双写故事层数据内核（只追加补丁序列 + supersede + fold + 游标 + 依赖图失锚） | `conatus_core`、`conatus_foundation` | [README](packages/conatus_doc/README.md) |
 | `conatus_intent` | 意图路由：正则 + 向量本地匹配，命中走确定性动作，未命中落回 Agent Loop | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_intent/README.md) |
 | `conatus_observability` | 可观测性导出器：span 语义 + 从 Session Log 派生 trace | `conatus_agent`、`conatus_foundation` | [README](packages/conatus_observability/README.md) |
@@ -139,14 +140,14 @@ conatus_ontology ──▶ conatus_agent、conatus_llm、conatus_foundation
 - 🗜️ **分层压缩与缓存度量**：`content-classifier`（内容分类器能力缝）、`layered-compaction`（按类别分层折叠：工具结果压成指针、用户偏好留原文）、`context-cache`（可缓存前缀指纹 + 命中遥测）
 - 🔭 **产品化**：`telemetry`（事件导出 + 埋点）、`evaluation`（用例评估 + 基线对比）、`approval`（高危工具审批）、`skill`（技能沉淀）、`skill-catalog`（技能加载：发现 `SKILL.md` 指令集 + 目录注入 + `skill` 工具）、`recovery`（会话快照恢复）
 - 🕹️ **实验性能力包**（API 可能破坏性变更）：`alerting`（订阅遥测按规则主动告警）、`browser_use` / `computer_use`（经 MCP 驱动浏览器与本地桌面）、`doc`（人机双写文档补丁引擎：只追加补丁序列 + supersede + fold + 游标）、`team`（多智能体协作：任务板 + 成员运行时）、`workflow`（把协作沉淀为声明式流程资产）、`observability`（span 语义 + 从 Session Log 派生 trace）、`ontology`（自进化本体层：Term / Mapping / Constraint / Evidence）
-- ✅ **完整测试覆盖**：1627 个测试（23 个模块包 + 根包与集成，CI 全量执行）
+- ✅ **完整测试覆盖**：24 个模块包 + 根包与集成测试，CI 全量执行
 
 ---
 
 ## 安装
 
 全部 24 个包均为 `publish_to: none`，**不经 pub.dev 分发**（也从未发布过）。
-以 git 源依赖伞包 `conatus`，一次性获得全部 23 个子包——伞包与各子包之间
+以 git 源依赖伞包 `conatus`，一次性获得全部 24 个子包——伞包与各子包之间
 一律是 path 依赖，随仓库自洽解析，**不需要任何 `dependency_overrides`**：
 
 ```yaml

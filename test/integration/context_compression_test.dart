@@ -15,20 +15,17 @@ class _BigJsonTool extends Tool {
 
   @override
   Future<ToolResult> call(ToolContext context) async => ToolResult.success(
-        jsonEncode(<Map<String, Object?>>[
-          for (int i = 0; i < 300; i++)
-            <String, Object?>{'id': i, 'status': i == 7 ? 500 : 200},
-        ]),
-      );
+    jsonEncode(<Map<String, Object?>>[
+      for (int i = 0; i < 300; i++)
+        <String, Object?>{'id': i, 'status': i == 7 ? 500 : 200},
+    ]),
+  );
 }
 
 void main() {
   test('大 JSON 工具结果在进入模型前被压缩，且不变式成立', () async {
     final TestHarness harness = await TestHarness.create(
-      llmScript: <LlmResult>[
-        callTool('c1', 'big_json'),
-        text('done'),
-      ],
+      llmScript: <LlmResult>[callTool('c1', 'big_json'), text('done')],
       configure: (Context app, Session session) {
         app.effect(() => app.tools.register(_BigJsonTool()));
         provideSessionLogRecorder(app);

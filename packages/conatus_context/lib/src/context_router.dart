@@ -150,8 +150,8 @@ class ContextRouter {
     ContentKind kind,
     String reason,
   ) {
-    final ContextCompressionResult result =
-        ContextCompressionResult.skipped(input: input, kind: kind, reason: reason);
+    final ContextCompressionResult result = ContextCompressionResult.skipped(
+        input: input, kind: kind, reason: reason);
     stats.record(result);
     return result;
   }

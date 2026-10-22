@@ -71,10 +71,9 @@ class SearchResultsCompressor implements ContentCompressor {
     final List<_FileGroup> sorted = groups.values.toList()
       ..sort((_FileGroup a, _FileGroup b) =>
           b.matches.length.compareTo(a.matches.length));
-    final List<_FileGroup> kept =
-        sorted.take(math.max(1, maxFiles)).toList()
-          ..sort((_FileGroup a, _FileGroup b) =>
-              a.matches.first.index.compareTo(b.matches.first.index));
+    final List<_FileGroup> kept = sorted.take(math.max(1, maxFiles)).toList()
+      ..sort((_FileGroup a, _FileGroup b) =>
+          a.matches.first.index.compareTo(b.matches.first.index));
     return kept;
   }
 
@@ -119,7 +118,9 @@ class SearchResultsCompressor implements ContentCompressor {
         output.add(match.line);
       }
       final int hidden = group.matches.length - picked.length;
-      if (hidden > 0) output.add('[... $hidden more matches in ${group.path} ...]');
+      if (hidden > 0) {
+        output.add('[... $hidden more matches in ${group.path} ...]');
+      }
     }
     int droppedFiles = 0;
     int droppedMatches = 0;

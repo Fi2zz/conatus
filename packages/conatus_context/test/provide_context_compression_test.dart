@@ -24,7 +24,8 @@ class _EchoTool extends Tool {
 
   @override
   Future<ToolResult> call(ToolContext context) async =>
-      ToolResult.success(context.str('text'), value: <String, Object?>{'ok': true});
+      ToolResult.success(context.str('text'),
+          value: <String, Object?>{'ok': true});
 }
 
 class _ListValueTool extends Tool {

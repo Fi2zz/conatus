@@ -32,8 +32,7 @@ class TabularCompressor implements ContentCompressor {
     ];
     final int omitted = table.rows.length - selected.length;
     final String marker = '[... $omitted rows omitted ...]';
-    final int insertAt =
-        table.header.length + math.max(0, selected.length - 2);
+    final int insertAt = table.header.length + math.max(0, selected.length - 2);
     output.insert(insertAt, marker);
     return CompressionDraft(
       joinTextLines(output, crlf: usesCrlf(input)),

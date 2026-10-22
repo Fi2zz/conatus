@@ -29,7 +29,8 @@ void main() {
   test('offset 与 limit 正确切片，越界不崩溃', () async {
     final String id = await store.put('abcdefghij');
     expect(
-      (await call(<String, Object?>{'id': id, 'offset': 2, 'limit': 3})).content,
+      (await call(<String, Object?>{'id': id, 'offset': 2, 'limit': 3}))
+          .content,
       'cde',
     );
     expect(

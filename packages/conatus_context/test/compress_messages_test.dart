@@ -15,8 +15,8 @@ void main() {
         LlmMessage('user', List<String>.filled(1000, 'x').join()),
         LlmMessage(
           'tool',
-          jsonEncode(
-              List<Map<String, Object?>>.filled(50, <String, Object?>{'a': 'b'})),
+          jsonEncode(List<Map<String, Object?>>.filled(
+              50, <String, Object?>{'a': 'b'})),
           toolCallId: 'c1',
         ),
       ],

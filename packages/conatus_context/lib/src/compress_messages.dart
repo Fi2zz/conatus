@@ -21,7 +21,8 @@ Future<List<LlmMessage>> compressMessages(
   Set<String> roles = const <String>{'tool'},
 }) async {
   if (messages.isEmpty) return messages;
-  final ContextCompressionConfig resolved = config ?? const ContextCompressionConfig();
+  final ContextCompressionConfig resolved =
+      config ?? const ContextCompressionConfig();
   final ContextRouter router = ContextRouter(
     config: resolved,
     store: store ??

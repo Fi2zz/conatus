@@ -67,9 +67,9 @@ ContentDetection detectContent(String input) {
 }
 
 bool _looksGitStatus(String text) {
-  final bool header = RegExp(r'^(On branch |HEAD detached |nothing to commit)',
-          multiLine: true)
-      .hasMatch(text);
+  final bool header =
+      RegExp(r'^(On branch |HEAD detached |nothing to commit)', multiLine: true)
+          .hasMatch(text);
   final bool section = RegExp(
           r'^(Changes to be committed|Changes not staged for commit|Untracked files):',
           multiLine: true)
@@ -86,8 +86,7 @@ bool _looksDiff(String text) {
   return signals >= 2;
 }
 
-final RegExp _searchLine =
-    RegExp(r'^(\S.*?)[:\-](\d+)[:\-](.*)$');
+final RegExp _searchLine = RegExp(r'^(\S.*?)[:\-](\d+)[:\-](.*)$');
 
 bool _looksSearch(String text) {
   int matches = 0;
@@ -99,7 +98,8 @@ bool _looksSearch(String text) {
 }
 
 bool _looksBuildLog(String text) {
-  if (RegExp(r'^(=== FAILURES ===|npm ERR!|error\[E\d+\]|make: \*\*\*|'
+  if (RegExp(
+          r'^(=== FAILURES ===|npm ERR!|error\[E\d+\]|make: \*\*\*|'
           r'Traceback \(most recent call last\)|PASS |FAIL )',
           multiLine: true)
       .hasMatch(text)) {
@@ -108,9 +108,9 @@ bool _looksBuildLog(String text) {
   final List<String> lines = text.split('\n');
   if (lines.length < 8) return false;
   final int leveled = lines
-      .where((String line) => RegExp(
-              r'(^|\s)(FATAL|ERROR|FAIL|WARNING|WARN|INFO|DEBUG|TRACE)\b')
-          .hasMatch(line))
+      .where((String line) =>
+          RegExp(r'(^|\s)(FATAL|ERROR|FAIL|WARNING|WARN|INFO|DEBUG|TRACE)\b')
+              .hasMatch(line))
       .length;
   return leveled >= 2;
 }
@@ -158,9 +158,9 @@ bool _looksSourceCode(String text) {
   final List<String> lines =
       text.split('\n').where((String line) => line.trim().isNotEmpty).toList();
   if (lines.length < 3) return false;
-  final int indented =
-      lines.where((String line) => line.startsWith(' ') || line.startsWith('\t'))
-          .length;
+  final int indented = lines
+      .where((String line) => line.startsWith(' ') || line.startsWith('\t'))
+      .length;
   if (indented / lines.length < 0.3) return false;
   int categories = 0;
   if (RegExp(r'\b(class|interface|enum|mixin|abstract)\b').hasMatch(text)) {

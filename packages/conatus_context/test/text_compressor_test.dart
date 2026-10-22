@@ -28,13 +28,15 @@ void main() {
   });
 
   test('收益不足返回 null', () {
-    final String input = List<String>.generate(
-        20, (int i) => 'path=/tmp/project/file$i.dart').join('\n');
+    final String input =
+        List<String>.generate(20, (int i) => 'path=/tmp/project/file$i.dart')
+            .join('\n');
     expect(const TextCompressor().compress(input, budget), isNull);
   });
 
   test('连续空行折叠', () {
-    final String input = 'head\n\n\n\n\ntail\n${List<String>.filled(100, 'x').join('\n')}';
+    final String input =
+        'head\n\n\n\n\ntail\n${List<String>.filled(100, 'x').join('\n')}';
     final CompressionDraft d = const TextCompressor().compress(input, budget)!;
     expect(d.output, isNot(contains('\n\n\n')));
   });

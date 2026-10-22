@@ -18,8 +18,7 @@ class ContextRetrievalTool extends Tool {
   String get name => 'context_retrieve';
 
   @override
-  String get description =>
-      '取回被压缩内容的原文。看到形如 <<ctx:ID N_items_omitted>> 的标记时，'
+  String get description => '取回被压缩内容的原文。看到形如 <<ctx:ID N_items_omitted>> 的标记时，'
       '用这里的 id 读取；可用 offset/limit 分段读取，避免一次取回过多内容。';
 
   @override
@@ -47,8 +46,7 @@ class ContextRetrievalTool extends Tool {
       );
     }
     final int requested = context.integer('limit') ?? 40000;
-    final int limit =
-        requested <= 0 || requested > 40000 ? 40000 : requested;
+    final int limit = requested <= 0 || requested > 40000 ? 40000 : requested;
     final int end = math.min(content.length, offset + limit);
     final String part = content.substring(offset, end);
     return ToolResult.success(

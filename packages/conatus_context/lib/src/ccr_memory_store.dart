@@ -110,6 +110,5 @@ class CcrMemoryStore implements CcrStore {
     }
   }
 
-  bool _expired(_MemoryEntry entry) =>
-      _now().difference(entry.createdAt) > ttl;
+  bool _expired(_MemoryEntry entry) => _now().difference(entry.createdAt) > ttl;
 }
