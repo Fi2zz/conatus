@@ -462,8 +462,9 @@ Expected: 编译失败，`storyEnabled` 参数不存在。
       await provideStory(ctx, sessionId: id, session: session, review: true);
     }
     _agent = ctx.agentLoop;
-    _agent?.steering = _takeQueuedForSteering;
 ```
+
+（steering 接线 `_agent?.steering = ...` 在 Task 7 完成——本任务先不引入尚未定义的方法。）
 
 - `_handleStory` 开头：
 
