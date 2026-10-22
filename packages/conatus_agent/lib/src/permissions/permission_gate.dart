@@ -5,6 +5,10 @@
 /// hooks / 驱逐 / lint / story 都只能看到被放行的调用；会话切换只替换
 /// [PermissionScopeSlot]，不重挂中间件。
 ///
+/// 遥测：ask 流程发 `permission.requested` / `permission.decided`（替代旧的
+/// `approval.requested` / `approval.decided`；旧事件仍由 `instrumentApproval`
+/// 在非 inherit 子代理的兼容路径发出）。
+///
 /// 零配置兼容：没有任何规则命中时按 [PermissionScope.askThreshold] 回退到旧
 /// 审批行为，且（仅在交互模式下）声明了 `Tool.pathParams` 的低风险工具仍会
 /// 询问——这正是目录信任的落点，由 [Approval.preapproved] 决定是否免打扰。
@@ -84,7 +88,8 @@ class _PermissionGate {
     if (tool == null) return next();
     final PermissionDecision decision = PermissionEvaluator(
       interactive: interactive,
-      workdir: ctx.get<String>('workdir'),
+      workdir: ctx.get<String>('permissionWorkdir') ??
+          ctx.get<String>('workdir'),
     ).evaluate(tool, call, slot.current);
     if (decision.effect == PermissionEffect.allow) return next();
     if (decision.effect == PermissionEffect.deny) return _denied(decision);

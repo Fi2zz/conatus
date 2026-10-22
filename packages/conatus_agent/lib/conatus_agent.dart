@@ -134,7 +134,8 @@ export 'src/permissions/permission_path.dart'
     show
         normalizePermissionPath,
         permissionDirectoryBoundary,
-        permissionPathUnder;
+        permissionPathUnder,
+        resolvePermissionPath;
 export 'src/permissions/permission_rule.dart' show PermissionRule;
 export 'src/permissions/permission_scope.dart' show PermissionScope;
 export 'src/permissions/permission_scope_slot.dart'
@@ -230,7 +231,11 @@ export 'src/sub_agent.dart'
         kDefaultSubAgentPrompt,
         provideSpawnAgent;
 export 'src/sub_agent_permission.dart'
-    show SubAgentPermission, parseSubAgentPermission, tightenBelow;
+    show
+        SubAgentPermission,
+        applySubAgentPermission,
+        parseSubAgentPermission,
+        tightenBelow;
 export 'src/sub_agent_progress.dart'
     show
         ProgressTool,

@@ -1,8 +1,9 @@
 /// 权限匹配用的路径规范化与工作区边界判定。
 ///
 /// 匹配器只做字符串通配，因此路径必须在进入引擎前统一：展开 `~`、把 `\` 归一
-/// 为 `/`、折叠 `.` / `..` 与重复分隔符。符号链接不在此层解析（避免在纯规则
-/// 层引入 IO；需要真实路径时由 fs 接缝负责）。
+/// 为 `/`、折叠 `.` / `..` 与重复分隔符。相对路径在判定工作区边界时按 workdir
+/// 解析（`../../etc/passwd` 因此不能伪装成「工作区内」）。符号链接不在此层
+/// 解析（纯规则层不做 IO；需要真实路径时由 fs 接缝负责）。
 library;
 
 import 'dart:io';
@@ -11,35 +12,30 @@ import 'dart:io';
 String normalizePermissionPath(String path, {Map<String, String>? env}) {
   String value = path.trim().replaceAll('\\', '/');
   value = _expandHome(value, env);
-  final RegExp drive = RegExp(r'^([A-Za-z]:)');
-  final String? drivePrefix = drive.firstMatch(value)?.group(1);
-  if (drivePrefix != null) value = value.substring(drivePrefix.length);
+  final RegExpMatch? drive = RegExp(r'^([A-Za-z]:)').firstMatch(value);
+  final String drivePrefix = drive?.group(1) ?? '';
+  if (drivePrefix.isNotEmpty) value = value.substring(drivePrefix.length);
   final bool absolute = value.startsWith('/');
-  final List<String> parts = <String>[];
-  for (final String part in value.split('/')) {
-    if (part.isEmpty || part == '.') continue;
-    if (part == '..') {
-      if (parts.isNotEmpty && parts.last != '..') {
-        parts.removeLast();
-      } else if (!absolute) {
-        parts.add(part);
-      }
-      continue;
-    }
-    parts.add(part);
-  }
+  final List<String> parts = _collapse(value, absolute);
   final String joined = parts.join('/');
-  final String base = drivePrefix ?? '';
-  if (absolute) return '$base/$joined';
-  return joined.isEmpty ? base : '$base$joined';
+  if (absolute) return '$drivePrefix/$joined';
+  return joined.isEmpty ? drivePrefix : '$drivePrefix$joined';
 }
 
-/// [path] 是否在 [workdir] 之内（相对路径视为在工作区内）。
+/// 把相对路径按 [workdir] 解析成绝对路径；绝对路径原样规范化。
+String resolvePermissionPath(String path, String workdir) {
+  final String normalized = normalizePermissionPath(path);
+  if (_absolute(normalized)) return normalized;
+  final String root = normalizePermissionPath(workdir);
+  if (root.isEmpty) return normalized;
+  return normalizePermissionPath('$root/$normalized');
+}
+
+/// [path] 是否在 [workdir] 之内；相对路径先按 workdir 解析。
 bool permissionPathUnder(String path, String workdir) {
-  final String candidate = normalizePermissionPath(path);
-  if (!_absolute(candidate)) return true;
   final String root = normalizePermissionPath(workdir);
   if (root.isEmpty) return true;
+  final String candidate = resolvePermissionPath(path, root);
   final String left = _fold(candidate);
   final String right = _fold(root);
   if (left == right) return true;
@@ -56,11 +52,26 @@ String permissionDirectoryBoundary(String path) {
   return '${normalized.substring(0, cut)}/*';
 }
 
+/// 折叠 `.` / `..` / 空段。
+List<String> _collapse(String value, bool absolute) {
+  final List<String> parts = <String>[];
+  for (final String part in value.split('/')) {
+    if (part.isEmpty || part == '.') continue;
+    if (part == '..' && parts.isNotEmpty && parts.last != '..') {
+      parts.removeLast();
+    } else if (part == '..' && !absolute) {
+      parts.add(part);
+    } else if (part != '..') {
+      parts.add(part);
+    }
+  }
+  return parts;
+}
+
 String _expandHome(String value, Map<String, String>? env) {
   if (value != '~' && !value.startsWith('~/')) return value;
   final Map<String, String> source = env ?? Platform.environment;
-  final String home =
-      source['HOME'] ?? source['USERPROFILE'] ?? '';
+  final String home = source['HOME'] ?? source['USERPROFILE'] ?? '';
   if (home.isEmpty) return value;
   return '${home.replaceAll('\\', '/')}/${value.substring(1)}';
 }

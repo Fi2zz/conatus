@@ -89,7 +89,7 @@ class PermissionEvaluator {
     final Set<String> boundaries = <String>{
       for (final String path in input.paths)
         if (!permissionPathUnder(path, root))
-          permissionDirectoryBoundary(path),
+          permissionDirectoryBoundary(resolvePermissionPath(path, root)),
     };
     if (boundaries.isEmpty) return null;
     return engine.evaluate(

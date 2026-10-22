@@ -2,7 +2,10 @@
 ///
 /// 支持两种头：
 /// - `*** Add File:` / `*** Update File:` / `*** Delete File:` / `*** Move to:`
-/// - 统一 diff 的 `--- a/` / `+++ b/`（`/dev/null` 侧退回另一侧）
+/// - 统一 diff 的 `--- a/` / `+++ b/`
+///
+/// 统一 diff 的**两侧路径都保留**：工具实际写入的是 `---` 侧（见 `diff_parse.dart`
+/// 与 `apply_patch.dart`），只取 `+++` 会让针对旧路径的 deny 规则被绕过。
 ///
 /// 提取结果规范化并去重；解析不出任何路径时返回空列表（调用方落回 `*`）。
 library;
@@ -28,13 +31,14 @@ List<String> permissionPatchPaths(String patch) {
       _add(paths, headerPath);
       continue;
     }
-    if (line.startsWith('+++ ')) {
-      oldPath = _addUnifiedSide(paths, line.substring(4).trim(), oldPath);
-      continue;
-    }
     if (line.startsWith('--- ')) {
       if (oldPath != null) _add(paths, oldPath);
-      oldPath = _stripPrefix(line.substring(4).trim());
+      oldPath = _unifiedPath(line.substring(4));
+      continue;
+    }
+    if (line.startsWith('+++ ')) {
+      _addUnifiedPair(paths, line.substring(4), oldPath);
+      oldPath = null;
     }
   }
   if (oldPath != null) _add(paths, oldPath);
@@ -52,19 +56,16 @@ String? _headerPath(String line) {
   return null;
 }
 
-/// 处理统一 diff 的 `+++` 侧；返回新的「旧侧待定路径」。
-String? _addUnifiedSide(
-  List<String> paths,
-  String value,
-  String? oldPath,
-) {
-  if (value == '/dev/null') return oldPath;
-  _add(paths, _stripPrefix(value));
-  return null;
+/// 统一 diff：新侧与旧侧都计入（`/dev/null` 侧跳过）。
+void _addUnifiedPair(List<String> paths, String rawNew, String? oldPath) {
+  final String newPath = _unifiedPath(rawNew);
+  if (newPath != '/dev/null') _add(paths, newPath);
+  if (oldPath != null) _add(paths, oldPath);
 }
 
 /// 去掉 git 的 `a/` / `b/` 前缀。
-String _stripPrefix(String value) {
+String _unifiedPath(String raw) {
+  final String value = raw.trim();
   if (value.startsWith('a/') || value.startsWith('b/')) {
     return value.substring(2);
   }

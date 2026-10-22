@@ -72,15 +72,17 @@ List<String> permissionPathsFor(ToolCall call, List<String> pathArgs) {
 /// - `read` / `edit`：规范化路径；`apply_patch` 解析补丁内每个目标路径，
 ///   解析不出时落回 `*`；
 /// - `glob`：请求的 pattern；
+/// - `grep`：请求的 pattern（`rg` 的搜索表达式）；
 /// - `skill`：请求的技能 id（参数 `name`）；
-/// - shell / web / subagent：命令 / URL / 查询词 / agent id；
+/// - shell / web / subagent：命令 / URL / 查询词 / agent id（缺省 `default`，
+///   `SpawnAgentTool` 目前没有 agent 参数，保留该约定供未来扩展）；
 /// - 其余（含 MCP、question）：`*`。空值同样落回 `*`。
 List<String> permissionResourcesFor(
   ToolCall call,
   List<String> pathArgs,
 ) {
   final String action = permissionActionFor(call.name);
-  if (action == 'glob') {
+  if (action == 'glob' || action == 'grep') {
     return <String>[_stringArgument(call.arguments, 'pattern') ?? '*'];
   }
   if (action == 'read' || action == 'edit') {

@@ -9,7 +9,11 @@ import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 
 import 'approval.dart';
-import 'approval_gate.dart';
+import 'approval_gate.dart' show kApprovalMiddlewareTag;
+import 'permissions/permission_gate.dart';
+import 'permissions/permission_rule.dart';
+import 'permissions/permission_scope.dart';
+import 'permissions/permission_scope_slot.dart';
 
 /// 子代理权限模式。
 enum SubAgentPermission {
@@ -63,6 +67,10 @@ SubAgentPermission tightenBelow(SubAgentPermission base, String? requested) {
 /// 根上下文的 `instrumentPermission` 也打同一个 tag，因此这条排除同时覆盖
 /// 「权限 + 审批」两层；[SubAgentPermission.inherit] 的子代理才会复用宿主
 /// 作用域（`PermissionScopeSlot`）与其规则。
+///
+/// 非 inherit 档不再只靠 readonly guard / 审批层：会装一个**子权限中间件**，
+/// 把宿主规则原样带过去（host deny 不下放），再按模式收紧阈值：
+/// readonly / auto → 不询问（readonly 另有风险守卫），ask → 阈值 low。
 void applySubAgentPermission(
   Context child,
   ToolRegistry childTools,
@@ -71,25 +79,47 @@ void applySubAgentPermission(
 }) {
   switch (mode) {
     case SubAgentPermission.inherit:
-    case SubAgentPermission.auto:
       return;
+    case SubAgentPermission.auto:
+      _installChildPermission(child, childTools, mode, gate);
     case SubAgentPermission.readonly:
       childTools.guard(_readonlyGuard(childTools));
+      _installChildPermission(child, childTools, mode, gate);
     case SubAgentPermission.ask:
-      final Approval? approver = gate;
-      if (approver == null) {
+      if (gate == null) {
         // 无人可问（headless 无审批服务）：按只读处理，而不是把所有子工具都
         // 静默拒掉——「无法确认」不等于「什么都不能做」，低风险读取照常。
         childTools.guard(_readonlyGuard(childTools));
+        _installChildPermission(child, childTools, SubAgentPermission.readonly, null);
         return;
       }
-      instrumentApproval(
-        child,
-        tools: childTools,
-        approval: approver,
-        threshold: ToolRisk.low,
-      );
+      _installChildPermission(child, childTools, mode, gate);
   }
+}
+
+/// 装子代理自己的权限中间件：宿主规则 + 按模式收紧的兜底阈值。
+void _installChildPermission(
+  Context child,
+  ToolRegistry childTools,
+  SubAgentPermission mode,
+  Approval? gate,
+) {
+  final PermissionScope? host = child
+      .get<PermissionScopeSlot>(kPermissionScopeService)
+      ?.current;
+  final ToolRisk? threshold =
+      mode == SubAgentPermission.ask ? ToolRisk.low : null;
+  instrumentPermission(
+    child,
+    tools: childTools,
+    scope: PermissionScopeSlot(PermissionScope(
+      rules: host?.rules ?? const <PermissionRule>[],
+      askThreshold: threshold,
+      agentId: host?.agentId ?? 'build',
+    )),
+    approval: gate,
+    interactive: gate != null,
+  );
 }
 
 /// 只读守卫：非 low 风险工具一律拒绝。

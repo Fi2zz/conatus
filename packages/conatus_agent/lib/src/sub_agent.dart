@@ -129,6 +129,8 @@ class SpawnAgentTool extends Tool {
   @override
   String get description => '把一个自包含的子任务委托给独立的子 Agent 执行，只回结论。';
 
+  /// 权限动作是 `subagent`；本工具没有单独的 agent id 参数，权限资源固定为
+  /// `default`（见 `permission_action.dart`）。
   @override
   ToolRisk get riskLevel => ToolRisk.medium;
 
