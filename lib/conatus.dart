@@ -1,7 +1,7 @@
 /// 时空可组合性（Spatiotemporal Composability）编程范式的 Dart 实现。
 ///
 /// 本包是 monorepo 的**伞包（umbrella）**：自身不含实现，单入口再导出全部
-/// 23 个模块包（14 个稳定包 + 9 个实验性包），
+/// 24 个模块包（14 个稳定包 + 10 个实验性包），
 /// 使 `import 'package:conatus/conatus.dart';` 即完整公开 API。
 /// 实验性包 API 可能破坏性变更，生产依赖前见各包 README。
 ///
@@ -45,6 +45,7 @@ export 'package:conatus_asr/conatus_asr.dart';
 export 'package:conatus_browser_use/conatus_browser_use.dart';
 export 'package:conatus_compaction/conatus_compaction.dart';
 export 'package:conatus_computer_use/conatus_computer_use.dart';
+export 'package:conatus_context/conatus_context.dart';
 export 'package:conatus_core/conatus_core.dart';
 export 'package:conatus_credentials/conatus_credentials.dart';
 export 'package:conatus_cron/conatus_cron.dart';

@@ -27,6 +27,7 @@ dependencies:
   conatus_browser_use: {path: packages/conatus_browser_use}
   conatus_compaction: {path: packages/conatus_compaction}
   conatus_computer_use: {path: packages/conatus_computer_use}
+  conatus_context: {path: packages/conatus_context}
   conatus_core: {path: packages/conatus_core}
   conatus_credentials: {path: packages/conatus_credentials}
   conatus_cron: {path: packages/conatus_cron}
