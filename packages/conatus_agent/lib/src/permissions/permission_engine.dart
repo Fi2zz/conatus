@@ -57,12 +57,12 @@ class PermissionEngine {
       rule: deciding,
     );
   }
+}
 
-  /// 无规则命中时的兜底：阈值缺省全放行，否则按风险等级比较。
-  PermissionEffect _fallbackEffect(ToolRisk risk, ToolRisk? threshold) {
-    if (threshold == null) return PermissionEffect.allow;
-    return risk.index >= threshold.index
-        ? PermissionEffect.ask
-        : PermissionEffect.allow;
-  }
+/// 无规则命中时的兜底：阈值缺省全放行，否则按风险等级比较。
+PermissionEffect _fallbackEffect(ToolRisk risk, ToolRisk? threshold) {
+  if (threshold == null) return PermissionEffect.allow;
+  return risk.index >= threshold.index
+      ? PermissionEffect.ask
+      : PermissionEffect.allow;
 }

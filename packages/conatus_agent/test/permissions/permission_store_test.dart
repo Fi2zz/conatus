@@ -161,6 +161,47 @@ void main() {
     expect(await store.load(), hasLength(1));
   });
 
+  test('损坏文件上 add 抛异常且原文件字节不变', () async {
+    const String original = '{"version":1,"rules":[broken';
+    await File(path).writeAsString(original);
+
+    await expectLater(
+      store.add(_editAsk),
+      throwsA(isA<PermissionStoreException>().having(
+          (PermissionStoreException e) => e.message,
+          'message',
+          contains(path))),
+    );
+    expect(await File(path).readAsString(), original);
+    expect(await store.load(), isEmpty);
+  });
+
+  test('未知版本文件上 add 拒绝覆盖', () async {
+    const String original = '{"version":2,"rules":[]}';
+    await File(path).writeAsString(original);
+
+    await expectLater(
+      store.add(_editAsk),
+      throwsA(isA<PermissionStoreException>()),
+    );
+    expect(await File(path).readAsString(), original);
+  });
+
+  test('rename 失败时清理临时文件并抛出', () async {
+    Directory('$path/child').createSync(recursive: true); // 非空目录占住目标
+
+    await expectLater(
+      store.save(<PermissionRule>[_shellDeny]),
+      throwsA(isA<FileSystemException>()),
+    );
+    final List<String> leftovers = dir
+        .listSync()
+        .map((FileSystemEntity entity) => entity.path.split('/').last)
+        .where((String name) => name.contains('.tmp-'))
+        .toList();
+    expect(leftovers, isEmpty);
+  });
+
   test('空列表保存后载回空列表', () async {
     await store.save(<PermissionRule>[_shellDeny]);
     await store.save(const <PermissionRule>[]);

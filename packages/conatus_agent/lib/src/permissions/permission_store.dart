@@ -1,8 +1,10 @@
 /// 项目级权限规则存储：`{"version":1,"rules":[...]}` 的原子落盘与容错载入。
 ///
 /// 写入先落到同目录临时文件、收紧 0600 后再 rename，读者永远看不到半截 JSON；
-/// 载入把缺失 / 损坏 / 版本不符 / 单条非法一律当「没有规则」，**不抛异常**：
-/// 权限文件坏掉时应回落到更保守的兜底阈值，而不是让整个 Agent 起不来。
+/// [PermissionStore.load] 把缺失 / 损坏 / 版本不符 / 单条非法一律当「没有规则」，
+/// **不抛异常**：权限文件坏掉时应回落到更保守的兜底阈值，而不是让整个 Agent
+/// 起不来。但**写入**不允许把「读不懂」当成「没有规则」——[PermissionStore.add]
+/// 对已存在却解不开的文件抛 [PermissionStoreException]，绝不覆盖用户手写的规则。
 library;
 
 import 'dart:convert';
@@ -16,6 +18,18 @@ import 'permission_rule.dart';
 /// 当前落盘格式版本。
 const int _storeVersion = 1;
 
+/// 权限存储无法安全完成写入时抛出（例如已有文件损坏、拒绝覆盖）。
+class PermissionStoreException implements Exception {
+  /// 创建异常。
+  PermissionStoreException(this.message);
+
+  /// 面向用户的说明（含文件路径）。
+  final String message;
+
+  @override
+  String toString() => 'PermissionStoreException($message)';
+}
+
 /// 单文件 JSON 规则存储。
 class PermissionStore {
   /// 创建指向 [path] 的存储；文件按需创建。
@@ -25,15 +39,15 @@ class PermissionStore {
   final String path;
 
   /// 读取全部规则；文件不存在或内容不可用时返回空列表。
+  ///
+  /// 单条非法规则被跳过，其余照常返回；版本 / 形状不符整体视为不可用。
   Future<List<PermissionRule>> load() async {
-    final File file = File(path);
     try {
-      if (!await file.exists()) return const <PermissionRule>[];
-      return _decode(jsonDecode(await file.readAsString()));
-    } on FormatException {
-      return const <PermissionRule>[];
+      final File file = File(path);
+      if (!await file.exists()) return <PermissionRule>[];
+      return await _readRules(file) ?? <PermissionRule>[];
     } on FileSystemException {
-      return const <PermissionRule>[];
+      return <PermissionRule>[];
     }
   }
 
@@ -48,7 +62,7 @@ class PermissionStore {
       await temp.writeAsString(encoded, flush: true);
       await restrictFilePermissions(temp.path);
       await temp.rename(path);
-    } on FileSystemException {
+    } on Object catch (_) {
       await _discard(temp);
       rethrow;
     }
@@ -56,17 +70,38 @@ class PermissionStore {
 
   /// 载入 → 追加 → 整体保存。
   ///
+  /// 文件不存在时直接建立；文件存在但解不开时抛 [PermissionStoreException]
+  /// 并保留原文件原样（否则一次「总是允许」就会永久抹掉看不见的 deny 规则）。
   /// 读改写之间不加锁：同一进程内应串行调用（权限写入本来就低频）。
   Future<void> add(PermissionRule rule) async {
-    final List<PermissionRule> rules = await load();
-    await save(<PermissionRule>[...rules, rule]);
+    final File file = File(path);
+    if (!await file.exists()) {
+      await save(<PermissionRule>[rule]);
+      return;
+    }
+    final List<PermissionRule>? existing = await _readRules(file);
+    if (existing == null) {
+      throw PermissionStoreException('$path 不可读或内容损坏，拒绝覆盖已有规则');
+    }
+    await save(<PermissionRule>[...existing, rule]);
+  }
+
+  /// 读取并解码；不可读或不可解码返回 `null`（与「合法但为空」区分）。
+  Future<List<PermissionRule>?> _readRules(File file) async {
+    try {
+      return _decode(jsonDecode(await file.readAsString()));
+    } on FormatException {
+      return null;
+    } on FileSystemException {
+      return null;
+    }
   }
 
   /// 临时文件清理失败不覆盖原始错误。
   Future<void> _discard(File temp) async {
     try {
       if (await temp.exists()) await temp.delete();
-    } on FileSystemException {
+    } on Object {
       // 原始错误更重要：残留临时文件不影响正确性。
     }
   }
@@ -90,12 +125,12 @@ Map<String, Object?> _encodeRule(PermissionRule rule) {
   return json;
 }
 
-/// 解码落盘结构；版本不符或形状不对返回空列表。
-List<PermissionRule> _decode(Object? json) {
-  if (json is! Map<String, Object?>) return const <PermissionRule>[];
-  if (json['version'] != _storeVersion) return const <PermissionRule>[];
+/// 解码落盘结构；版本或形状不符返回 `null`（区别于合法的空规则列表）。
+List<PermissionRule>? _decode(Object? json) {
+  if (json is! Map<String, Object?>) return null;
+  if (json['version'] != _storeVersion) return null;
   final Object? raw = json['rules'];
-  if (raw is! List<Object?>) return const <PermissionRule>[];
+  if (raw is! List<Object?>) return null;
   final List<PermissionRule> rules = <PermissionRule>[];
   for (final Object? entry in raw) {
     final PermissionRule? rule = _decodeRule(entry);
@@ -107,14 +142,12 @@ List<PermissionRule> _decode(Object? json) {
 /// 解码单条规则；任何字段非法返回 `null`（调用方跳过该条）。
 PermissionRule? _decodeRule(Object? json) {
   if (json is! Map<String, Object?>) return null;
-  final Object? action = json['action'];
-  final Object? resource = json['resource'];
-  final Object? source = json['source'];
-  if (action is! String || action.isEmpty) return null;
-  if (resource is! String || resource.isEmpty) return null;
-  if (source != null && source is! String) return null;
+  final String? action = _nonEmptyString(json['action']);
+  final String? resource = _nonEmptyString(json['resource']);
   final PermissionEffect? effect = _parseEffect(json['effect']);
-  if (effect == null) return null;
+  if (action == null || resource == null || effect == null) return null;
+  final Object? source = json['source'];
+  if (source != null && source is! String) return null;
   return PermissionRule(
     action: action,
     resource: resource,
@@ -122,6 +155,10 @@ PermissionRule? _decodeRule(Object? json) {
     source: source as String?,
   );
 }
+
+/// 只接受非空字符串。
+String? _nonEmptyString(Object? raw) =>
+    raw is String && raw.isNotEmpty ? raw : null;
 
 /// 按枚举名解析效果；未知值返回 `null`。
 PermissionEffect? _parseEffect(Object? raw) {

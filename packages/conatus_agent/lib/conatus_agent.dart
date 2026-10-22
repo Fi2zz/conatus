@@ -123,7 +123,8 @@ export 'src/permissions/permission_matcher.dart'
     show lastMatchingRule, permissionPatternMatches;
 export 'src/permissions/permission_rule.dart' show PermissionRule;
 export 'src/permissions/permission_scope.dart' show PermissionScope;
-export 'src/permissions/permission_store.dart' show PermissionStore;
+export 'src/permissions/permission_store.dart'
+    show PermissionStore, PermissionStoreException;
 export 'src/permissions/permission_verdict.dart' show PermissionVerdict;
 export 'src/plan.dart'
     show

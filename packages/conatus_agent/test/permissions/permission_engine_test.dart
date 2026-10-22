@@ -106,6 +106,26 @@ void main() {
       expect(verdict.rule!.resource, 'git status *');
     });
 
+    test('单资源显式 ask 原样返回 ask 与命中规则', () {
+      const PermissionScope scope = PermissionScope(
+        rules: <PermissionRule>[
+          PermissionRule(
+            action: 'edit',
+            resource: '*.env',
+            effect: PermissionEffect.ask,
+          ),
+        ],
+      );
+      final PermissionVerdict verdict = _evaluate(
+        action: 'edit',
+        resources: const <String>['config/.env'],
+        scope: scope,
+      );
+      expect(verdict.effect, PermissionEffect.ask);
+      expect(verdict.rule!.resource, '*.env');
+      expect(verdict.resources, <String>['config/.env']);
+    });
+
     test('action 不同的规则不参与判定', () {
       const PermissionScope scope = PermissionScope(
         rules: <PermissionRule>[
@@ -278,6 +298,30 @@ void main() {
             .effect,
         PermissionEffect.deny,
       );
+    });
+  });
+
+  group('作用域', () {
+    test('agentId 默认 build，可显式覆盖', () {
+      expect(const PermissionScope().agentId, 'build');
+      expect(const PermissionScope(agentId: 'review').agentId, 'review');
+    });
+
+    test('规则与阈值互相独立保存', () {
+      const PermissionScope scope = PermissionScope(
+        rules: <PermissionRule>[
+          PermissionRule(
+            action: 'shell',
+            resource: '*',
+            effect: PermissionEffect.allow,
+          ),
+        ],
+        askThreshold: ToolRisk.medium,
+        agentId: 'plan',
+      );
+      expect(scope.rules, hasLength(1));
+      expect(scope.askThreshold, ToolRisk.medium);
+      expect(scope.agentId, 'plan');
     });
   });
 }
