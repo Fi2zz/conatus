@@ -90,7 +90,8 @@ void applySubAgentPermission(
         // 无人可问（headless 无审批服务）：按只读处理，而不是把所有子工具都
         // 静默拒掉——「无法确认」不等于「什么都不能做」，低风险读取照常。
         childTools.guard(_readonlyGuard(childTools));
-        _installChildPermission(child, childTools, SubAgentPermission.readonly, null);
+        _installChildPermission(
+            child, childTools, SubAgentPermission.readonly, null);
         return;
       }
       _installChildPermission(child, childTools, mode, gate);
@@ -104,9 +105,8 @@ void _installChildPermission(
   SubAgentPermission mode,
   Approval? gate,
 ) {
-  final PermissionScope? host = child
-      .get<PermissionScopeSlot>(kPermissionScopeService)
-      ?.current;
+  final PermissionScope? host =
+      child.get<PermissionScopeSlot>(kPermissionScopeService)?.current;
   final ToolRisk? threshold =
       mode == SubAgentPermission.ask ? ToolRisk.low : null;
   instrumentPermission(

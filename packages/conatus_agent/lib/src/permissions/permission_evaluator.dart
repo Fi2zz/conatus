@@ -54,10 +54,10 @@ class PermissionEvaluator {
       risk: tool.riskLevel,
       scope: scope,
     ));
-    final PermissionVerdict verdict = external != null &&
-            external.effect.index > primary.effect.index
-        ? external
-        : primary;
+    final PermissionVerdict verdict =
+        external != null && external.effect.index > primary.effect.index
+            ? external
+            : primary;
     final bool fallback =
         primary.rule == null && (external == null || external.rule == null);
     final bool pathFallback = interactive &&
