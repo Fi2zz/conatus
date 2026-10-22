@@ -64,6 +64,13 @@ test('full session leaves .opencode bytes unchanged', () async {
   await _runSessionWithEdits(dir.path);
   expect(_snapshot(dir.path + '/.opencode'), before);
 });
+
+test('symlink under .opencode cannot write outside', () async {
+  Link('${dir.path}/.opencode/escape').createSync('${outside.path}/target');
+  final guard = ReadOnlyPathGuard(inner: LocalFileSystem(), protectedRoots: defaultReadOnlyRoots(dir.path));
+  final target = await guard.resolve('${dir.path}/.opencode/escape/x');
+  expect(() => guard.writeText(target, 'x'), throwsA(isA<FsError>()));
+});
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -367,6 +374,8 @@ git commit -m "fix(code): checkpoint 支持接管已有会话并按会话读取�
 
 **Interfaces:**
 - `class RevertStage { final String originalSessionId; final String forkSessionId; final int fromTurn; final int toTurn; final String prompt; }`
+- `class UndoResult { final RevertStage stage; final CheckpointRestore restore; }`
+- `class RedoResult { final bool restored; }`
 - `class RevertService { RevertService({required CheckpointManager checkpoint, required SessionStore sessions}); Future<UndoResult> undo(Session current, int steps); Future<RedoResult> redo(RevertStage stage); }`
 - `void ConatusTuiController.prefillInput(String text)` + `String? takePrefillInput()`。
 
@@ -385,6 +394,13 @@ test('redo switches back and restores pre-undo files', () async {
   await controller.handleLine('/redo');
   expect(controller.sessionId, originalId);
   expect(File('$dir/a.txt').readAsStringSync(), 'v2');
+});
+
+test('undo without checkpoints forks conversation and warns', () async {
+  final controller = await _buildController(checkpoint: const CheckpointConfig(enabled: false));
+  await controller.handleLine('/undo');
+  expect(controller.transcript.messages.last.text, contains('checkpoint 已关闭'));
+  expect(controller.sessionId, isNot(originalId));
 });
 ```
 
@@ -426,10 +442,10 @@ git commit -m "feat(code): 增加按轮的 undo/redo 与输入框回填"
 
 **Interfaces:**
 - `enum DiffScope { working, turn }`
-- `class FileDiff { final String path; final String status; final List<DiffHunk> hunks; final int additions; final int deletions; }`
+- `class FileDiff { final String path; final String status; final List<DiffHunk> hunks; final int additions; final int deletions; final bool truncated; }`
 - `List<FileDiff> parseUnifiedDiff(String text)`
 - `List<FileDiff> diffLines(String path, String? before, String? after, {int maxLines = 5000})`
-- `class DiffSource { Future<List<FileDiff>> load(DiffScope scope); }`
+- `class DiffSource { DiffSource({required String workdir, required CheckpointStore store, required String sessionId, required int turn}); Future<List<FileDiff>> load(DiffScope scope); }`
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -451,6 +467,12 @@ test('parses unified diff hunks and counts', () {
 test('line diff handles added and deleted files', () {
   expect(diffLines('new.txt', null, 'a\nb').single.status, 'added');
   expect(diffLines('old.txt', 'a', null).single.status, 'deleted');
+});
+
+test('binary and oversized files degrade to file-level', () {
+  expect(diffLines('a.bin', '\u0000\u0001', '\u0000\u0002').single.status, 'binary');
+  final huge = List.generate(6000, (i) => 'line $i').join('\n');
+  expect(diffLines('huge.txt', '', huge).single.truncated, isTrue);
 });
 ```
 
