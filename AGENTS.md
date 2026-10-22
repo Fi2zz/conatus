@@ -57,7 +57,7 @@ Agent 能力。
 | | `conatus_agent` | Agent Loop 与产品化：plan / sub-agent / reflection / telemetry / eval / approval / skill / recovery |
 | | `conatus_tasks` | 任务中心：运行时任务追踪（任务树 + `list_tasks` / `cancel_task`） |
 | **实验性包 ×9**（进伞包导出，API 可能破坏性变更） | `conatus_alerting` / `conatus_browser_use` / `conatus_computer_use` / `conatus_doc` / `conatus_intent` / `conatus_observability` / `conatus_team` / `conatus_workflow` / `conatus_ontology` | 告警 / 浏览器操作 / 桌面操作 / 文档补丁引擎（人机双写故事层） / 意图路由 / 可观测性导出 / 多智能体协作 / 流程编排 / 自进化本体层（EvoOntology 适配） |
-| **子模块 ×2** | `conatus_code` / `cowriter` | 独立仓库：终端编码智能体（github.com/Fi2zz/conatus_code）/ 人机双写协同写作产品（github.com/Fi2zz/cowriter，fork 自 conatus_code）；根包仅在 `dev_dependencies` 以 git 源引用 conatus_code，workspace 内解析到本地成员。不开发时无需拉取 |
+| **子模块 ×1** | `conatus_code` | 独立仓库：终端编码智能体 nava（github.com/Fi2zz/conatus_code）；根包仅在 `dev_dependencies` 以 git 源引用，workspace 内解析到本地成员。不开发时无需拉取。原 `cowriter` 产品已并入 nava 并归档 |
 
 依赖方向自上而下无环：`conatus` → `conatus_agent` → `conatus_llm` / `conatus_foundation` /
 `conatus_compaction` → `conatus_core`（公共底座）。稳定包不反向依赖实验性包。
@@ -87,7 +87,7 @@ dart test test/integration/ --reporter=expanded # 集成测试（CI 单独跑）
 ```bash
 bash tool/version.sh                    # 版本冻结校验：version 一致、无残留托管约束（升版能力已退役，版本演进由 git tag 承载）
 bash tool/verify_reversibility.sh       # conatus_core 可逆性验证：静态检查 + 单元 + 随机顺序(3种子) + 行覆盖率 + 变异测试
-git submodule update --init             # 首次拉取子模块（conatus_code / cowriter）
+git submodule update --init             # 首次拉取子模块（conatus_code）
 bash tool/setup_code_filter.sh          # 子模块 workspace filter（开发子模块前必跑；可传路径只装一个）
 ```
 
@@ -149,10 +149,9 @@ Conventional Commits + 中文描述 + scope：`feat(foundation): ...` / `fix(llm
 `chore(code): ...` / `docs(...): ...`。**子模块 conatus_code 的每次更新**在父仓库表现为
 `chore(code): 同步子模块 gitlink（<改动简述>）` 的 gitlink 提交。
 
-### 子模块工作流（开发 conatus_code / cowriter 时）
+### 子模块工作流（开发 conatus_code 时）
 
-1. `git submodule update --init` 拉取；2. `bash tool/setup_code_filter.sh`（默认装全部
-子模块，可传路径只装一个）。
+1. `git submodule update --init` 拉取；2. `bash tool/setup_code_filter.sh`。
 filter 的作用：checkout 时恢复 `pubspec.yaml` 的 `resolution: workspace`（本地走 workspace、
 依赖解析到本地 `packages/*`），`git add` 时自动注释掉（独立 clone 仍按 git 源解析）；并生成
 `pubspec_overrides.yaml`（已 gitignore）清空 `dependency_overrides`。**不要手动改子模块的
@@ -161,15 +160,12 @@ filter 的作用：checkout 时恢复 `pubspec.yaml` 的 `resolution: workspace`
 - **每次完成 conatus_code 相关改动并通过 `dart test` 后，必须重新构建二进制**：
   在 `packages/conatus_code` 下运行 `bash tool/build_binary.sh`，产出 `dist/nava`
   （`/Users/fitz/bin/nava` 是它的符号链接，PATH 里的 `nava` 随之生效）。只改源码不
-  重建、或交付旧二进制，视为改动未完成。cowriter 同理，产出 `dist/cowriter`。
+  重建、或交付旧二进制，视为改动未完成。
 - **conatus 依赖 ref 钉版**：子模块 pubspec 里 37 条 conatus git 依赖的 `ref` 钉到
   具体 commit（非浮动 master），保证外部用户 `pub get` 拿到的组合与子模块 CI 验证
   过的组合一致。父仓更新并推送后，在子模块下跑
   `bash tool/pin_conatus_refs.sh` 刷新（默认钉 conatus `origin/master` 最新），
   通过测试后提交并推送子模块、同步父仓 gitlink。
-- **cowriter 现状**：包标识已从 conatus_code 更名（pubspec name、import 前缀、
-  入口 `bin/cowriter.dart`、构建产出 `dist/cowriter`）；编码工具面剥离、
-  conatus_doc 接入、README/文案品牌化是后续任务。
 
 ### 版本管理
 

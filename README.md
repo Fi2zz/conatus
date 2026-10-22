@@ -18,9 +18,6 @@
 内该依赖解析到本地成员。不开发它时无需拉取 —— 根 `pubspec.yaml` 的 `workspace`
 用 glob，没有 `pubspec.yaml` 的目录会被跳过。
 
-`packages/cowriter` 同为独立**子模块**（[Fi2zz/cowriter](https://github.com/Fi2zz/cowriter)）：
-人机双写协同写作产品（fork 自 conatus_code），同样不进伞包、无需拉取。
-
 要开发它，先拉取子模块并安装 workspace filter：
 
 ```bash

@@ -4,8 +4,8 @@
 # 使本地开发走 workspace、独立 clone 仍按 git 依赖解析。
 #
 # 用法：
-#   bash tool/setup_code_filter.sh                  # 处理全部子模块（未拉取的跳过）
-#   bash tool/setup_code_filter.sh packages/cowriter # 只处理指定子模块
+#   bash tool/setup_code_filter.sh                  # 处理 conatus_code（未拉取则跳过）
+#   bash tool/setup_code_filter.sh packages/conatus_code # 只处理指定子模块
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -46,6 +46,6 @@ if [ $# -gt 0 ]; then
   exit $?
 fi
 
-for target in packages/conatus_code packages/cowriter; do
+for target in packages/conatus_code; do
   setup_one "$root/$target" || echo "跳过 $target"
 done
