@@ -16,6 +16,7 @@ export 'src/compress_messages.dart' show compressMessages;
 export 'src/compression_result.dart' show ContextCompressionResult;
 export 'src/compression_stats.dart' show CompressionStats, KindStats;
 export 'src/compressors/build_log_compressor.dart' show BuildLogCompressor;
+export 'src/compressors/diff_compressor.dart' show DiffCompressor;
 export 'src/compressors/json_array_compressor.dart' show JsonArrayCompressor;
 export 'src/compressors/search_results_compressor.dart'
     show SearchResultsCompressor;
