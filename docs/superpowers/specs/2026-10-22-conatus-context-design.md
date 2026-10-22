@@ -129,6 +129,7 @@ class ContextCompressionConfig {
     this.maxJsonItems = 30,
     this.maxLogLines = 200,
     this.maxSearchLines = 80,
+    this.maxSearchFiles = 40,
     this.maxDiffLines = 150,
     this.maxTableRows = 30,
     this.textTargetRatio = 0.5,
@@ -147,6 +148,7 @@ class ContextCompressionConfig {
   final int maxJsonItems;
   final int maxLogLines;
   final int maxSearchLines;
+  final int maxSearchFiles;
   final int maxDiffLines;
   final int maxTableRows;
   final double textTargetRatio;       // 纯文本目标保留比，默认 0.5
@@ -169,7 +171,7 @@ class ContextCompressionResult {
   final int beforeChars;
   final int afterChars;
   final String? ccrId;
-  final String? skippedReason; // tooSmall / protected / noSaving / disabled / error / empty
+  final String? skippedReason; // tooSmall / protected / noSaving / disabled / alreadyCompressed / error / empty
 }
 
 class CompressionStats {
@@ -202,13 +204,15 @@ abstract class ContentCompressor {
 class CompressionDraft {
   final String output;       // 不含 CCR 标记与省略说明（由 Router 统一追加）
   final int itemsOmitted;    // 0 表示只是格式紧凑化
-  final String? label;       // 如 rows / lines / matches / hunks
+  final String unit;         // 如 rows / lines / matches / hunks
 }
 
 class CompressionBudget {
   final int maxItems;
   final int maxLines;
+  final int maxFiles;
   final double targetRatio;  // 由 config.textTargetRatio 派生
+  final String retrievalId;  // CCR 关闭时为空串，压缩器据此决定是否嵌标记
   final bool conservative;   // 工具错误结果走保守模式
 }
 ```
@@ -220,7 +224,6 @@ class ContextCompressionService {
   ContextRouter get router;
   CcrStore get store;
   CompressionStats get stats;
-  List<Disposer> get disposers;
 }
 
 ContextCompressionService provideContextCompression(
@@ -230,6 +233,7 @@ ContextCompressionService provideContextCompression(
   ToolRegistry? tools,
   FileSystem? fs,
   String? dir,               // 传入则启用文件型 CCR
+  List<ContentCompressor>? compressors, // 缺省用内置集合，测试可注入
 });
 ```
 
@@ -258,6 +262,7 @@ Future<List<LlmMessage>> compressMessages(
   List<LlmMessage> messages, {
   ContextCompressionConfig? config,
   CcrStore? store,
+  List<ContentCompressor>? compressors,
   Set<String> roles = const <String>{'tool'},
 }) async;
 ```
@@ -285,7 +290,10 @@ Future<List<LlmMessage>> compressMessages(
 | 8 | `text` | 其余 |
 
 检测器不做「多类型混合切分」：一条内容只走一个压缩器，避免语义被切碎。`git status` 与源码
-保护优先于其他信号。
+保护优先于其他信号。检测前先剥离开头的 BOM（`\uFEFF`）。
+
+JSON 压缩器需要的 CCR id 在压缩前就能确定（内容 hash），因此 Router 先计算 `retrievalId`
+放进预算，压缩器把它嵌进 JSON 说明元素；其它类型的标记由 Router 统一追加。
 
 ## 7. 压缩算法
 
@@ -377,7 +385,7 @@ Future<List<LlmMessage>> compressMessages(
 <<ctx:<ID> <N>_<unit>_omitted>>
 ```
 
-例：`<<ctx:9f3a1c07b2d4e681 42_items_omitted>>`。单位取压缩器给的 `label`
+例：`<<ctx:9f3a1c07b2d4e681 42_items_omitted>>`。单位取压缩器给的 `unit`
 （items / lines / matches / hunks / rows），`N` 为省略数量（紧凑化时为 0，不写标记）。
 
 - 标记只出现在压缩输出中，**不进入** CCR 原文。
