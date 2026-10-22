@@ -79,6 +79,7 @@ class LlmMessage {
     this.toolCallId,
     this.cacheable = false,
     this.images = const <LlmImage>[],
+    this.thinkingBlocks = const <Map<String, dynamic>>[],
   });
 
   final String role; // system / user / assistant / tool
@@ -99,6 +100,11 @@ class LlmMessage {
 
   /// 消息携带的图片；为空时消息退化为纯文本。
   final List<LlmImage> images;
+
+  /// Anthropic 的 thinking 原始块（含 signature）；用于多轮回传。
+  ///
+  /// 其它 provider 忽略该字段。
+  final List<Map<String, dynamic>> thinkingBlocks;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'role': role,
@@ -129,6 +135,7 @@ class LlmResult {
     this.usage = const <String, dynamic>{},
     this.toolCalls = const <LlmToolCall>[],
     this.reasoning = '',
+    this.thinkingBlocks = const <Map<String, dynamic>>[],
   });
 
   final String content;
@@ -141,6 +148,9 @@ class LlmResult {
 
   /// 模型的思考过程（如 Kimi 的 `reasoning_content`）；模型未输出时为空串。
   final String reasoning;
+
+  /// Anthropic thinking 原始块（含 signature）；其它 provider 为空。
+  final List<Map<String, dynamic>> thinkingBlocks;
 
   @override
   String toString() => '[$provider/$model] $content';
@@ -179,6 +189,7 @@ final class LlmStreamDone extends LlmStreamEvent {
     this.usage = const <String, dynamic>{},
     this.finishReason,
     this.toolCalls = const <LlmToolCall>[],
+    this.thinkingBlocks = const <Map<String, dynamic>>[],
     this.provider = '',
     this.model = '',
   });
@@ -190,6 +201,9 @@ final class LlmStreamDone extends LlmStreamEvent {
   ///
   /// 工具参数以 JSON 分片到达，须攒到流结束才能得到完整调用，故在终态一次性给出。
   final List<LlmToolCall> toolCalls;
+
+  /// Anthropic thinking 原始块（含 signature）；其它 provider 为空。
+  final List<Map<String, dynamic>> thinkingBlocks;
 
   /// 产出该流的提供商名（供 [streamChatResult] 还原 [LlmResult]）。
   final String provider;
@@ -218,6 +232,7 @@ Future<LlmResult> streamChatResult(
   final StringBuffer text = StringBuffer();
   final StringBuffer reasoning = StringBuffer();
   List<LlmToolCall> toolCalls = const <LlmToolCall>[];
+  List<Map<String, dynamic>> thinkingBlocks = const <Map<String, dynamic>>[];
   Map<String, dynamic> usage = const <String, dynamic>{};
   String model = '';
   bool sawEvent = false;
@@ -231,6 +246,7 @@ Future<LlmResult> streamChatResult(
       reasoning.write(event.text);
     } else if (event is LlmStreamDone) {
       toolCalls = event.toolCalls;
+      thinkingBlocks = event.thinkingBlocks;
       usage = event.usage;
       model = event.model;
     }
@@ -247,6 +263,7 @@ Future<LlmResult> streamChatResult(
     usage: usage,
     toolCalls: toolCalls,
     reasoning: reasoning.toString(),
+    thinkingBlocks: thinkingBlocks,
   );
 }
 

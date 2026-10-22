@@ -246,12 +246,19 @@ class AgentLoop {
             session, messages, steps, usages, result.content.trim(), userInput);
       }
       messages.add(
-        LlmMessage('assistant', result.content, toolCalls: result.toolCalls),
+        LlmMessage(
+          'assistant',
+          result.content,
+          toolCalls: result.toolCalls,
+          thinkingBlocks: result.thinkingBlocks,
+        ),
       );
       session?.append(kAssistantMessageEvent, data: <String, Object?>{
         'text': result.content,
         'reasoning': result.reasoning,
         'toolCalls': toolCallsToJson(result.toolCalls),
+        if (result.thinkingBlocks.isNotEmpty)
+          'thinkingBlocks': result.thinkingBlocks,
       });
       for (final LlmToolCall call in result.toolCalls) {
         ToolResult outcome = await invoke(call);

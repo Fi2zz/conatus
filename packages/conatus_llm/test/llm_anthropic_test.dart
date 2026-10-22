@@ -42,6 +42,35 @@ event: message_stop
 data: {"type":"message_stop"}
 ''';
 
+const String _thinkingSse = '''
+event: message_start
+data: {"type":"message_start","message":{"model":"m","usage":{"input_tokens":1}}}
+
+event: content_block_start
+data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":""}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"先想"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"sig123"}}
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":0}
+
+event: content_block_start
+data: {"type":"content_block_start","index":1,"content_block":{"type":"text","text":""}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"答案"}}
+
+event: message_delta
+data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":2}}
+
+event: message_stop
+data: {"type":"message_stop"}
+''';
+
 class _Recorder {
   final List<http.Request> requests = <http.Request>[];
 
@@ -161,6 +190,82 @@ void main() {
     final Map<String, dynamic> body =
         jsonDecode(recorder.requests.single.body) as Map<String, dynamic>;
     expect(body['max_tokens'], 1024);
+  });
+
+  test('prompt caching：cacheable system 与最后一个工具带 cache_control', () async {
+    final _Recorder recorder = _Recorder();
+    final AnthropicProvider provider = AnthropicProvider(
+      name: 'anthropic',
+      baseUrl: 'https://api.anthropic.com/v1',
+      model: 'm',
+      apiKey: 'k',
+      client: recorder.client(_textAndToolSse),
+    );
+
+    await provider.chat(
+      const <LlmMessage>[
+        LlmMessage('system', '你是助手', cacheable: true),
+        LlmMessage('user', 'hi'),
+      ],
+      tools: <Map<String, dynamic>>[
+        <String, dynamic>{'name': 'a', 'parameters': <String, dynamic>{}},
+        <String, dynamic>{'name': 'b', 'parameters': <String, dynamic>{}},
+      ],
+    );
+
+    final Map<String, dynamic> body =
+        jsonDecode(recorder.requests.single.body) as Map<String, dynamic>;
+    final List<dynamic> system = body['system'] as List<dynamic>;
+    expect((system.single as Map<String, dynamic>)['cache_control'],
+        <String, String>{'type': 'ephemeral'});
+    final List<dynamic> tools = body['tools'] as List<dynamic>;
+    expect(
+      (tools.first as Map<String, dynamic>).containsKey('cache_control'),
+      isFalse,
+    );
+    expect((tools.last as Map<String, dynamic>)['cache_control'],
+        <String, String>{'type': 'ephemeral'});
+  });
+
+  test('thinking 块：流式捕获 signature，并在下一轮回传', () async {
+    final _Recorder recorder = _Recorder();
+    final AnthropicProvider provider = AnthropicProvider(
+      name: 'anthropic',
+      baseUrl: 'https://api.anthropic.com/v1',
+      model: 'm',
+      apiKey: 'k',
+      client: recorder.client(_thinkingSse),
+    );
+
+    final LlmResult result = await provider.chat(_messages);
+    expect(result.reasoning, '先想');
+    expect(result.thinkingBlocks.single['signature'], 'sig123');
+
+    final _Recorder second = _Recorder();
+    final AnthropicProvider again = AnthropicProvider(
+      name: 'anthropic',
+      baseUrl: 'https://api.anthropic.com/v1',
+      model: 'm',
+      apiKey: 'k',
+      client: second.client(_textAndToolSse),
+    );
+    await again.chat(<LlmMessage>[
+      const LlmMessage('user', 'hi'),
+      LlmMessage(
+        'assistant',
+        '答案',
+        thinkingBlocks: result.thinkingBlocks,
+      ),
+    ]);
+
+    final Map<String, dynamic> body =
+        jsonDecode(second.requests.single.body) as Map<String, dynamic>;
+    final List<dynamic> turns = body['messages'] as List<dynamic>;
+    final Map<String, dynamic> assistant =
+        turns[1] as Map<String, dynamic>;
+    final List<dynamic> blocks = assistant['content'] as List<dynamic>;
+    expect((blocks.first as Map<String, dynamic>)['type'], 'thinking');
+    expect((blocks.first as Map<String, dynamic>)['signature'], 'sig123');
   });
 
   test('HTTP 错误转 LlmException', () async {

@@ -29,6 +29,7 @@ List<LlmMessage> deriveAgentMessages(Iterable<SessionEvent> events) {
           'assistant',
           '${data['text'] ?? ''}',
           toolCalls: toolCallsFromJson(data['toolCalls']),
+          thinkingBlocks: thinkingBlocksFromJson(data['thinkingBlocks']),
         ));
       case kToolResultEvent:
         messages.add(LlmMessage(
@@ -39,6 +40,15 @@ List<LlmMessage> deriveAgentMessages(Iterable<SessionEvent> events) {
     }
   }
   return messages;
+}
+
+/// 把事件里的 `thinkingBlocks` 负载还原为原始 Anthropic 块。
+List<Map<String, dynamic>> thinkingBlocksFromJson(Object? raw) {
+  if (raw is! List) return const <Map<String, dynamic>>[];
+  return <Map<String, dynamic>>[
+    for (final Object? item in raw)
+      if (item is Map) Map<String, dynamic>.from(item),
+  ];
 }
 
 /// 把事件里的 `images` 负载还原为 [LlmImage] 列表。

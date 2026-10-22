@@ -4,6 +4,7 @@ export 'src/agent_events.dart'
         buildSystemText,
         compactSession,
         deriveAgentMessages,
+        thinkingBlocksFromJson,
         ensureSessionOpen,
         imagesFromJson,
         imagesToJson,

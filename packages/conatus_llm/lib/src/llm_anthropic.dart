@@ -148,6 +148,7 @@ class AnthropicProvider implements LlmProvider {
       usage: state.usage,
       finishReason: state.finishReason,
       toolCalls: state.buildToolCalls(),
+      thinkingBlocks: state.buildThinkingBlocks(),
     );
   }
 
@@ -162,11 +163,18 @@ class AnthropicProvider implements LlmProvider {
     List<Map<String, dynamic>>? tools,
   }) {
     final List<String> system = <String>[];
+    bool systemCacheable = false;
     final List<Map<String, dynamic>> turns = <Map<String, dynamic>>[];
-    for (final LlmMessage message in messages) {
+    final int lastCacheable = messages.lastIndexWhere(
+      (LlmMessage m) => m.cacheable && m.role != 'system',
+    );
+    for (final (int index, LlmMessage message) in messages.indexed) {
       switch (message.role) {
         case 'system':
-          if (message.content.trim().isNotEmpty) system.add(message.content);
+          if (message.content.trim().isNotEmpty) {
+            system.add(message.content);
+            if (message.cacheable) systemCacheable = true;
+          }
         case 'tool':
           _append(
             turns,
@@ -182,6 +190,7 @@ class AnthropicProvider implements LlmProvider {
         case 'assistant':
           final List<Map<String, dynamic>> blocks =
               <Map<String, dynamic>>[];
+          blocks.addAll(message.thinkingBlocks);
           if (message.content.isNotEmpty) {
             blocks.add(<String, dynamic>{
               'type': 'text',
@@ -196,7 +205,10 @@ class AnthropicProvider implements LlmProvider {
               'input': _decodeArguments(call.arguments),
             });
           }
-          if (blocks.isNotEmpty) _append(turns, 'assistant', blocks);
+          if (blocks.isNotEmpty) {
+            if (index == lastCacheable) _markCache(blocks);
+            _append(turns, 'assistant', blocks);
+          }
         default:
           final List<Map<String, dynamic>> blocks =
               <Map<String, dynamic>>[];
@@ -216,7 +228,10 @@ class AnthropicProvider implements LlmProvider {
               },
             });
           }
-          if (blocks.isNotEmpty) _append(turns, 'user', blocks);
+          if (blocks.isNotEmpty) {
+            if (index == lastCacheable) _markCache(blocks);
+            _append(turns, 'user', blocks);
+          }
       }
     }
 
@@ -224,16 +239,27 @@ class AnthropicProvider implements LlmProvider {
       'model': model,
       'max_tokens': _maxTokens(options),
       'messages': turns,
-      if (system.isNotEmpty) 'system': system.join('\n\n'),
+      if (system.isNotEmpty)
+        'system': systemCacheable
+            ? <Map<String, dynamic>>[
+                <String, dynamic>{
+                  'type': 'text',
+                  'text': system.join('\n\n'),
+                  'cache_control': _ephemeral,
+                },
+              ]
+            : system.join('\n\n'),
       if (stream) 'stream': true,
       if (tools != null && tools.isNotEmpty)
         'tools': <Map<String, dynamic>>[
-          for (final Map<String, dynamic> tool in tools)
+          for (final (int index, Map<String, dynamic> tool)
+              in tools.indexed)
             <String, dynamic>{
               'name': tool['name'],
               'description': tool['description'] ?? '',
               'input_schema': tool['parameters'] ??
                   <String, dynamic>{'type': 'object'},
+              if (index == tools.length - 1) 'cache_control': _ephemeral,
             },
         ],
     };
@@ -249,6 +275,16 @@ class AnthropicProvider implements LlmProvider {
       }
     }
     return body;
+  }
+
+  static const Map<String, String> _ephemeral = <String, String>{
+    'type': 'ephemeral',
+  };
+
+  /// 给最后一块内容打上 prompt caching 断点。
+  void _markCache(List<Map<String, dynamic>> blocks) {
+    if (blocks.isEmpty) return;
+    blocks.last['cache_control'] = _ephemeral;
   }
 
   int _maxTokens(Map<String, dynamic>? options) {
@@ -300,11 +336,16 @@ class AnthropicProvider implements LlmProvider {
         }
       case 'content_block_start':
         final Object? block = json['content_block'];
-        if (block is Map<String, dynamic> && block['type'] == 'tool_use') {
-          final _AnthropicToolBuilder builder =
-              state.builder(json['index'] as int? ?? 0);
-          builder.id = block['id'] as String? ?? builder.id;
-          builder.name = block['name'] as String? ?? builder.name;
+        if (block is Map<String, dynamic>) {
+          final int index = json['index'] as int? ?? 0;
+          if (block['type'] == 'thinking') {
+            final String text = block['thinking'] as String? ?? '';
+            if (text.isNotEmpty) state.thinking(index).addText(text);
+          } else if (block['type'] == 'tool_use') {
+            final _AnthropicToolBuilder builder = state.builder(index);
+            builder.id = block['id'] as String? ?? builder.id;
+            builder.name = block['name'] as String? ?? builder.name;
+          }
         }
       case 'content_block_delta':
         final Object? delta = json['delta'];
@@ -316,7 +357,14 @@ class AnthropicProvider implements LlmProvider {
             case 'thinking_delta':
               final String text = delta['thinking'] as String? ?? '';
               if (text.isNotEmpty) {
+                state.thinking(json['index'] as int? ?? 0).addText(text);
                 return <LlmStreamEvent>[LlmReasoningDelta(text)];
+              }
+            case 'signature_delta':
+              final String signature = delta['signature'] as String? ?? '';
+              if (signature.isNotEmpty) {
+                state.thinking(json['index'] as int? ?? 0).signature =
+                    signature;
               }
             case 'input_json_delta':
               state
@@ -389,9 +437,19 @@ class _AnthropicStreamState {
   Map<String, dynamic> usage = const <String, dynamic>{};
   final Map<int, _AnthropicToolBuilder> _builders =
       <int, _AnthropicToolBuilder>{};
+  final Map<int, _AnthropicThinkingBuilder> _thinking =
+      <int, _AnthropicThinkingBuilder>{};
 
   _AnthropicToolBuilder builder(int index) =>
       _builders.putIfAbsent(index, _AnthropicToolBuilder.new);
+
+  _AnthropicThinkingBuilder thinking(int index) =>
+      _thinking.putIfAbsent(index, _AnthropicThinkingBuilder.new);
+
+  List<Map<String, dynamic>> buildThinkingBlocks() => <Map<String, dynamic>>[
+        for (final _AnthropicThinkingBuilder builder in _thinking.values)
+          if (builder.build() case final Map<String, dynamic> block) block,
+      ];
 
   void mergeUsage(Object? raw) {
     if (raw is! Map<String, dynamic>) return;
@@ -408,6 +466,22 @@ class _AnthropicStreamState {
         for (final _AnthropicToolBuilder builder in _builders.values)
           builder.build(),
       ].where((LlmToolCall call) => call.name.isNotEmpty).toList();
+}
+
+class _AnthropicThinkingBuilder {
+  final StringBuffer _text = StringBuffer();
+  String signature = '';
+
+  void addText(String chunk) => _text.write(chunk);
+
+  /// signature 为空时不可回传（Anthropic 会拒绝），只在可回传时产出。
+  Map<String, dynamic>? build() => signature.isEmpty
+      ? null
+      : <String, dynamic>{
+          'type': 'thinking',
+          'thinking': _text.toString(),
+          'signature': signature,
+        };
 }
 
 class _AnthropicToolBuilder {

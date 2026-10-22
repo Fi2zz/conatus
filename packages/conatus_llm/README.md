@@ -9,7 +9,10 @@ conatus 的大模型接入：
   在 `conatus_code`（`lib/providers.dart`）
 - `AnthropicProvider`：Anthropic Messages（`LlmApiStyle.anthropic`，`/messages`），
   支持 system 抽取、工具调用/结果、图片与 SSE 文本/thinking 增量；认证按主机区分
-  （`opencode.ai` 用 `Authorization: Bearer`，其它主机用 `x-api-key`）
+  （`opencode.ai` 用 `Authorization: Bearer`，其它主机用 `x-api-key`）。
+  可缓存前缀（`LlmMessage.cacheable`）与最后一个工具会自动带
+  `cache_control: ephemeral`；thinking 块的 `signature` 随 `LlmResult` /
+  `LlmMessage.thinkingBlocks` 往返，供 tool loop 回传
 - Key 的解析：显式 `apiKey` → 注入的 `credentials`（`conatus_credentials`），
   **不直接读环境变量**；两者都没有时调用抛 `LlmException('缺少 API Key')`，
   并订阅 `changes` 做运行时轮换
