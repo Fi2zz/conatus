@@ -1,6 +1,7 @@
 /// conatus 的上下文压缩：结构化压缩工具结果并把原文存入 CCR。
 library;
 
+export 'src/ccr_file_store.dart' show CcrFileStore, contextCacheDir;
 export 'src/ccr_marker.dart'
     show
         CcrMarker,
