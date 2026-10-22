@@ -12,6 +12,7 @@ export 'src/ccr_marker.dart'
         parseCcrMarker;
 export 'src/ccr_memory_store.dart' show CcrMemoryStore;
 export 'src/ccr_store.dart' show CcrEntry, CcrStore;
+export 'src/compress_messages.dart' show compressMessages;
 export 'src/compression_result.dart' show ContextCompressionResult;
 export 'src/compression_stats.dart' show CompressionStats, KindStats;
 export 'src/compressors/json_array_compressor.dart' show JsonArrayCompressor;
