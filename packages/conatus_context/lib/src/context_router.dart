@@ -9,6 +9,7 @@ import 'content_compressor.dart';
 import 'content_detector.dart';
 import 'content_kind.dart';
 import 'context_compression_config.dart';
+import 'default_compressors.dart';
 
 /// 单条内容的压缩入口。
 class ContextRouter {
@@ -22,7 +23,7 @@ class ContextRouter {
         stats = stats ?? CompressionStats(),
         _compressors = <ContentKind, ContentCompressor>{
           for (final ContentCompressor compressor
-              in compressors ?? const <ContentCompressor>[])
+              in compressors ?? defaultContentCompressors())
             compressor.kind: compressor,
         };
 

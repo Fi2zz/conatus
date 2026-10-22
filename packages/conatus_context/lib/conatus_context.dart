@@ -21,6 +21,7 @@ export 'src/compressors/json_array_compressor.dart' show JsonArrayCompressor;
 export 'src/compressors/search_results_compressor.dart'
     show SearchResultsCompressor;
 export 'src/compressors/tabular_compressor.dart' show TabularCompressor;
+export 'src/compressors/text_compressor.dart' show TextCompressor;
 export 'src/content_compressor.dart'
     show CompressionBudget, CompressionDraft, ContentCompressor;
 export 'src/content_detector.dart'
@@ -30,6 +31,7 @@ export 'src/context_compression_config.dart' show ContextCompressionConfig;
 export 'src/context_retrieval_tool.dart' show ContextRetrievalTool;
 export 'src/context_router.dart' show ContextRouter;
 export 'src/context_stats_tool.dart' show ContextStatsTool;
+export 'src/default_compressors.dart' show defaultContentCompressors;
 export 'src/provide_context_compression.dart'
     show
         ContextCompressionContext,
