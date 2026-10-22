@@ -3,5 +3,6 @@ library;
 
 export 'src/compression_result.dart' show ContextCompressionResult;
 export 'src/compression_stats.dart' show CompressionStats, KindStats;
+export 'src/content_detector.dart' show ContentDetection, Detector, detectContent;
 export 'src/content_kind.dart' show ContentKind;
 export 'src/context_compression_config.dart' show ContextCompressionConfig;
