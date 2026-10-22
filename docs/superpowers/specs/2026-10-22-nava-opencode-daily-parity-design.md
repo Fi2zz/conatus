@@ -176,14 +176,19 @@ packages/conatus_mcp/lib/src/                   # MCP 补全
 
 1. 用 `instrumentPermission` 替换 nava 会话里的 `instrumentApproval`
    （**不是**再叠一层中间件，避免双重弹窗）。
-2. 它评估每次工具调用，返回 `allow / ask / deny`：
+2. **挂载位置是根上下文的最外层**：必须在 hooks / eviction / story / lint 之前
+   注册，否则这些中间件可以短路掉工具调用，权限规则永远看不到。控制器不再
+   每个会话重挂审批中间件；当前会话/Agent 的规则由 `PermissionScope` 服务槽
+   提供，`_bind` 时只更新槽位。
+3. 它评估每次工具调用，返回 `allow / ask / deny`：
    - `allow` → `next()`；
-   - `ask` → 复用 `Approval.request`（TUI 弹层；headless 按 `deny`）；
+   - `ask` → 复用当前 `Approval.request`（TUI 弹层；headless 按 `deny`）；
    - `deny` → 直接返回 `PERMISSION_DENIED` 错误，不进入执行体。
-3. 中间件仍打 `kApprovalMiddlewareTag`，子 Agent 的 `excludeTags` 逻辑不变。
-4. 没有命中任何显式规则时，退回当前 `[approval] mode` + `ToolRisk` 行为，
+4. 中间件仍打 `kApprovalMiddlewareTag`。子 Agent：`inherit` 复用宿主 scope；
+   `readonly` / `ask` / `auto` 按现有逻辑排除宿主中间件，安装子 scope。
+5. 没有命中任何显式规则时，退回当前 `[approval] mode` + `ToolRisk` 行为，
    保证零配置完全兼容。
-5. 权限引擎不依赖 TUI；未来 server / ACP 可直接复用。
+6. 权限引擎不依赖 TUI；未来 server / ACP 可直接复用。
 
 ## 4. A 组：安全与流程
 
@@ -374,7 +379,13 @@ class RevertStage {
 - rewind 与 undo 并存：`/rewind` 保留原语义（文件回滚 + 对话 fork，无 redo）；
   `/undo` 是带 stage 的新命令。文档说明差异，暂不合并。
 - checkpoint 的 `restoreTo` 需要支持“按 sessionId 恢复”，不依赖 manager 当前
-  绑定；在 `CheckpointStore` 层新增 `restoreSession(sessionId, turn)`。
+  绑定；`CheckpointStore.restore(sessionId, turn)` 已具备该能力，manager 只需
+  暴露包装并串行化。
+- 绑定已有会话时用 `bind` 而不是 `reset`：有检查点则接管（`turn = max(turn)`，
+  不 `clearSession`），没有才写 turn 0 基线。现有 `reset` 会清空时间线，
+  既破坏 `/redo`，也会在 `--session` 恢复时误删历史；本项一并修正。
+- `rewind` / `restoreTo` 进入 `_chain` 串行执行，并新增 `flush()` 等待在途快照；
+  `/undo` 前先 `flush()`，避免与 `recordTurn` 抢文件。
 
 #### 测试
 
