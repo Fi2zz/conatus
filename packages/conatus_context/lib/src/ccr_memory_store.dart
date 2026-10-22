@@ -87,10 +87,7 @@ class CcrMemoryStore implements CcrStore {
   }
 
   @override
-  Future<CcrEntry?> stat(String id) async {
-    final _MemoryEntry? entry = _entries[id];
-    return entry == null ? null : entry.toMeta(id);
-  }
+  Future<CcrEntry?> stat(String id) async => _entries[id]?.toMeta(id);
 
   @override
   Future<void> remove(String id) async {
