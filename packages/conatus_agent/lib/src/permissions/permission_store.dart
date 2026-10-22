@@ -38,20 +38,52 @@ class PermissionStore {
   /// JSON 文件路径。
   final String path;
 
+  /// 最近一次 [load] 的失败原因；成功 / 文件缺失为 `null`。
+  ///
+  /// 载入失败仍然按「没有规则」处理（fail-open 保证 Agent 能启动），但调用方
+  /// 要把这条原因摊给用户：静默禁用全部 deny 是最危险的一种「看起来正常」。
+  String? get loadError => _loadError;
+  String? _loadError;
+
+  /// 最近一次 [load] 跳过的非法规则条数（单条坏规则不整体失败）。
+  int get skippedRules => _skippedRules;
+  int _skippedRules = 0;
+
   /// 读取全部规则；文件不存在或内容不可用时返回空列表。
   ///
   /// 单条非法规则被跳过，其余照常返回；版本 / 形状不符整体视为不可用。
   Future<List<PermissionRule>> load() async {
+    _loadError = null;
+    _skippedRules = 0;
     try {
       final File file = File(path);
       if (!await file.exists()) return <PermissionRule>[];
-      return await _readRules(file) ?? <PermissionRule>[];
-    } on FileSystemException {
+      final Object? json = jsonDecode(await file.readAsString());
+      final List<PermissionRule>? rules = _decode(json);
+      if (rules == null) {
+        _loadError = '权限文件 $path 的格式或版本无法识别，已按无规则启动';
+        return <PermissionRule>[];
+      }
+      final Object? rawRules =
+          json is Map<String, Object?> ? json['rules'] : null;
+      if (rawRules is List<Object?>) {
+        _skippedRules = rawRules.length - rules.length;
+      }
+      return rules;
+    } on FormatException {
+      _loadError = '权限文件 $path 不是合法 JSON，已按无规则启动';
+      return <PermissionRule>[];
+    } on FileSystemException catch (error) {
+      _loadError = '权限文件 $path 读取失败（${error.message}），已按无规则启动';
       return <PermissionRule>[];
     }
   }
 
   /// 用 [rules] 整体替换文件内容（原子发布 + 0600）。
+  ///
+  /// rename 之后 best-effort 刷一次盘（`sync`）：目录项本身在 Dart 里拿不到
+  /// 可 fsync 的句柄，不刷的话「总是允许」在崩溃后可能连文件一起消失，而用户
+  /// 以为规则已经生效。写入本来就低频（每次「总是允许」一次），代价可接受。
   Future<void> save(List<PermissionRule> rules) async {
     final File file = File(path);
     await file.parent.create(recursive: true);
@@ -62,9 +94,20 @@ class PermissionStore {
       await temp.writeAsString(encoded, flush: true);
       await restrictFilePermissions(temp.path);
       await temp.rename(path);
+      _syncParent();
     } on Object catch (_) {
       await _discard(temp);
       rethrow;
+    }
+  }
+
+  /// 目录项落盘（best-effort；失败不影响已经成功的 rename）。
+  void _syncParent() {
+    if (Platform.isWindows) return;
+    try {
+      Process.runSync('sync', const <String>[]);
+    } on ProcessException {
+      // 没有 sync 命令的环境（极简容器）只能接受「已 flush 文件内容」。
     }
   }
 

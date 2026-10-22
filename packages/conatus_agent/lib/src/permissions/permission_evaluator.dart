@@ -14,6 +14,7 @@ import 'permission_decision.dart';
 import 'permission_effect.dart';
 import 'permission_engine.dart';
 import 'permission_path.dart';
+import 'permission_rule.dart';
 import 'permission_scope.dart';
 import 'permission_verdict.dart';
 
@@ -41,18 +42,22 @@ class PermissionEvaluator {
     final String action = permissionActionFor(call.name);
     final List<String> resources = permissionResourcesFor(call, pathArgs);
     const PermissionEngine engine = PermissionEngine();
-    final PermissionVerdict primary = engine.evaluate(
-      action: action,
-      resources: resources,
-      risk: tool.riskLevel,
-      scope: scope,
+    final PermissionScope expanded = _expandRules(scope, workdir);
+    final PermissionVerdict primary = _withResources(
+      engine.evaluate(
+        action: action,
+        resources: _spellings(action, resources, workdir),
+        risk: tool.riskLevel,
+        scope: expanded,
+      ),
+      resources,
     );
-    final List<String> targetPaths = permissionPathsFor(call, pathArgs);
+    final List<String> targetPaths = permissionBoundaryPathsFor(call, pathArgs);
     final PermissionVerdict? external = _outsideVerdict(engine, (
       action: action,
       paths: targetPaths,
       risk: tool.riskLevel,
-      scope: scope,
+      scope: expanded,
     ));
     final PermissionVerdict verdict =
         external != null && external.effect.index > primary.effect.index
@@ -75,6 +80,70 @@ class PermissionEvaluator {
     );
   }
 
+  /// 判定结果对外只暴露调用方看到的资源（词法拼写）；内部匹配用的 workdir /
+  /// 真实路径拼写不上屏、不进遥测，否则同一次调用看起来像读了两个文件。
+  PermissionVerdict _withResources(
+    PermissionVerdict verdict,
+    List<String> resources,
+  ) =>
+      PermissionVerdict(
+        effect: verdict.effect,
+        action: verdict.action,
+        resources: resources,
+        rule: verdict.rule,
+      );
+
+  /// 规则里路径 pattern 的全部拼写（词法 / workdir / 真实路径）。
+  ///
+  /// 规则展开发生在判定时，因此库用法（不经过 `PermissionWiring`）也享有
+  /// 同一套拼写；已展开的规则再次展开是幂等的。
+  PermissionScope _expandRules(PermissionScope scope, String? root) {
+    if (root == null || root.isEmpty) return scope;
+    final List<PermissionRule> rules = <PermissionRule>[];
+    for (final PermissionRule rule in scope.rules) {
+      if (!permissionActionUsesPath(rule.action)) {
+        rules.add(rule);
+        continue;
+      }
+      for (final String spelling in permissionPatternSpellings(
+        rule.resource,
+        root,
+      )) {
+        rules.add(spelling == rule.resource
+            ? rule
+            : PermissionRule(
+                action: rule.action,
+                resource: spelling,
+                effect: rule.effect,
+                source: rule.source,
+              ));
+      }
+    }
+    return PermissionScope(
+      rules: rules,
+      askThreshold: scope.askThreshold,
+      agentId: scope.agentId,
+    );
+  }
+
+  /// 调用侧资源拼写：路径动作补 workdir / 真实路径，非路径动作原样。
+  List<String> _spellings(
+    String action,
+    List<String> resources,
+    String? root,
+  ) {
+    if (!permissionActionUsesPath(action)) return resources;
+    final Set<String> spellings = <String>{};
+    for (final String resource in resources) {
+      spellings.addAll(
+        action == 'glob'
+            ? permissionPatternSpellings(resource, root)
+            : permissionPathSpellings(resource, root),
+      );
+    }
+    return spellings.toList(growable: false);
+  }
+
   PermissionVerdict? _outsideVerdict(
     PermissionEngine engine,
     ({
@@ -86,11 +155,20 @@ class PermissionEvaluator {
   ) {
     final String? root = workdir;
     if (root == null || !permissionActionUsesPath(input.action)) return null;
-    final Set<String> boundaries = <String>{
-      for (final String path in input.paths)
-        if (!permissionPathUnder(path, root))
-          permissionDirectoryBoundary(resolvePermissionPath(path, root)),
+    final String? realRoot = canonicalPermissionPath(root);
+    final Set<String> roots = <String>{
+      normalizePermissionPath(root),
+      if (realRoot != null) normalizePermissionPath(realRoot),
     };
+    final Set<String> boundaries = <String>{};
+    for (final String path in input.paths) {
+      final String resolved = resolvePermissionPath(path, root);
+      final String identity = canonicalPermissionPath(resolved) ?? resolved;
+      if (roots.any((String base) => permissionPathUnder(identity, base))) {
+        continue;
+      }
+      boundaries.add(permissionDirectoryBoundary(identity));
+    }
     if (boundaries.isEmpty) return null;
     return engine.evaluate(
       action: kExternalDirectoryAction,

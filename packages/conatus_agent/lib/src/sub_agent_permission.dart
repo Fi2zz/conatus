@@ -10,6 +10,7 @@ import 'package:conatus_foundation/conatus_foundation.dart';
 
 import 'approval.dart';
 import 'approval_gate.dart' show kApprovalMiddlewareTag;
+import 'permissions/permission_effect.dart';
 import 'permissions/permission_gate.dart';
 import 'permissions/permission_rule.dart';
 import 'permissions/permission_scope.dart';
@@ -69,7 +70,8 @@ SubAgentPermission tightenBelow(SubAgentPermission base, String? requested) {
 /// 作用域（`PermissionScopeSlot`）与其规则。
 ///
 /// 非 inherit 档不再只靠 readonly guard / 审批层：会装一个**子权限中间件**，
-/// 把宿主规则原样带过去（host deny 不下放），再按模式收紧阈值：
+/// 继承宿主的 deny / ask 规则（ask 档还要再过滤掉父级 allow，否则「子代理每次
+/// 都要确认」会被父级 allow 直接放行），再按模式收紧阈值：
 /// readonly / auto → 不询问（readonly 另有风险守卫），ask → 阈值 low。
 void applySubAgentPermission(
   Context child,
@@ -109,11 +111,20 @@ void _installChildPermission(
       child.get<PermissionScopeSlot>(kPermissionScopeService)?.current;
   final ToolRisk? threshold =
       mode == SubAgentPermission.ask ? ToolRisk.low : null;
+  final List<PermissionRule> inherited =
+      host?.rules ?? const <PermissionRule>[];
   instrumentPermission(
     child,
     tools: childTools,
     scope: PermissionScopeSlot(PermissionScope(
-      rules: host?.rules ?? const <PermissionRule>[],
+      // ask 档要逐次确认：父级 allow 会把「本应询问」的调用直接放行，
+      // 只继承更严的 deny / ask 才符合子代理语义。
+      rules: mode == SubAgentPermission.ask
+          ? <PermissionRule>[
+              for (final PermissionRule rule in inherited)
+                if (rule.effect != PermissionEffect.allow) rule,
+            ]
+          : inherited,
       askThreshold: threshold,
       agentId: host?.agentId ?? 'build',
     )),

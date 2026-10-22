@@ -13,6 +13,10 @@ import 'permission_patch.dart';
 import 'permission_path.dart';
 
 /// 具名工具的动作归一表（与设计文档「动作映射」表一致）。
+///
+/// git 写工具归一到 `shell`：它们经 `runGit` 执行真实 git 命令，规则
+/// `action="shell", resource="git *"` 必须能拦住，否则「只允许只读 git」的
+/// 策略会被 `git_add` / `git_commit` / `git_branch` / `git_stash` 绕过。
 const Map<String, String> _toolActions = <String, String>{
   'read_file': 'read',
   'list_files': 'read',
@@ -28,6 +32,10 @@ const Map<String, String> _toolActions = <String, String>{
   'list_background_tasks': 'shell',
   'background_output': 'shell',
   'background_kill': 'shell',
+  'git_add': 'shell',
+  'git_commit': 'shell',
+  'git_branch': 'shell',
+  'git_stash': 'shell',
   'web_search': 'websearch',
   'fetch_url': 'webfetch',
   'spawn_agent': 'subagent',
@@ -36,7 +44,16 @@ const Map<String, String> _toolActions = <String, String>{
 };
 
 /// 以路径为资源的动作：资源需要规范化。
-const Set<String> _pathActions = <String>{'read', 'edit', 'glob'};
+///
+/// `external_directory` 也在此列：它的规则资源是路径 pattern（`~/shared/*`
+/// 这类写法需要展开与按 workdir 解析），否则规则永远匹配不上判定器给出的
+/// 绝对边界。
+const Set<String> _pathActions = <String>{
+  'read',
+  'edit',
+  'glob',
+  'external_directory',
+};
 
 /// MCP 工具名里的 server / tool 分隔符。
 const String _mcpSeparator = '__';
@@ -73,6 +90,7 @@ List<String> permissionPathsFor(ToolCall call, List<String> pathArgs) {
 ///   解析不出时落回 `*`；
 /// - `glob`：请求的 pattern；
 /// - `grep`：请求的 pattern（`rg` 的搜索表达式）；
+/// - `shell`：命令 / git 写工具的实际 argv（`git add ...` 等）；
 /// - `skill`：请求的技能 id（参数 `name`）；
 /// - shell / web / subagent：命令 / URL / 查询词 / agent id（缺省 `default`，
 ///   `SpawnAgentTool` 目前没有 agent 参数，保留该约定供未来扩展）；
@@ -90,11 +108,12 @@ List<String> permissionResourcesFor(
     if (paths.isNotEmpty) return paths;
   }
   final String? value = switch (action) {
-    'shell' => _firstArgument(call.arguments, const <String>[
-        'command',
-        'test_cmd',
-        'program',
-      ]),
+    'shell' => _gitResource(call) ??
+        _firstArgument(call.arguments, const <String>[
+          'command',
+          'test_cmd',
+          'program',
+        ]),
     'webfetch' => _stringArgument(call.arguments, 'url'),
     'websearch' => _stringArgument(call.arguments, 'query'),
     'skill' => _stringArgument(call.arguments, 'name'),
@@ -104,6 +123,62 @@ List<String> permissionResourcesFor(
   if (value == null || value.isEmpty) return const <String>['*'];
   return <String>[value];
 }
+
+/// 参与 `external_directory` 判定的路径。
+///
+/// 与 [permissionPathsFor] 的区别：`grep`（`rg`）的搜索根 `path` 不在
+/// `Tool.pathParams` 里，但 `rg(path: "/")` 同样是越界读取。这里把它并进来做
+/// **边界判定**，不并进权限资源——否则每次 rg 都会多出一条「路径信任」询问。
+List<String> permissionBoundaryPathsFor(
+  ToolCall call,
+  List<String> pathArgs,
+) {
+  final String action = permissionActionFor(call.name);
+  if (action != 'grep') return permissionPathsFor(call, pathArgs);
+  final String? searchPath = _stringArgument(call.arguments, 'path');
+  final List<String> paths = <String>[
+    if (searchPath != null) searchPath,
+    ...pathArgs,
+  ];
+  return <String>[
+    for (final String path in paths) normalizePermissionPath(path),
+  ];
+}
+
+/// git 写工具的等价命令行，用于 `shell` 规则匹配。
+///
+/// 与 `git_write_tools.dart` 拼的 argv 保持同形（前缀 `git <子命令>`）；规则
+/// 通常写成 `git *` / `git add *`，只依赖前缀。返回 `null` 表示不是 git 写
+/// 工具（落回普通命令参数）。
+String? _gitResource(ToolCall call) {
+  final Map<String, Object?> args = call.arguments;
+  switch (call.name) {
+    case 'git_add':
+      if (args['all'] == true) return 'git add -A';
+      final List<String> paths = _stringList(args['paths']);
+      return paths.isEmpty ? 'git add' : 'git add -- ${paths.join(' ')}';
+    case 'git_commit':
+      final String? message = _stringArgument(args, 'message');
+      return message == null ? 'git commit' : 'git commit -m $message';
+    case 'git_branch':
+      if (args['list'] == true) return 'git branch --list';
+      final String name = _stringArgument(args, 'name') ?? '';
+      return args['create'] == true
+          ? 'git checkout -b $name'.trimRight()
+          : 'git checkout $name'.trimRight();
+    case 'git_stash':
+      if (args['restore'] == true) return 'git stash list';
+      return args['keep'] == true ? 'git stash push' : 'git stash pop';
+  }
+  return null;
+}
+
+List<String> _stringList(Object? raw) => raw is List
+    ? <String>[
+        for (final Object? item in raw)
+          if (item is String) item
+      ]
+    : const <String>[];
 
 /// 按候选键顺序取第一个非空字符串参数。
 String? _firstArgument(Map<String, Object?> args, List<String> keys) {

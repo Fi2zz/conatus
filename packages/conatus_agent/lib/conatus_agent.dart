@@ -121,6 +121,7 @@ export 'src/permissions/permission_action.dart'
     show
         permissionActionFor,
         permissionActionUsesPath,
+        permissionBoundaryPathsFor,
         permissionPathsFor,
         permissionResourcesFor;
 export 'src/permissions/permission_effect.dart' show PermissionEffect;
@@ -130,11 +131,16 @@ export 'src/permissions/permission_evaluator.dart'
 export 'src/permissions/permission_gate.dart' show instrumentPermission;
 export 'src/permissions/permission_matcher.dart'
     show lastMatchingRule, permissionPatternMatches;
+export 'src/permissions/permission_patch.dart' show permissionPatchPaths;
 export 'src/permissions/permission_path.dart'
     show
+        canonicalPermissionPath,
+        canonicalPermissionPattern,
         normalizePermissionPath,
         permissionDirectoryBoundary,
+        permissionPathSpellings,
         permissionPathUnder,
+        permissionPatternSpellings,
         resolvePermissionPath;
 export 'src/permissions/permission_rule.dart' show PermissionRule;
 export 'src/permissions/permission_scope.dart' show PermissionScope;
