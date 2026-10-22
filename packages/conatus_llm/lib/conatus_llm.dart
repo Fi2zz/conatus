@@ -13,6 +13,7 @@ export 'src/llm.dart'
         LlmToolCall,
         provideLlm,
         streamChatResult;
+export 'src/llm_anthropic.dart' show AnthropicProvider;
 export 'src/llm_fallback.dart'
     show FallbackLlm, LlmFallbackEvent, LlmFallbackReporter;
 export 'src/llm_openai.dart'

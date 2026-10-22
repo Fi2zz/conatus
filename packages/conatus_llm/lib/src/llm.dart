@@ -1,9 +1,10 @@
 /// llm 插件：统一的大模型接入层。
 ///
-/// 支持 OpenAI 兼容的两种请求形态（[LlmApiStyle]）：
+/// 支持三种请求形态（[LlmApiStyle]）：
 ///
 /// * [LlmApiStyle.chat]：`{baseUrl}/chat/completions`，消息用 `messages`；
-/// * [LlmApiStyle.responses]：`{baseUrl}/responses`，消息用 `input`。
+/// * [LlmApiStyle.responses]：`{baseUrl}/responses`，消息用 `input`；
+/// * [LlmApiStyle.anthropic]：`{baseUrl}/messages`（Anthropic Messages）。
 ///
 /// 非流式走 [LlmProvider.chat]，流式走 [LlmProvider.chatStream]。
 /// 具体 provider 实现见 `llm_openai.dart`。
@@ -18,8 +19,8 @@ import 'package:conatus_core/conatus_core.dart';
 import 'llm_fallback.dart';
 import 'llm_retry.dart';
 
-/// OpenAI 兼容端点的请求形态。
-enum LlmApiStyle { chat, responses }
+/// 请求形态：OpenAI Chat / Responses，或 Anthropic Messages。
+enum LlmApiStyle { chat, responses, anthropic }
 
 /// 模型请求的一次工具调用。
 class LlmToolCall {

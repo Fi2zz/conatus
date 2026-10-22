@@ -7,6 +7,9 @@ conatus 的大模型接入：
 - `OpenAiCompatibleProvider`：任意 OpenAI 兼容端点的通用实现（`LlmApiStyle.chat`
   与 `LlmApiStyle.responses`），本包**不含具体提供商**——豆包 / DeepSeek 的便捷类
   在 `conatus_code`（`lib/providers.dart`）
+- `AnthropicProvider`：Anthropic Messages（`LlmApiStyle.anthropic`，`/messages`），
+  支持 system 抽取、工具调用/结果、图片与 SSE 文本/thinking 增量；认证按主机区分
+  （`opencode.ai` 用 `Authorization: Bearer`，其它主机用 `x-api-key`）
 - Key 的解析：显式 `apiKey` → 注入的 `credentials`（`conatus_credentials`），
   **不直接读环境变量**；两者都没有时调用抛 `LlmException('缺少 API Key')`，
   并订阅 `changes` 做运行时轮换
@@ -26,4 +29,12 @@ final llm = OpenAiCompatibleProvider(
 );
 final result = await llm.chat(<LlmMessage>[const LlmMessage('user', '你好')]);
 print(result.content);
+
+// Anthropic Messages
+final claude = AnthropicProvider(
+  name: 'anthropic',
+  baseUrl: 'https://api.anthropic.com/v1',
+  model: 'claude-haiku-5-5',
+  apiKey: 'sk-ant-...',
+);
 ```
