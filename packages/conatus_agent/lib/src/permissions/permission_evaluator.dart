@@ -47,9 +47,10 @@ class PermissionEvaluator {
       risk: tool.riskLevel,
       scope: scope,
     );
+    final List<String> targetPaths = permissionPathsFor(call, pathArgs);
     final PermissionVerdict? external = _outsideVerdict(engine, (
       action: action,
-      resources: resources,
+      paths: targetPaths,
       risk: tool.riskLevel,
       scope: scope,
     ));
@@ -78,7 +79,7 @@ class PermissionEvaluator {
     PermissionEngine engine,
     ({
       String action,
-      List<String> resources,
+      List<String> paths,
       ToolRisk risk,
       PermissionScope scope,
     }) input,
@@ -86,9 +87,9 @@ class PermissionEvaluator {
     final String? root = workdir;
     if (root == null || !permissionActionUsesPath(input.action)) return null;
     final Set<String> boundaries = <String>{
-      for (final String resource in input.resources)
-        if (!permissionPathUnder(resource, root))
-          permissionDirectoryBoundary(resource),
+      for (final String path in input.paths)
+        if (!permissionPathUnder(path, root))
+          permissionDirectoryBoundary(path),
     };
     if (boundaries.isEmpty) return null;
     return engine.evaluate(

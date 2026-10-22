@@ -9,6 +9,7 @@ library;
 
 import 'package:conatus_foundation/conatus_foundation.dart';
 
+import 'permission_patch.dart';
 import 'permission_path.dart';
 
 /// 具名工具的动作归一表（与设计文档「动作映射」表一致）。
@@ -51,20 +52,40 @@ String permissionActionFor(String toolName) {
 /// [action] 是否把路径当作资源（`read` / `edit` / `glob`）。
 bool permissionActionUsesPath(String action) => _pathActions.contains(action);
 
+/// 取一次调用涉及的**文件路径**（用于 `external_directory` 判定）。
+///
+/// `apply_patch` 从补丁头解析；`glob` 用搜索根 `path`；`read` / `edit` 用声明
+/// 的路径参数。非路径动作返回空列表。
+List<String> permissionPathsFor(ToolCall call, List<String> pathArgs) {
+  final String action = permissionActionFor(call.name);
+  if (!permissionActionUsesPath(action)) return const <String>[];
+  if (call.name == 'apply_patch') {
+    return permissionPatchPaths(_stringArgument(call.arguments, 'patch') ?? '');
+  }
+  return <String>[
+    for (final String path in pathArgs) normalizePermissionPath(path),
+  ];
+}
+
 /// 取一次调用的权限资源列表。
 ///
-/// 路径动作返回规范化后的路径；shell 用命令串（`command` / `test_cmd` /
-/// `program`）；联网工具用 URL / 查询词；子代理用 agent id（缺省 `default`）；
-/// 其余（含 MCP、skill、question）用通配 `*`。空值同样落回 `*`。
+/// - `read` / `edit`：规范化路径；`apply_patch` 解析补丁内每个目标路径，
+///   解析不出时落回 `*`；
+/// - `glob`：请求的 pattern；
+/// - `skill`：请求的技能 id（参数 `name`）；
+/// - shell / web / subagent：命令 / URL / 查询词 / agent id；
+/// - 其余（含 MCP、question）：`*`。空值同样落回 `*`。
 List<String> permissionResourcesFor(
   ToolCall call,
   List<String> pathArgs,
 ) {
   final String action = permissionActionFor(call.name);
-  if (permissionActionUsesPath(action) && pathArgs.isNotEmpty) {
-    return <String>[
-      for (final String path in pathArgs) normalizePermissionPath(path),
-    ];
+  if (action == 'glob') {
+    return <String>[_stringArgument(call.arguments, 'pattern') ?? '*'];
+  }
+  if (action == 'read' || action == 'edit') {
+    final List<String> paths = permissionPathsFor(call, pathArgs);
+    if (paths.isNotEmpty) return paths;
   }
   final String? value = switch (action) {
     'shell' => _firstArgument(call.arguments, const <String>[
@@ -74,6 +95,7 @@ List<String> permissionResourcesFor(
       ]),
     'webfetch' => _stringArgument(call.arguments, 'url'),
     'websearch' => _stringArgument(call.arguments, 'query'),
+    'skill' => _stringArgument(call.arguments, 'name'),
     'subagent' => _stringArgument(call.arguments, 'agent') ?? 'default',
     _ => null,
   };

@@ -118,7 +118,11 @@ export 'src/layered_compaction.dart'
 export 'src/model_visible_invariant.dart'
     show assertModelVisibleInvariant, checkModelVisibleInvariant, sameJson;
 export 'src/permissions/permission_action.dart'
-    show permissionActionFor, permissionActionUsesPath, permissionResourcesFor;
+    show
+        permissionActionFor,
+        permissionActionUsesPath,
+        permissionPathsFor,
+        permissionResourcesFor;
 export 'src/permissions/permission_effect.dart' show PermissionEffect;
 export 'src/permissions/permission_engine.dart' show PermissionEngine;
 export 'src/permissions/permission_evaluator.dart'
