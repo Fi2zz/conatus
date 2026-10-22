@@ -20,6 +20,7 @@ export 'src/compressors/diff_compressor.dart' show DiffCompressor;
 export 'src/compressors/json_array_compressor.dart' show JsonArrayCompressor;
 export 'src/compressors/search_results_compressor.dart'
     show SearchResultsCompressor;
+export 'src/compressors/tabular_compressor.dart' show TabularCompressor;
 export 'src/content_compressor.dart'
     show CompressionBudget, CompressionDraft, ContentCompressor;
 export 'src/content_detector.dart'

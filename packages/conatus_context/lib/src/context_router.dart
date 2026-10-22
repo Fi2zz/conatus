@@ -126,7 +126,9 @@ class ContextRouter {
     bool conservative,
   ) =>
       CompressionBudget(
-        maxItems: config.maxJsonItems,
+        maxItems: kind == ContentKind.tabular
+            ? config.maxTableRows
+            : config.maxJsonItems,
         maxLines: _maxLines(kind),
         maxFiles: config.maxSearchFiles,
         targetRatio: config.textTargetRatio,
