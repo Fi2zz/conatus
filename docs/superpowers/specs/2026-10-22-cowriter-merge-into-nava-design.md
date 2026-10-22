@@ -125,16 +125,15 @@ config / hooks / project_context / headless / list_files / glob。
 
 ### 3.5 cowriter 归档
 
-1. 在 cowriter 仓库新增 `ARCHIVED.md`，写清：
+1. 在 cowriter 的 `README.md` 顶部写清归档信息（不新增独立文件）：
    - 归档日期与决定：收敛为单一产品 nava，降低双份代码的维护成本；
    - 增量去向：story 已并入 `conatus_code`（附合并提交 SHA），steering / diff apply
      同步合入；
    - 迁移指引：`~/.cowriter/config.toml` → `~/.nava/config.toml`、会话与
      `story-log` 目录映射、`COWRITER.md` → `NAVA.md`；
    - 明确「本仓库不再接受改动，问题请提到 conatus 仓库」。
-2. `README.md` 顶部加醒目的归档横幅，指向 `ARCHIVED.md` 与 nava。
-3. 推送后执行 `gh repo archive Fi2zz/cowriter`（只读，保留历史）。
-4. 归档提交必须先于父仓 gitlink 移除推送。
+2. 推送后执行 `gh repo archive Fi2zz/cowriter`（只读，保留历史）。
+3. 归档提交必须先于父仓 gitlink 移除推送。
 
 ## 4. 文件级改动清单
 
@@ -176,7 +175,7 @@ config / hooks / project_context / headless / list_files / glob。
 
 | 文件 | 动作 |
 |---|---|
-| `ARCHIVED.md` | 新增，写清归档原因、增量去向、迁移指引 |
+| `README.md` | 顶部写入归档原因、增量去向、迁移指引（不新增独立文件） |
 | `README.md` | 顶部归档横幅 |
 
 ## 5. 测试策略
@@ -209,7 +208,7 @@ config / hooks / project_context / headless / list_files / glob。
 
 1. conatus_code：依赖/钉版 → 配置 → story 移植 → 接线 → 通用增量 → 测试 → 文档。
 2. `dart analyze --fatal-infos` + `dart test` + 重建二进制；提交并推送 conatus_code。
-3. cowriter：写 `ARCHIVED.md` + README 横幅；提交推送；GitHub archive。
+3. cowriter：在 `README.md` 顶部写归档说明；提交推送；GitHub archive。
 4. 父仓：移除子模块、改脚本与文档、同步 gitlink；提交推送。
 5. 验证父仓 `dart pub get` 与根测试；确认 CI。
 
@@ -224,4 +223,4 @@ config / hooks / project_context / headless / list_files / glob。
 - [ ] `dart test` 全绿（含新增用例）
 - [ ] `dist/nava` 重建且 `--version` 正确
 - [ ] 父仓无 cowriter 子模块，`dart pub get` 与根测试通过
-- [ ] cowriter `ARCHIVED.md` 写清归档原因与迁移指引，仓库已 archive
+- [ ] cowriter `README.md` 顶部写清归档原因与迁移指引，仓库已 archive
