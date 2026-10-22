@@ -59,6 +59,10 @@ SubAgentPermission tightenBelow(SubAgentPermission base, String? requested) {
 /// [child] 用于挂审批中间件（随子上下文释放）。调用方需已按模式决定是否从继承
 /// 管线里排除宿主审批层：非 [SubAgentPermission.inherit] 时应排除
 /// [kApprovalMiddlewareTag]，否则会与本函数装的策略叠成两次审批。
+///
+/// 根上下文的 `instrumentPermission` 也打同一个 tag，因此这条排除同时覆盖
+/// 「权限 + 审批」两层；[SubAgentPermission.inherit] 的子代理才会复用宿主
+/// 作用域（`PermissionScopeSlot`）与其规则。
 void applySubAgentPermission(
   Context child,
   ToolRegistry childTools,

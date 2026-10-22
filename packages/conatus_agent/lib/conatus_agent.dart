@@ -117,12 +117,17 @@ export 'src/layered_compaction.dart'
     show LayeredCompactor, provideLayeredCompaction;
 export 'src/model_visible_invariant.dart'
     show assertModelVisibleInvariant, checkModelVisibleInvariant, sameJson;
+export 'src/permissions/permission_action.dart'
+    show permissionActionFor, permissionResourcesFor;
 export 'src/permissions/permission_effect.dart' show PermissionEffect;
 export 'src/permissions/permission_engine.dart' show PermissionEngine;
+export 'src/permissions/permission_gate.dart' show instrumentPermission;
 export 'src/permissions/permission_matcher.dart'
     show lastMatchingRule, permissionPatternMatches;
 export 'src/permissions/permission_rule.dart' show PermissionRule;
 export 'src/permissions/permission_scope.dart' show PermissionScope;
+export 'src/permissions/permission_scope_slot.dart'
+    show PermissionScopeSlot, kPermissionScopeService;
 export 'src/permissions/permission_store.dart'
     show PermissionStore, PermissionStoreException;
 export 'src/permissions/permission_verdict.dart' show PermissionVerdict;

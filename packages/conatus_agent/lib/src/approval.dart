@@ -19,6 +19,9 @@ class ApprovalRequest {
     this.arguments = const <String, Object?>{},
     this.description = '',
     this.pathArgs = const <String>[],
+    this.action = '',
+    this.resources = const <String>[],
+    this.rule,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -39,6 +42,17 @@ class ApprovalRequest {
   /// 无路径参数时为空列表。审批方据此把「工具 + 目录」作为信任粒度。
   final List<String> pathArgs;
 
+  /// 权限动作（如 `shell` / `read_file` / `server_tool`）；空串表示未经权限层。
+  ///
+  /// 审批方据此展示「将要保存的规则」，也是「总是允许」推导规则的一部分。
+  final String action;
+
+  /// 本次调用被判定时使用的资源列表（路径 / 命令 / URL / 查询词 / `*`）。
+  final List<String> resources;
+
+  /// 命中的权限规则摘要（`PermissionRule.toString()`）；无命中为 `null`。
+  final String? rule;
+
   /// 请求时间。
   final DateTime createdAt;
 
@@ -49,6 +63,9 @@ class ApprovalRequest {
         'arguments': arguments,
         'description': description,
         'pathArgs': pathArgs,
+        'action': action,
+        'resources': resources,
+        'rule': rule,
         'createdAt': createdAt.toIso8601String(),
       };
 
