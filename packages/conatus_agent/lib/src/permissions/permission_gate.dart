@@ -17,16 +17,13 @@ import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 
 import '../approval.dart';
-import '../approval_gate.dart' show kApprovalMiddlewareTag, pathArguments;
+import '../approval_gate.dart' show kApprovalMiddlewareTag;
 import '../telemetry.dart';
-import 'permission_action.dart';
 import 'permission_decision.dart';
 import 'permission_effect.dart';
-import 'permission_engine.dart';
+import 'permission_evaluator.dart';
 import 'permission_rule.dart';
-import 'permission_scope.dart';
 import 'permission_scope_slot.dart';
-import 'permission_verdict.dart';
 
 /// 在工具表上挂权限中间件；返回撤销函数。
 ///
@@ -85,38 +82,13 @@ class _PermissionGate {
   ) async {
     final Tool? tool = registry.get(call.name);
     if (tool == null) return next();
-    final PermissionDecision decision = _evaluate(tool, call, slot.current);
+    final PermissionDecision decision = PermissionEvaluator(
+      interactive: interactive,
+      workdir: ctx.get<String>('workdir'),
+    ).evaluate(tool, call, slot.current);
     if (decision.effect == PermissionEffect.allow) return next();
     if (decision.effect == PermissionEffect.deny) return _denied(decision);
     return _ask(call, tool, decision, next);
-  }
-
-  PermissionDecision _evaluate(
-      Tool tool, ToolCall call, PermissionScope scope) {
-    final List<String> pathArgs = pathArguments(tool, call);
-    final String action = permissionActionFor(call.name);
-    final List<String> resources = permissionResourcesFor(call, pathArgs);
-    final PermissionVerdict verdict = const PermissionEngine().evaluate(
-      action: action,
-      resources: resources,
-      risk: tool.riskLevel,
-      scope: scope,
-    );
-    // 路径兜底只在有人可问时生效：它服务的是「目录信任」交互，headless 没有
-    // 审批人，旧行为也不拦（零配置兼容）。
-    final bool pathFallback = interactive &&
-        verdict.rule == null &&
-        verdict.effect == PermissionEffect.allow &&
-        pathArgs.isNotEmpty &&
-        scope.askThreshold != null;
-    return PermissionDecision(
-      effect: pathFallback ? PermissionEffect.ask : verdict.effect,
-      action: action,
-      resources: resources,
-      pathArgs: pathArgs,
-      verdict: verdict,
-      fallback: verdict.rule == null,
-    );
   }
 
   Future<ToolResult> _ask(
@@ -164,8 +136,8 @@ class _PermissionGate {
         arguments: call.arguments,
         description: tool.description,
         pathArgs: decision.pathArgs,
-        action: decision.action,
-        resources: decision.resources,
+        action: decision.verdict.action,
+        resources: decision.verdict.resources,
         rule: decision.verdict.rule?.toString(),
       );
 
