@@ -21,8 +21,8 @@ class ContextStatsTool extends Tool {
   String get description => '查看上下文压缩的累计统计（字符数与估算 token 数）。';
 
   @override
-  Future<ToolResult> call(ToolContext context) async => ToolResult.success(
-        jsonEncode(stats.toJson()),
-        value: stats.toJson(),
-      );
+  Future<ToolResult> call(ToolContext context) async {
+    final Map<String, Object?> json = stats.toJson();
+    return ToolResult.success(jsonEncode(json), value: json);
+  }
 }

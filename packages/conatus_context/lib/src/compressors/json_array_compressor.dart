@@ -42,11 +42,11 @@ class JsonArrayCompressor implements ContentCompressor {
   }
 
   Object _note(Object? first, int omitted, String retrievalId) {
-    final String marker = retrievalId.isEmpty
-        ? ''
-        : ' ${encodeCcrMarker(retrievalId, omitted, 'items')}';
-    final String text =
-        '$omitted items omitted;$marker use context_retrieve to read the original';
+    final String text = retrievalId.isEmpty
+        ? '$omitted items omitted (CCR disabled)'
+        : '$omitted items omitted; '
+            '${encodeCcrMarker(retrievalId, omitted, 'items')} '
+            'use context_retrieve to read the original';
     return first is Map ? <String, Object?>{'_conatus_context': text} : text;
   }
 

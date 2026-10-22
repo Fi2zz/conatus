@@ -36,6 +36,21 @@ void main() {
     expect(await s.get(id), 'x');
   });
 
+  test('索引存在但内容文件缺失时不报告条目', () async {
+    final String id = await store.put('x');
+    await fs.remove(await fs.resolve('${tmp.path}/$id.txt'));
+    final CcrFileStore reopened = CcrFileStore(fs: fs, dir: tmp.path);
+    expect(await reopened.stat(id), isNull);
+    expect(reopened.length, 0);
+  });
+
+  test('内容写入失败时抛出，不返回虚假 id', () async {
+    await fs.writeText(await fs.resolve('${tmp.path}/blocked'), 'x');
+    final CcrFileStore blocked =
+        CcrFileStore(fs: fs, dir: '${tmp.path}/blocked');
+    await expectLater(blocked.put('content'), throwsA(anything));
+  });
+
   test('TTL 过期视为未命中', () async {
     DateTime now = DateTime(2026);
     final CcrFileStore s = CcrFileStore(

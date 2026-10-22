@@ -35,6 +35,7 @@ void main() {
     final CompressionDraft d =
         const DiffCompressor().compress(_manyHunks(20), budget)!;
     expect(d.output, contains('hunks omitted'));
+    expect(d.output, contains('context_retrieve id=0123456789abcdef'));
     expect(d.output, contains('@@ -1,'));
     expect(d.output, contains('@@ -191,'));
   });

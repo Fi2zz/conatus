@@ -31,6 +31,11 @@ void main() {
     expect(d.output, contains('|---|---|'));
     expect(d.output, contains('| 0 | n0 |'));
     expect(d.output, contains('| 59 | n59 |'));
+    final String marker = d.output
+        .split('\n')
+        .firstWhere((String line) => line.contains('rows omitted'));
+    expect(
+        '|'.allMatches(marker).length, '|'.allMatches('| id | name |').length);
   });
 
   test('列数不一致时返回 null（不误判）', () {

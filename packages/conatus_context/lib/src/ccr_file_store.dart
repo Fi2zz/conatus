@@ -49,11 +49,7 @@ class CcrFileStore implements CcrStore {
   Future<String> put(String content) async {
     final CcrFileIndex index = await _ensureLoaded();
     final String id = ccrIdOf(content);
-    try {
-      await fs.writeText(await _target('$id.txt'), content);
-    } on Object {
-      return id;
-    }
+    await fs.writeText(await _target('$id.txt'), content);
     final DateTime now = _now();
     index.entries[id] = CcrFileEntry(
       chars: content.length,
@@ -132,6 +128,7 @@ class CcrFileStore implements CcrStore {
     } on Object {
       // 文件可能已不存在。
     }
+    await index.flush(fs, dir);
   }
 
   Future<void> _deleteAll(List<String> ids) async {

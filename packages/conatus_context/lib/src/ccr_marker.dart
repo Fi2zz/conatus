@@ -13,8 +13,8 @@ final RegExp _markerPattern =
 
 /// 由内容计算 16 位小写 hex 身份。
 ///
-/// 取 FNV-1a 64 与 djb2 的低 32 位拼接；对同一内容稳定，碰撞由读取时的
-/// 内容重算兜底。
+/// 取 FNV-1a 64 与 djb2 的低 32 位拼接；按 UTF-16 code unit 迭代，对同一内容
+/// 稳定，碰撞由读取时的内容重算兜底。
 String ccrIdOf(String content) {
   int fnv = 0xcbf29ce484222325;
   int djb = 5381;

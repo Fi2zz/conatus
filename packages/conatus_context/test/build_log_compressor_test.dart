@@ -65,6 +65,21 @@ void main() {
     expect(d.output, contains('--> src/main.rs:3:5'));
   });
 
+  test('栈链跨空行继续保留后续帧', () {
+    final List<String> lines = <String>[
+      for (int i = 0; i < 100; i++) 'INFO noise $i',
+      'ERROR boom',
+      'Traceback (most recent call last):',
+      '  File "a.py", line 1, in f',
+      '',
+      '  File "b.py", line 2, in g',
+      for (int i = 0; i < 100; i++) 'INFO tail $i',
+    ];
+    final CompressionDraft d =
+        const BuildLogCompressor().compress(lines.join('\n'), budget)!;
+    expect(d.output, contains('File "b.py"'));
+  });
+
   test('CRLF 输入保持 CRLF', () {
     final String input = '${_pytestLog().join('\r\n')}\r\n';
     final CompressionDraft d =

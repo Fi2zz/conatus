@@ -62,7 +62,27 @@ class CcrFileIndex {
     } on Object {
       // 索引缺失或损坏：按空存储启动。
     }
+    await _dropMissing(fs, dir, entries);
     return CcrFileIndex(entries);
+  }
+
+  static Future<void> _dropMissing(
+    FileSystem fs,
+    String dir,
+    Map<String, CcrFileEntry> entries,
+  ) async {
+    final List<String> missing = <String>[];
+    for (final String id in entries.keys) {
+      try {
+        final FsInfo? info = await fs.stat(await fs.resolve('$dir/$id.txt'));
+        if (info == null) missing.add(id);
+      } on Object {
+        missing.add(id);
+      }
+    }
+    for (final String id in missing) {
+      entries.remove(id);
+    }
   }
 
   static CcrFileEntry? _parse(Object? raw) {

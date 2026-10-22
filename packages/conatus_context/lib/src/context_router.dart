@@ -47,14 +47,25 @@ class ContextRouter {
     required String toolName,
     bool conservative = false,
   }) async {
-    final String? gate = _gate(input, toolName);
-    if (gate != null) return _skip(input, ContentKind.text, gate);
+    if (!config.enabled) {
+      return _skip(input, ContentKind.text, 'disabled');
+    }
+    if (input.isEmpty) return _skip(input, ContentKind.text, 'empty');
     final ContentKind kind;
     try {
       kind = detector(input).kind;
     } on Object {
       stats.recordFailure(ContentKind.text);
       return _skip(input, ContentKind.text, 'error');
+    }
+    if (config.protectedTools.contains(toolName)) {
+      return _skip(input, kind, 'protected');
+    }
+    if (input.length < config.minChars) {
+      return _skip(input, kind, 'tooSmall');
+    }
+    if (containsCcrMarker(input)) {
+      return _skip(input, kind, 'alreadyCompressed');
     }
     if (_kindDisabled(kind)) return _skip(input, kind, 'disabled');
     final ContentCompressor? compressor = _compressors[kind];
@@ -74,15 +85,6 @@ class ContextRouter {
       stats.recordFailure(kind);
       return _skip(input, kind, 'error');
     }
-  }
-
-  String? _gate(String input, String toolName) {
-    if (!config.enabled) return 'disabled';
-    if (input.isEmpty) return 'empty';
-    if (config.protectedTools.contains(toolName)) return 'protected';
-    if (input.length < config.minChars) return 'tooSmall';
-    if (containsCcrMarker(input)) return 'alreadyCompressed';
-    return null;
   }
 
   bool _kindDisabled(ContentKind kind) =>
@@ -115,19 +117,17 @@ class ContextRouter {
     CompressionBudget budget,
   ) async {
     String content = draft.output;
-    bool stored = false;
-    if (draft.itemsOmitted > 0 && config.ccrEnabled) {
-      await store.put(input);
-      stored = true;
-      if (!containsCcrMarker(content)) {
-        content = '$content\n'
-            '${encodeCcrMarker(budget.retrievalId, draft.itemsOmitted, draft.unit)}';
-      }
+    final bool wantsMarker = draft.itemsOmitted > 0 && config.ccrEnabled;
+    if (wantsMarker && !containsCcrMarker(content)) {
+      content = '$content\n'
+          '${encodeCcrMarker(budget.retrievalId, draft.itemsOmitted, draft.unit)}';
     }
     final double ratio = content.length / input.length;
     if (ratio > 1 - config.minSavingRatio) {
       return _skip(input, kind, 'noSaving');
     }
+    final bool stored = wantsMarker;
+    if (stored) await store.put(input);
     final ContextCompressionResult result = ContextCompressionResult(
       applied: true,
       kind: kind,

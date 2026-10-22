@@ -31,9 +31,8 @@ class TabularCompressor implements ContentCompressor {
         if (selected.contains(i)) table.rows[i],
     ];
     final int omitted = table.rows.length - selected.length;
-    final String marker = '[... $omitted rows omitted ...]';
-    final int insertAt = table.header.length + math.max(0, selected.length - 2);
-    output.insert(insertAt, marker);
+    final int insertAt = table.header.length + math.max(0, selected.length - 5);
+    output.insert(insertAt, _marker(table, omitted));
     return CompressionDraft(
       joinTextLines(output, crlf: usesCrlf(input)),
       itemsOmitted: omitted,
@@ -45,14 +44,26 @@ class TabularCompressor implements ContentCompressor {
     if (rows.first.contains('|') &&
         rows.length > 1 &&
         _markdownSeparator.hasMatch(rows[1])) {
-      return _Table(<String>[rows[0], rows[1]], rows.sublist(2));
+      final int columns = rows.first.split('|').length - 2;
+      return _Table(<String>[rows[0], rows[1]], rows.sublist(2),
+          columns: columns);
     }
     for (final String delimiter in <String>[',', '\t', ';']) {
       if (_consistent(rows, delimiter)) {
-        return _Table(<String>[rows.first], rows.sublist(1));
+        return _Table(<String>[rows.first], rows.sublist(1),
+            columns: rows.first.split(delimiter).length, delimiter: delimiter);
       }
     }
     return null;
+  }
+
+  String _marker(_Table table, int omitted) {
+    final String note = '[... $omitted rows omitted ...]';
+    final List<String> cells = List<String>.filled(table.columns, '');
+    cells[0] = note;
+    final String? delimiter = table.delimiter;
+    if (delimiter != null) return cells.join(delimiter);
+    return '| ${cells.join(' | ')} |';
   }
 
   bool _consistent(List<String> rows, String delimiter) {
@@ -66,7 +77,10 @@ class TabularCompressor implements ContentCompressor {
   }
 
   List<int> _select(int length, int maxItems) {
-    final Set<int> keep = <int>{0, 1, length - 2, length - 1};
+    final Set<int> keep = <int>{
+      for (int i = 0; i < math.min(5, length); i++) i,
+      for (int i = math.max(0, length - 5); i < length; i++) i,
+    };
     final int slots = maxItems - keep.length;
     if (slots > 0) {
       final List<int> candidates = <int>[
@@ -84,8 +98,10 @@ class TabularCompressor implements ContentCompressor {
 }
 
 class _Table {
-  _Table(this.header, this.rows);
+  _Table(this.header, this.rows, {required this.columns, this.delimiter});
 
   final List<String> header;
   final List<String> rows;
+  final int columns;
+  final String? delimiter;
 }

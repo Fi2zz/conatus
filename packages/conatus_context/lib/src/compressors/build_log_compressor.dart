@@ -45,16 +45,15 @@ class BuildLogCompressor implements ContentCompressor {
 
   _Selection? _select(List<String> lines, CompressionBudget budget) {
     final Set<int> errors = <int>{};
-    final Set<int> stacks = <int>{};
     final Set<int> summaries = <int>{};
     for (int i = 0; i < lines.length; i++) {
       final String? level = _level(lines[i]);
       if (level == 'ERROR' || level == 'FATAL' || level == 'FAIL') {
         errors.add(i);
       }
-      if (_isStack(lines[i])) stacks.add(i);
       if (_summaryPattern.hasMatch(lines[i])) summaries.add(i);
     }
+    final Set<int> stacks = _stackIndices(lines);
     final Set<int> warnings = _dedupedWarnings(lines);
     final Set<int> droppedWarnings = <int>{
       for (int i = 0; i < lines.length; i++)
@@ -72,10 +71,13 @@ class BuildLogCompressor implements ContentCompressor {
     final Set<int> selected = _withContext(
       lines.length,
       keep,
-      <int>{...errors, ...stacks, ...summaries},
+      _orderedSeeds(
+          lines, <int>{...errors, ...stacks, ...summaries, ...warnings}),
       maxLines,
       budget.conservative ? 1 : 2,
     )..removeAll(droppedWarnings);
+    _dropWarnings(selected, warnings, <int>{...errors, ...stacks, ...summaries},
+        maxLines);
     return _Selection(selected, lines.length - selected.length);
   }
 
@@ -89,10 +91,38 @@ class BuildLogCompressor implements ContentCompressor {
     return indices;
   }
 
+  List<int> _orderedSeeds(List<String> lines, Set<int> seeds) => seeds.toList()
+    ..sort((int a, int b) => _score(lines[b]).compareTo(_score(lines[a])));
+
+  int _score(String line) {
+    final String? level = _level(line);
+    int score = switch (level) {
+      'FATAL' || 'ERROR' || 'FAIL' => 3,
+      'WARN' => 2,
+      _ => 1,
+    };
+    if (_stackFrame.hasMatch(line) || _stackBar.hasMatch(line)) score += 2;
+    if (_summaryPattern.hasMatch(line)) score += 2;
+    return score;
+  }
+
+  void _dropWarnings(
+    Set<int> selected,
+    Set<int> warnings,
+    Set<int> protectedIndices,
+    int maxLines,
+  ) {
+    if (selected.length <= maxLines) return;
+    for (final int index in warnings.toList().reversed) {
+      if (selected.length <= maxLines) return;
+      if (!protectedIndices.contains(index)) selected.remove(index);
+    }
+  }
+
   Set<int> _withContext(
     int length,
     Set<int> keep,
-    Set<int> seeds,
+    List<int> seeds,
     int maxLines,
     int context,
   ) {
@@ -138,11 +168,35 @@ class BuildLogCompressor implements ContentCompressor {
     return level;
   }
 
-  bool _isStack(String line) =>
-      line.contains('Traceback (most recent call last)') ||
-      _stackFrame.hasMatch(line) ||
-      _stackBar.hasMatch(line) ||
-      line.startsWith('-->');
+  Set<int> _stackIndices(List<String> lines) {
+    final Set<int> indices = <int>{};
+    bool inTrace = false;
+    for (int i = 0; i < lines.length; i++) {
+      final String line = lines[i];
+      if (line.contains('Traceback (most recent call last)')) {
+        inTrace = true;
+        indices.add(i);
+        continue;
+      }
+      if (inTrace) {
+        if (line.trim().isEmpty) continue;
+        if (line.startsWith(' ') ||
+            line.startsWith('\t') ||
+            line.startsWith('-->') ||
+            _stackBar.hasMatch(line)) {
+          indices.add(i);
+          continue;
+        }
+        inTrace = false;
+      }
+      if (_stackFrame.hasMatch(line) ||
+          _stackBar.hasMatch(line) ||
+          line.startsWith('-->')) {
+        indices.add(i);
+      }
+    }
+    return indices;
+  }
 
   String _messagePrefix(String line) {
     final int colon = line.indexOf(':');

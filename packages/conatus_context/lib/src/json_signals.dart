@@ -15,12 +15,22 @@ bool jsonItemHasErrorSignal(Object? item) {
     final Object? value = entry.value;
     if (value is String && _errorWords.hasMatch(value)) return true;
     if (value is num && _statusLike(entry.key) && value >= 400) return true;
+    if (value is num && _severityLike(entry.key) && value >= 3) return true;
+    if (value is String &&
+        _severityLike(entry.key) &&
+        RegExp(r'error|fatal|critical|high', caseSensitive: false)
+            .hasMatch(value)) {
+      return true;
+    }
   }
   return false;
 }
 
 bool _statusLike(String key) =>
     key == 'status' || key == 'code' || key.endsWith('Code');
+
+bool _severityLike(String key) =>
+    key == 'severity' || key == 'level' || key.endsWith('Severity');
 
 /// 找出数值字段落在 1% / 99% 分位之外的条目。
 Set<int> jsonOutlierIndices(List<Object?> items) {

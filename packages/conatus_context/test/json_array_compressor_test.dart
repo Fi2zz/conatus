@@ -43,6 +43,15 @@ void main() {
     expect(draft.output, contains('999999'));
   });
 
+  test('severity >= error 的条目不被采样掉', () {
+    final List<Map<String, Object?>> items = <Map<String, Object?>>[
+      for (int i = 0; i < 100; i++) <String, Object?>{'id': i, 'severity': 3},
+    ];
+    final CompressionDraft draft =
+        const JsonArrayCompressor().compress(jsonEncode(items), budget)!;
+    expect(draft.output, contains('"id":50'));
+  });
+
   test('重复字符串去重并保持顺序', () {
     final String input = jsonEncode(<String>[
       for (int i = 0; i < 50; i++) i.isEven ? 'same' : 'v$i',

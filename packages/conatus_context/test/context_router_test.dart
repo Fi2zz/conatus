@@ -14,6 +14,16 @@ class _FakeCompressor implements ContentCompressor {
       const CompressionDraft('压缩后', itemsOmitted: 90);
 }
 
+class _WastefulCompressor implements ContentCompressor {
+  @override
+  ContentKind get kind => ContentKind.text;
+
+  @override
+  CompressionDraft? compress(String input, CompressionBudget budget) =>
+      CompressionDraft(List<String>.filled(input.length, 'y').join(),
+          itemsOmitted: 90);
+}
+
 class _IdentityCompressor implements ContentCompressor {
   @override
   ContentKind get kind => ContentKind.text;
@@ -174,6 +184,37 @@ void main() {
         .compress(List<String>.filled(1000, 'x').join(), toolName: 't');
     expect(r.applied, false);
     expect(r.skippedReason, 'noSaving');
+  });
+
+  test('收益不足时不写入 CCR（无孤儿条目）', () async {
+    final ContextRouter router =
+        _router(compressors: <ContentCompressor>[_WastefulCompressor()]);
+    final ContextCompressionResult r = await router
+        .compress(List<String>.filled(1000, 'x').join(), toolName: 't');
+    expect(r.skippedReason, 'noSaving');
+    expect(router.store.length, 0);
+  });
+
+  test('保护工具的统计按真实内容类型归桶', () async {
+    final ContextRouter router = _router(protectedTools: {'secret'});
+    final String input = jsonEncode(
+        List<Map<String, Object?>>.filled(50, <String, Object?>{'a': 'b'}));
+    await router.compress(input, toolName: 'secret');
+    expect(router.stats.kindStats(ContentKind.jsonArray).skipped, 1);
+    expect(router.stats.kindStats(ContentKind.text).skipped, 0);
+  });
+
+  test('相同输入两次压缩结果一致', () async {
+    final ContextRouter router =
+        _router(compressors: <ContentCompressor>[const JsonArrayCompressor()]);
+    final String input = jsonEncode(
+        List<Map<String, Object?>>.filled(80, <String, Object?>{'a': 'b'}));
+    final ContextCompressionResult first =
+        await router.compress(input, toolName: 't');
+    final ContextCompressionResult second =
+        await router.compress(input, toolName: 't');
+    expect(first.content, second.content);
+    expect(first.ccrId, second.ccrId);
   });
 
   test('关闭 CCR 时不注入标记', () async {

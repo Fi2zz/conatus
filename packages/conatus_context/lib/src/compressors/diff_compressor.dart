@@ -31,7 +31,7 @@ class DiffCompressor implements ContentCompressor {
     final bool crlf = usesCrlf(input);
     final List<String> output = <String>[];
     for (final _FileDiff file in files) {
-      output.addAll(_renderFile(file, budget.maxLines));
+      output.addAll(_renderFile(file, budget.maxLines, budget.retrievalId));
     }
     if (output.isEmpty) return null;
     final int omitted = lines.length - output.length;
@@ -67,7 +67,11 @@ class DiffCompressor implements ContentCompressor {
     return files;
   }
 
-  List<String> _renderFile(_FileDiff file, int maxLines) {
+  List<String> _renderFile(
+    _FileDiff file,
+    int maxLines,
+    String retrievalId,
+  ) {
     final List<String> output = <String>[...file.headers];
     for (final _Hunk hunk in file.hunks) {
       output.addAll(_renderHunk(hunk));
@@ -75,10 +79,12 @@ class DiffCompressor implements ContentCompressor {
     if (output.length <= maxLines || file.hunks.length <= 2) return output;
     final List<_Hunk> hunks = file.hunks;
     final int middle = hunks.length - 2;
+    final String suffix =
+        retrievalId.isEmpty ? '' : '; context_retrieve id=$retrievalId';
     return <String>[
       ...file.headers,
       ..._renderHunk(hunks.first),
-      '[... $middle hunks omitted ...]',
+      '[... $middle hunks omitted$suffix ...]',
       ..._renderHunk(hunks.last),
     ];
   }

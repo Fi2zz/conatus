@@ -48,8 +48,8 @@ class TextCompressor implements ContentCompressor {
       while (index + run < lines.length && lines[index + run] == line) {
         run++;
       }
-      if (line.trim().isEmpty && run >= 2) {
-        output.add('');
+      if (line.trim().isEmpty) {
+        output.addAll(List<String>.filled(run >= 3 ? 1 : run, ''));
       } else if (run > 1) {
         output.add('$line  (×$run)');
       } else {

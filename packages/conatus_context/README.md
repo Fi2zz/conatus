@@ -69,7 +69,7 @@ final List<LlmMessage> compressed = await compressMessages(messages);
 <<ctx:0123456789abcdef 42_items_omitted>>
 ```
 
-- id 是内容 hash（FNV-1a 64 + djb2，各取 32 位）；读取时重算校验，**不是安全边界**。
+- id 是内容 hash（按 UTF-16 code unit 迭代 FNV-1a 64 + djb2，各取 32 位）；读取时重算校验，**不是安全边界**。
 - 模型调用 `context_retrieve(id, offset?, limit?)` 取回原文，默认最多返回 40000 字符，
   可分段读取。
 - 未命中（过期、编造 id、内容被篡改）返回可读失败，不抛异常。
@@ -112,7 +112,9 @@ final List<LlmMessage> compressed = await compressMessages(messages);
 - 字符数是 UTF-16 口径；token 数是 `chars / 4` 的估算，不用于计费。
 - CSV 解析不处理带引号的字段；遇到复杂 CSV 请先转成 JSON 或直接透传。
 - 源码默认不压缩，不引入 tree-sitter。
-- 文件型 CCR 的并发写以后写覆盖为准；读取会校验内容 hash。
+- 文件型 CCR 的并发写以后写覆盖为准；读取会校验内容 hash，淘汰/过期会同时删除内容文件。
+- 混合换行（部分 CRLF、部分 LF）会被统一按 CRLF 输出。
+- 检索结果仍受外层 `tool-result-eviction` 阈值约束；需要完整原文时用 `limit` 分段取回。
 - diff 压缩后的输出可读，但不保证可以 `git apply`。
 
 ## 许可证与来源

@@ -74,6 +74,13 @@ void main() {
     expect(detectContent(input).kind, ContentKind.text);
   });
 
+  test('时间戳日志不被误判为搜索结果', () {
+    const String input = '2026-10-22 12:00:00 ERROR boom\n'
+        'Traceback (most recent call last):\n'
+        '  File "a.py", line 1, in f\n';
+    expect(detectContent(input).kind, isNot(ContentKind.searchResults));
+  });
+
   test('unified diff 识别为 diff', () {
     const String input = 'diff --git a/a.dart b/a.dart\n'
         '--- a/a.dart\n'
@@ -109,6 +116,21 @@ void main() {
         '\tmodified:   lib/a.dart\n\n'
         'diff --git a/lib/a.dart b/lib/a.dart\n';
     expect(detectContent(input).kind, ContentKind.passthrough);
+  });
+
+  test('单个 diff 头不算 diff', () {
+    expect(detectContent('--- a\n普通文本\n').kind, isNot(ContentKind.diff));
+  });
+
+  test('只有缩进没有语法特征不算源码', () {
+    expect(
+      detectContent('  缩进一行\n  缩进两行\n  缩进三行\n').kind,
+      isNot(ContentKind.sourceCode),
+    );
+  });
+
+  test('非法 JSON 不算 jsonArray', () {
+    expect(detectContent('[1,2').kind, isNot(ContentKind.jsonArray));
   });
 
   test('普通散文识别为 text', () {

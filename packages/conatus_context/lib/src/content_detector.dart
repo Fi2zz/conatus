@@ -108,7 +108,10 @@ final RegExp _searchLine = RegExp(r'^(\S.*?)[:\-](\d+)[:\-](.*)$');
 bool _looksSearch(String text) {
   int matches = 0;
   for (final String line in splitTextLines(text)) {
-    if (_searchLine.hasMatch(line)) matches++;
+    final RegExpMatch? match = _searchLine.firstMatch(line);
+    if (match != null && !RegExp(r'^\d+$').hasMatch(match.group(1)!)) {
+      matches++;
+    }
     if (matches >= 3) return true;
   }
   return false;
