@@ -20,3 +20,4 @@ export 'src/content_detector.dart'
     show ContentDetection, Detector, detectContent;
 export 'src/content_kind.dart' show ContentKind;
 export 'src/context_compression_config.dart' show ContextCompressionConfig;
+export 'src/context_router.dart' show ContextRouter;
