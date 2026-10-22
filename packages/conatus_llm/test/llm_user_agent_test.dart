@@ -39,7 +39,7 @@ class _Recorder {
 const List<LlmMessage> messages = <LlmMessage>[LlmMessage('user', 'hi')];
 
 void main() {
-  test('默认 User-Agent：ConatusCode/0.16', () async {
+  test('默认 User-Agent：nava/0.1.0', () async {
     final _Recorder recorder = _Recorder();
     final OpenAiCompatibleProvider provider = doubaoProviderForTest(
       apiKey: 'k',
@@ -66,6 +66,34 @@ void main() {
     await provider.chat(messages);
 
     expect(recorder.headers.last['User-Agent'], 'dsh/0.1.2');
+    provider.close();
+  });
+
+  test('动态请求头回调每次请求重算', () async {
+    final _Recorder recorder = _Recorder();
+    String? session;
+    final OpenAiCompatibleProvider provider = OpenAiCompatibleProvider(
+      name: 'opencode-go',
+      baseUrl: 'https://opencode.ai/inference/go/openai/v1',
+      model: 'glm-5.3',
+      apiKey: 'k',
+      client: recorder.client,
+      headersProvider: () => <String, String>{
+        if (session != null) 'x-opencode-session': session,
+      },
+    );
+
+    session = 'ses_a';
+    await provider.chat(messages);
+    expect(recorder.headers.last['x-opencode-session'], 'ses_a');
+
+    session = 'ses_b';
+    await provider.chat(messages);
+    expect(recorder.headers.last['x-opencode-session'], 'ses_b');
+
+    session = null;
+    await provider.chat(messages);
+    expect(recorder.headers.last.containsKey('x-opencode-session'), isFalse);
     provider.close();
   });
 

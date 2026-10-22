@@ -20,7 +20,7 @@ import 'llm.dart';
 import 'llm_retry.dart';
 
 /// LLM 请求的默认 User-Agent。
-const String kDefaultLlmUserAgent = 'ConatusCode/0.16';
+const String kDefaultLlmUserAgent = 'nava/0.1.0';
 
 /// 处理 OpenAI 兼容端点的公共逻辑。
 abstract class _OpenAiCompatibleProvider implements LlmProvider {
@@ -31,6 +31,7 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
     required this.credentialKey,
     this.apiStyle = LlmApiStyle.chat,
     this.userAgent = kDefaultLlmUserAgent,
+    this.headersProvider,
     http.Client? client,
     Credentials? credentials,
     this.timeout = const Duration(seconds: 60),
@@ -51,6 +52,12 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
 
   /// 请求携带的 User-Agent（可伪装成其他 harness 客户端）。
   final String userAgent;
+
+  /// 每次请求时重算的附加请求头（如按会话变化的 `x-opencode-session`）。
+  ///
+  /// 在固定头之后合并，因此可以覆盖 `User-Agent` / `Authorization`；
+  /// 返回空 Map 表示本次不加附加头。
+  final Map<String, String> Function()? headersProvider;
   final Duration timeout;
 
   /// HTTP client。Key 轮换只改 [apiKey]，而 `_headers` 每次请求重算，因此
@@ -88,6 +95,7 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $apiKey',
         'User-Agent': userAgent,
+        ...?headersProvider?.call(),
       };
 
   // ═══════════════════════════════════════════════════════════════
@@ -591,6 +599,7 @@ class OpenAiCompatibleProvider extends _OpenAiCompatibleProvider {
     super.apiKey,
     super.apiStyle,
     super.userAgent,
+    super.headersProvider,
     super.client,
     super.credentials,
     super.timeout,

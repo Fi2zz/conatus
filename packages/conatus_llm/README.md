@@ -11,7 +11,7 @@ conatus 的大模型接入：
   **不直接读环境变量**；两者都没有时调用抛 `LlmException('缺少 API Key')`，
   并订阅 `changes` 做运行时轮换
 - `LlmMessage.cacheable` 是本地前缀标记，**不写入请求体**，仅供消费方计算可缓存前缀
-- 请求携带 `User-Agent`（默认 `ConatusCode/0.16`，可按 provider 自定义）
+- 请求携带 `User-Agent`（默认 `nava/0.1.0`，可按 provider 自定义）；可传 `headersProvider` 每次请求重算附加头（如 `x-opencode-session`）
 
 ```dart
 import 'package:conatus_credentials/conatus_credentials.dart';
