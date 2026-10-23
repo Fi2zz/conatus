@@ -242,6 +242,8 @@ export 'src/sub_agent_permission.dart'
         applySubAgentPermission,
         parseSubAgentPermission,
         tightenBelow;
+export 'src/sub_agent_profile.dart'
+    show SubAgentProfile, SubAgentProfileResolver;
 export 'src/sub_agent_progress.dart'
     show
         ProgressTool,

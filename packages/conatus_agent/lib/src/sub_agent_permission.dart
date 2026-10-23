@@ -73,44 +73,60 @@ SubAgentPermission tightenBelow(SubAgentPermission base, String? requested) {
 /// 继承宿主的 deny / ask 规则（ask 档还要再过滤掉父级 allow，否则「子代理每次
 /// 都要确认」会被父级 allow 直接放行），再按模式收紧阈值：
 /// readonly / auto → 不询问（readonly 另有风险守卫），ask → 阈值 low。
+///
+/// [extraRules] 是 Agent profile 自带的规则。inherit 档传非空规则时也会装子
+/// 中间件（宿主中间件已被排除），阈值沿用宿主的 [PermissionScope.askThreshold]。
+// REASON: 与既有 applySubAgentPermission 形状对齐；extraRules 是可选收紧入口。
 void applySubAgentPermission(
   Context child,
   ToolRegistry childTools,
   SubAgentPermission mode, {
   Approval? gate,
+  List<PermissionRule> extraRules = const <PermissionRule>[],
 }) {
   switch (mode) {
     case SubAgentPermission.inherit:
-      return;
+      if (extraRules.isNotEmpty) {
+        _installChildPermission(child, childTools, mode, gate, extraRules);
+      }
     case SubAgentPermission.auto:
-      _installChildPermission(child, childTools, mode, gate);
+      _installChildPermission(child, childTools, mode, gate, extraRules);
     case SubAgentPermission.readonly:
       childTools.guard(_readonlyGuard(childTools));
-      _installChildPermission(child, childTools, mode, gate);
+      _installChildPermission(child, childTools, mode, gate, extraRules);
     case SubAgentPermission.ask:
       if (gate == null) {
         // 无人可问（headless 无审批服务）：按只读处理，而不是把所有子工具都
         // 静默拒掉——「无法确认」不等于「什么都不能做」，低风险读取照常。
         childTools.guard(_readonlyGuard(childTools));
         _installChildPermission(
-            child, childTools, SubAgentPermission.readonly, null);
+          child,
+          childTools,
+          SubAgentPermission.readonly,
+          null,
+          extraRules,
+        );
         return;
       }
-      _installChildPermission(child, childTools, mode, gate);
+      _installChildPermission(child, childTools, mode, gate, extraRules);
   }
 }
 
-/// 装子代理自己的权限中间件：宿主规则 + 按模式收紧的兜底阈值。
+/// 装子代理自己的权限中间件：宿主规则 + profile 规则 + 按模式收紧的兜底阈值。
 void _installChildPermission(
   Context child,
   ToolRegistry childTools,
   SubAgentPermission mode,
   Approval? gate,
+  List<PermissionRule> extraRules,
 ) {
   final PermissionScope? host =
       child.get<PermissionScopeSlot>(kPermissionScopeService)?.current;
-  final ToolRisk? threshold =
-      mode == SubAgentPermission.ask ? ToolRisk.low : null;
+  final ToolRisk? threshold = switch (mode) {
+    SubAgentPermission.ask => ToolRisk.low,
+    SubAgentPermission.inherit => host?.askThreshold,
+    SubAgentPermission.auto || SubAgentPermission.readonly => null,
+  };
   final List<PermissionRule> inherited =
       host?.rules ?? const <PermissionRule>[];
   instrumentPermission(
@@ -119,18 +135,40 @@ void _installChildPermission(
     scope: PermissionScopeSlot(PermissionScope(
       // ask 档要逐次确认：父级 allow 会把「本应询问」的调用直接放行，
       // 只继承更严的 deny / ask 才符合子代理语义。
-      rules: mode == SubAgentPermission.ask
-          ? <PermissionRule>[
-              for (final PermissionRule rule in inherited)
-                if (rule.effect != PermissionEffect.allow) rule,
-            ]
-          : inherited,
+      rules: _childRules(
+        mode == SubAgentPermission.ask
+            ? <PermissionRule>[
+                for (final PermissionRule rule in inherited)
+                  if (rule.effect != PermissionEffect.allow) rule,
+              ]
+            : inherited,
+        extraRules,
+      ),
       askThreshold: threshold,
       agentId: host?.agentId ?? 'build',
     )),
     approval: gate,
     interactive: gate != null,
   );
+}
+
+/// 合并宿主规则与 profile 规则：profile 的 allow 不能放宽宿主已有的 deny / ask。
+List<PermissionRule> _childRules(
+  List<PermissionRule> hostRules,
+  List<PermissionRule> extraRules,
+) {
+  if (extraRules.isEmpty) return hostRules;
+  final Set<String> restricted = <String>{
+    for (final PermissionRule rule in hostRules)
+      if (rule.effect != PermissionEffect.allow) rule.action,
+  };
+  return <PermissionRule>[
+    ...hostRules,
+    for (final PermissionRule rule in extraRules)
+      if (rule.effect != PermissionEffect.allow ||
+          !restricted.contains(rule.action))
+        rule,
+  ];
 }
 
 /// 只读守卫：非 low 风险工具一律拒绝。

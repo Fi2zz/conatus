@@ -15,7 +15,9 @@ import 'agent_loop.dart';
 import 'agent_types.dart';
 import 'approval.dart';
 import 'approval_gate.dart';
+import 'permissions/permission_rule.dart';
 import 'sub_agent_permission.dart';
+import 'sub_agent_profile.dart';
 import 'sub_agent_progress.dart';
 
 /// 子 Agent 的默认人设：只完成交办的一件事，只回结论。
@@ -66,6 +68,7 @@ class SpawnAgentTool extends Tool {
     this.permissionMode = SubAgentPermission.inherit,
     this.onProgress,
     this.childLlm,
+    this.profileResolver,
   });
 
   /// 宿主上下文：子上下文在其下派生，随宿主释放。
@@ -108,6 +111,9 @@ class SpawnAgentTool extends Tool {
   /// 而子 Agent 拿到的半截结论会被当成结论回传。
   final LlmProvider Function(LlmProvider base)? childLlm;
 
+  /// 按 Agent ID 解析 profile；`null` 时 `agent` 参数一律视为未知。
+  final SubAgentProfileResolver? profileResolver;
+
   int _seq = 0;
 
   /// 在途子 Agent 的取消句柄；[interrupt] 据此打断全部。
@@ -137,6 +143,10 @@ class SpawnAgentTool extends Tool {
   @override
   List<ParamSpec> get params => <ParamSpec>[
         ParamSpec.string('task', required: true, description: '自包含的子任务描述'),
+        ParamSpec.string(
+          'agent',
+          description: '子 Agent ID；必须是已注册的自定义 / 内置 Agent',
+        ),
         ParamSpec.array(
           'tools',
           items: ParamSpec.string('item'),
@@ -153,15 +163,35 @@ class SpawnAgentTool extends Tool {
   @override
   Future<ToolResult> call(ToolContext ctx) async {
     final String task = ctx.str('task');
-    final int rounds = ctx.integer('max_rounds') ?? maxRounds;
-    final SubAgentResult result = await run(
-      task,
-      allowed: _allowedTools(ctx.array('tools')),
-      maxRounds: rounds,
-      requestedPermission: ctx.string('permission_mode'),
+    final String? agentId = _agentId(ctx.string('agent'));
+    final SubAgentProfile? profile = await _resolveProfile(agentId);
+    if (profile == null && agentId != null) {
+      return ToolResult.failure(
+        '未知 Agent "$agentId"',
+        error: ToolError('UNKNOWN_AGENT', 'unknown agent: $agentId'),
+      );
+    }
+    final SubAgentResult result = await _execute(
+      _SubAgentInvocation(
+        task: task,
+        allowed: _allowedTools(ctx.array('tools'), profile),
+        maxRounds: profile?.steps ?? ctx.integer('max_rounds') ?? maxRounds,
+        requestedPermission: ctx.string('permission_mode'),
+      ),
+      profile: profile,
     );
     return ToolResult.success(result.output, value: result.toJson());
   }
+
+  /// 规范化可选的 `agent` 参数；未传或空白返回 `null`。
+  String? _agentId(String? raw) {
+    final String? id = raw?.trim();
+    return id == null || id.isEmpty ? null : id;
+  }
+
+  /// 解析 `agent` 参数；未传返回 `null`。
+  Future<SubAgentProfile?> _resolveProfile(String? agentId) async =>
+      agentId == null ? null : profileResolver?.resolve(agentId);
 
   /// 跑一次委托。子 Agent 的失败也收敛为 [SubAgentResult]（status=failed）。
   Future<SubAgentResult> run(
@@ -169,22 +199,39 @@ class SpawnAgentTool extends Tool {
     required Set<String> allowed,
     required int maxRounds,
     String? requestedPermission,
+  }) =>
+      _execute(_SubAgentInvocation(
+        task: task,
+        allowed: allowed,
+        maxRounds: maxRounds,
+        requestedPermission: requestedPermission,
+      ));
+
+  Future<SubAgentResult> _execute(
+    _SubAgentInvocation invocation, {
+    SubAgentProfile? profile,
   }) async {
     _seq++;
     final SubAgentProgressReporter? report = onProgress;
-    report?.call(SubAgentStarted(task));
+    report?.call(SubAgentStarted(invocation.task));
     final CompactionEngine? compactor =
         this.compactor ?? host.get<CompactionEngine>('compaction');
-    final SubAgentPermission permission =
-        tightenBelow(permissionMode, requestedPermission);
-    // 非继承档由子代理自带审批策略，故把宿主审批层从继承管线里排除，避免双层。
-    final Set<String> excludeTags = permission == SubAgentPermission.inherit
-        ? const <String>{}
-        : const <String>{kApprovalMiddlewareTag};
+    final SubAgentPermission permission = tightenBelow(
+      profile?.permissionMode ?? permissionMode,
+      invocation.requestedPermission,
+    );
+    final List<PermissionRule> profileRules =
+        profile?.permissions ?? const <PermissionRule>[];
+    // 非继承档由子代理自带审批策略；profile 规则也要求装子中间件。两种情况都
+    // 把宿主审批层从继承管线里排除，避免双层。
+    final Set<String> excludeTags =
+        permission == SubAgentPermission.inherit && profileRules.isEmpty
+            ? const <String>{}
+            : const <String>{kApprovalMiddlewareTag};
     final Set<String> used = <String>{};
     final ToolRegistry childTools = buildChildRegistry(
       tools,
-      allowed,
+      invocation.allowed,
       excludeTags: excludeTags,
       reporter: report == null
           ? null
@@ -200,19 +247,27 @@ class SpawnAgentTool extends Tool {
     final Context child = host.plugin('subagent$_seq', (Context c) {
       c.onDispose(childSession.close);
     });
-    applySubAgentPermission(child, childTools, permission,
-        gate: host.get<Approval>('approval'));
+    applySubAgentPermission(
+      child,
+      childTools,
+      permission,
+      gate: host.get<Approval>('approval'),
+      extraRules: profileRules,
+    );
+    final String prompt = profile != null && profile.system.isNotEmpty
+        ? profile.system
+        : subAgentPrompt;
     try {
       final AgentTurn turn = await AgentLoop(
-        llm: childLlm?.call(llm) ?? llm,
+        llm: profile?.llm ?? childLlm?.call(llm) ?? llm,
         tools: childTools,
         session: childSession,
         systemPrompt: systemPrompt,
         compactor: compactor,
-        defaultSystemPrompt: subAgentPrompt,
-        maxSteps: maxRounds,
+        defaultSystemPrompt: prompt,
+        maxSteps: invocation.maxRounds,
         onEvent: report == null ? null : _roundReporter(report, used),
-      ).run(task, cancel: cancel);
+      ).run(invocation.task, cancel: cancel);
       final SubAgentResult result = SubAgentResult(
         status: 'success',
         output: turn.reply,
@@ -251,23 +306,35 @@ class SpawnAgentTool extends Tool {
   String _preview(int contentLength, int toolCount) =>
       contentLength > 0 ? '输出 $contentLength 字符' : '思考中（工具已 $toolCount 次）';
 
-  Set<String> _allowedTools(List<Object?>? requested) {
-    if (requested != null && requested.isNotEmpty) {
-      return <String>{
-        for (final Object? item in requested)
-          if (_usable('$item')) '$item',
-      };
-    }
-    if (defaultTools != null) {
-      return <String>{
-        for (final String n in defaultTools!)
-          if (_usable(n)) n,
-      };
-    }
-    return <String>{
-      for (final String n in tools.names)
-        if (_usable(n)) n,
+  Set<String> _allowedTools(
+    List<Object?>? requested,
+    SubAgentProfile? profile,
+  ) {
+    final Set<String> base = _baseTools(requested, profile);
+    final List<String>? whitelist = profile?.tools;
+    final Set<String> disabled = <String>{
+      for (final String n in profile?.disabledTools ?? const <String>[]) n,
     };
+    return <String>{
+      for (final String n in base)
+        if (_usable(n) &&
+            (whitelist == null || whitelist.contains(n)) &&
+            !disabled.contains(n))
+          n,
+    };
+  }
+
+  /// 请求白名单 → profile 白名单 → 宿主默认白名单 → 全量工具。
+  Set<String> _baseTools(
+    List<Object?>? requested,
+    SubAgentProfile? profile,
+  ) {
+    if (requested != null && requested.isNotEmpty) {
+      return <String>{for (final Object? item in requested) '$item'};
+    }
+    if (profile?.tools != null) return <String>{...tools.names};
+    if (defaultTools != null) return <String>{...defaultTools!};
+    return <String>{...tools.names};
   }
 
   /// 工具可进子白名单：存在、非本工具、且不是 high 风险。子注册表是新建的、
@@ -292,6 +359,7 @@ SpawnAgentTool provideSpawnAgent(
   SubAgentPermission permissionMode = SubAgentPermission.inherit,
   SubAgentProgressReporter? onProgress,
   LlmProvider Function(LlmProvider base)? childLlm,
+  SubAgentProfileResolver? profileResolver,
 }) {
   final ToolRegistry registry = tools ?? ctx.tools;
   final SpawnAgentTool tool = SpawnAgentTool(
@@ -306,7 +374,23 @@ SpawnAgentTool provideSpawnAgent(
     permissionMode: permissionMode,
     onProgress: onProgress,
     childLlm: childLlm,
+    profileResolver: profileResolver,
   );
   ctx.effect(() => registry.register(tool));
   return tool;
+}
+
+/// 一次委托的输入：公共 `run` 与带 profile 的内部入口共用。
+class _SubAgentInvocation {
+  const _SubAgentInvocation({
+    required this.task,
+    required this.allowed,
+    required this.maxRounds,
+    this.requestedPermission,
+  });
+
+  final String task;
+  final Set<String> allowed;
+  final int maxRounds;
+  final String? requestedPermission;
 }
