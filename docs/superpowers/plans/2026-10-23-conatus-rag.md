@@ -268,7 +268,7 @@ Expected: FAIL。
 - `eventText`：`user/message` → `用户：<text>`；`assistant/message` → `助手：<text>`；`tool/call` → `工具调用 <name>(<json args>)`；`tool/result` → `工具结果 <name>：<content>`；其余返回 `''`。
 - 每行先按 `maxChunkChars` 截断并追加 `…[截断]`。
 - 建 `_Line {event, start, end}`，拼成整串后按 `chunkChars` 滑窗、步长 `chunkChars - overlapChars`。
-- 每块：`id = '<sourceKind>/<sourceId>/<firstSeq>-<lastSeq>'`；`eventIds` 取与窗口相交的行；时间取相交行的 min/max；跳过没有相交行的窗口。
+- 每块：`id = '<sourceKind>/<sourceId>/<firstSeq>-<lastSeq>-<windowIndex>'`（窗口序号必须入 id：同一组事件可能被重叠窗切成多块，只用 seq 区间会互相覆盖）；`eventIds` 取与窗口相交的行；时间取相交行的 min/max；跳过没有相交行的窗口。
 - 不合并空行；正文保持原文（除截断）。
 
 - [ ] **Step 4: 运行确认通过**

@@ -111,7 +111,7 @@ class RagScope {
 }
 
 class RagChunk {
-  final String id;                  // <sourceKind>/<sourceId>/<first>-<last>，稳定幂等
+  final String id;                  // <sourceKind>/<sourceId>/<first>-<last>-<window>，稳定且唯一
   final String tenantId;
   final String sourceKind;          // v1 只有 'session'；为文档接入预留
   final String sourceId;            // v1 = sessionId
