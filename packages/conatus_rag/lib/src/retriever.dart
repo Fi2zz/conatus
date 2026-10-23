@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'embedder.dart';
 import 'rag_backend.dart';
 import 'rag_chunk.dart';
@@ -32,20 +34,24 @@ class DenseRetriever implements Retriever {
     RetrievalRequest request,
     RagFilter filter,
   ) async {
+    final int effectiveTopK = math.min(request.limit, topK);
+    final int effectiveBudget = math.min(request.tokenBudget, tokenBudget);
     final List<double> vector = await embedder.embed(request.query);
     final RagFilter effective = mergeFilter(filter, request);
     final List<RagHit> found =
         await backend.search(effective, queryVector: vector, k: candidates);
-    final List<RagHit> reranked = await _safeRerank(request.query, found);
-    return applyBudget(reranked, request.limit, request.tokenBudget);
+    final List<RagHit> reranked =
+        await _safeRerank(request.query, found, effectiveTopK);
+    return applyBudget(reranked, effectiveTopK, effectiveBudget);
   }
 
   Future<List<RagHit>> _safeRerank(
     String query,
     List<RagHit> candidates,
+    int effectiveTopK,
   ) async {
     try {
-      return await reranker.rerank(query, candidates, topK: candidates.length);
+      return await reranker.rerank(query, candidates, topK: effectiveTopK);
     } on Object {
       return candidates;
     }

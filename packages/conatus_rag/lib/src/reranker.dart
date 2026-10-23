@@ -94,7 +94,11 @@ class HttpReranker implements Reranker {
     for (final Object? item in results) {
       final (int index, double score) = _entry(item);
       if (index < 0 || index >= candidates.length) throw _malformed();
-      ranked.add(RagHit(chunk: candidates[index].chunk, score: score, rerankScore: score));
+      ranked.add(RagHit(
+        chunk: candidates[index].chunk,
+        score: candidates[index].score,
+        rerankScore: score,
+      ));
     }
     return ranked;
   }
