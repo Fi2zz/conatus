@@ -34,6 +34,8 @@ class SubAgentProfile {
   final int? steps;
 
   /// 工具白名单；`null` 表示沿用宿主默认白名单。
+  ///
+  /// 空列表表示**禁止所有工具**（fail-closed）；非空时与请求的白名单取交集。
   final List<String>? tools;
 
   /// 显式禁用的工具（在交集之后减去）。

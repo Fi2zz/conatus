@@ -135,8 +135,8 @@ class SpawnAgentTool extends Tool {
   @override
   String get description => '把一个自包含的子任务委托给独立的子 Agent 执行，只回结论。';
 
-  /// 权限动作是 `subagent`；本工具没有单独的 agent id 参数，权限资源固定为
-  /// `default`（见 `permission_action.dart`）。
+  /// 权限动作是 `subagent`；资源取 `agent` 参数（未传时回落到 `default`，见
+  /// `permission_action.dart`）。
   @override
   ToolRisk get riskLevel => ToolRisk.medium;
 
@@ -216,10 +216,12 @@ class SpawnAgentTool extends Tool {
     report?.call(SubAgentStarted(invocation.task));
     final CompactionEngine? compactor =
         this.compactor ?? host.get<CompactionEngine>('compaction');
-    final SubAgentPermission permission = tightenBelow(
-      profile?.permissionMode ?? permissionMode,
-      invocation.requestedPermission,
-    );
+    // 宿主装配档是硬上限：Agent profile 与模型请求都只能在此基础上收紧。
+    final SubAgentPermission base = profile == null
+        ? permissionMode
+        : tightenBelow(permissionMode, profile.permissionMode.name);
+    final SubAgentPermission permission =
+        tightenBelow(base, invocation.requestedPermission);
     final List<PermissionRule> profileRules =
         profile?.permissions ?? const <PermissionRule>[];
     // 非继承档由子代理自带审批策略；profile 规则也要求装子中间件。两种情况都
@@ -251,15 +253,21 @@ class SpawnAgentTool extends Tool {
       child,
       childTools,
       permission,
-      gate: host.get<Approval>('approval'),
-      extraRules: profileRules,
+      options: SubAgentPermissionOptions(
+        gate: host.get<Approval>('approval'),
+        extraRules: profileRules,
+      ),
     );
     final String prompt = profile != null && profile.system.isNotEmpty
         ? profile.system
         : subAgentPrompt;
+    final LlmProvider? profileLlm = profile?.llm;
+    final LlmProvider effectiveLlm = profileLlm == null
+        ? childLlm?.call(llm) ?? llm
+        : childLlm?.call(profileLlm) ?? profileLlm;
     try {
       final AgentTurn turn = await AgentLoop(
-        llm: profile?.llm ?? childLlm?.call(llm) ?? llm,
+        llm: effectiveLlm,
         tools: childTools,
         session: childSession,
         systemPrompt: systemPrompt,

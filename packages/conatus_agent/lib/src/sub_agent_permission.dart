@@ -59,6 +59,21 @@ SubAgentPermission tightenBelow(SubAgentPermission base, String? requested) {
   return req.rank <= base.rank ? req : base;
 }
 
+/// 一次子代理权限装配的附加选项。
+class SubAgentPermissionOptions {
+  /// 创建选项。
+  const SubAgentPermissionOptions({
+    this.gate,
+    this.extraRules = const <PermissionRule>[],
+  });
+
+  /// 审批端口；`null` 表示无人可问。
+  final Approval? gate;
+
+  /// Agent profile 自带的规则。
+  final List<PermissionRule> extraRules;
+}
+
 /// 把 [mode] 落到子工具注册表上。
 ///
 /// [child] 用于挂审批中间件（随子上下文释放）。调用方需已按模式决定是否从继承
@@ -74,28 +89,28 @@ SubAgentPermission tightenBelow(SubAgentPermission base, String? requested) {
 /// 都要确认」会被父级 allow 直接放行），再按模式收紧阈值：
 /// readonly / auto → 不询问（readonly 另有风险守卫），ask → 阈值 low。
 ///
-/// [extraRules] 是 Agent profile 自带的规则。inherit 档传非空规则时也会装子
-/// 中间件（宿主中间件已被排除），阈值沿用宿主的 [PermissionScope.askThreshold]。
-// REASON: 与既有 applySubAgentPermission 形状对齐；extraRules 是可选收紧入口。
+/// [options] 的 `extraRules` 是 Agent profile 自带的规则。inherit 档传非空规则
+/// 时也会装子中间件（宿主中间件已被排除），阈值沿用宿主的
+/// [PermissionScope.askThreshold]。
 void applySubAgentPermission(
   Context child,
   ToolRegistry childTools,
   SubAgentPermission mode, {
-  Approval? gate,
-  List<PermissionRule> extraRules = const <PermissionRule>[],
+  SubAgentPermissionOptions options = const SubAgentPermissionOptions(),
 }) {
+  final List<PermissionRule> extraRules = options.extraRules;
   switch (mode) {
     case SubAgentPermission.inherit:
       if (extraRules.isNotEmpty) {
-        _installChildPermission(child, childTools, mode, gate, extraRules);
+        _installChildPermission(child, childTools, mode, options);
       }
     case SubAgentPermission.auto:
-      _installChildPermission(child, childTools, mode, gate, extraRules);
+      _installChildPermission(child, childTools, mode, options);
     case SubAgentPermission.readonly:
       childTools.guard(_readonlyGuard(childTools));
-      _installChildPermission(child, childTools, mode, gate, extraRules);
+      _installChildPermission(child, childTools, mode, options);
     case SubAgentPermission.ask:
-      if (gate == null) {
+      if (options.gate == null) {
         // 无人可问（headless 无审批服务）：按只读处理，而不是把所有子工具都
         // 静默拒掉——「无法确认」不等于「什么都不能做」，低风险读取照常。
         childTools.guard(_readonlyGuard(childTools));
@@ -103,12 +118,11 @@ void applySubAgentPermission(
           child,
           childTools,
           SubAgentPermission.readonly,
-          null,
-          extraRules,
+          options,
         );
         return;
       }
-      _installChildPermission(child, childTools, mode, gate, extraRules);
+      _installChildPermission(child, childTools, mode, options);
   }
 }
 
@@ -117,9 +131,9 @@ void _installChildPermission(
   Context child,
   ToolRegistry childTools,
   SubAgentPermission mode,
-  Approval? gate,
-  List<PermissionRule> extraRules,
+  SubAgentPermissionOptions options,
 ) {
+  final Approval? gate = options.gate;
   final PermissionScope? host =
       child.get<PermissionScopeSlot>(kPermissionScopeService)?.current;
   final ToolRisk? threshold = switch (mode) {
@@ -142,7 +156,7 @@ void _installChildPermission(
                   if (rule.effect != PermissionEffect.allow) rule,
               ]
             : inherited,
-        extraRules,
+        options.extraRules,
       ),
       askThreshold: threshold,
       agentId: host?.agentId ?? 'build',

@@ -92,8 +92,9 @@ List<String> permissionPathsFor(ToolCall call, List<String> pathArgs) {
 /// - `grep`：请求的 pattern（`rg` 的搜索表达式）；
 /// - `shell`：命令 / git 写工具的实际 argv（`git add ...` 等）；
 /// - `skill`：请求的技能 id（参数 `name`）；
-/// - shell / web / subagent：命令 / URL / 查询词 / agent id（缺省 `default`，
-///   `SpawnAgentTool` 目前没有 agent 参数，保留该约定供未来扩展）；
+/// - shell / web / subagent：命令 / URL / 查询词 / agent id（`subagent` 取
+///   `spawn_agent` 的 `agent` 参数，缺省 `default`；因此按
+///   `subagent/default` 写的旧规则不再命中带 `agent` 的调用）；
 /// - 其余（含 MCP、question）：`*`。空值同样落回 `*`。
 List<String> permissionResourcesFor(
   ToolCall call,

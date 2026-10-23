@@ -239,6 +239,7 @@ export 'src/sub_agent.dart'
 export 'src/sub_agent_permission.dart'
     show
         SubAgentPermission,
+        SubAgentPermissionOptions,
         applySubAgentPermission,
         parseSubAgentPermission,
         tightenBelow;

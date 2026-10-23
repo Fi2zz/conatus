@@ -57,7 +57,7 @@ void main() {
       host.child,
       host.tools,
       SubAgentPermission.auto,
-      gate: AutoApproval(true),
+      options: SubAgentPermissionOptions(gate: AutoApproval(true)),
     );
 
     final ToolResult result = await host.tools.call(
@@ -76,7 +76,7 @@ void main() {
       host.child,
       host.tools,
       SubAgentPermission.auto,
-      gate: AutoApproval(true),
+      options: SubAgentPermissionOptions(gate: AutoApproval(true)),
     );
 
     final ToolResult result = await host.tools.call(
@@ -95,7 +95,7 @@ void main() {
       host.child,
       host.tools,
       SubAgentPermission.readonly,
-      gate: AutoApproval(true),
+      options: SubAgentPermissionOptions(gate: AutoApproval(true)),
     );
 
     final ToolResult result = await host.tools.call(
@@ -120,7 +120,7 @@ void main() {
       host.child,
       host.tools,
       SubAgentPermission.ask,
-      gate: AutoApproval(true),
+      options: SubAgentPermissionOptions(gate: AutoApproval(true)),
     );
 
     final ToolResult result = await host.tools.call(
@@ -145,7 +145,7 @@ void main() {
       host.child,
       host.tools,
       SubAgentPermission.ask,
-      gate: AutoApproval(false),
+      options: SubAgentPermissionOptions(gate: AutoApproval(false)),
     );
 
     final ToolResult result = await host.tools.call(

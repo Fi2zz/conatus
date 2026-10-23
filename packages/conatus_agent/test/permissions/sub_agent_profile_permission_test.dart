@@ -71,8 +71,10 @@ void main() {
       host.child,
       host.tools,
       SubAgentPermission.inherit,
-      gate: AutoApproval(true),
-      extraRules: const <PermissionRule>[_denyEdit],
+      options: SubAgentPermissionOptions(
+        gate: AutoApproval(true),
+        extraRules: const <PermissionRule>[_denyEdit],
+      ),
     );
 
     final ToolResult result = await _write(host);
@@ -86,8 +88,10 @@ void main() {
       host.child,
       host.tools,
       SubAgentPermission.auto,
-      gate: AutoApproval(true),
-      extraRules: const <PermissionRule>[_denyEdit],
+      options: SubAgentPermissionOptions(
+        gate: AutoApproval(true),
+        extraRules: const <PermissionRule>[_denyEdit],
+      ),
     );
 
     final ToolResult result = await _write(host);
@@ -107,14 +111,16 @@ void main() {
       host.child,
       host.tools,
       SubAgentPermission.auto,
-      gate: AutoApproval(true),
-      extraRules: const <PermissionRule>[
-        PermissionRule(
-          action: 'shell',
-          resource: '*',
-          effect: PermissionEffect.allow,
-        ),
-      ],
+      options: SubAgentPermissionOptions(
+        gate: AutoApproval(true),
+        extraRules: const <PermissionRule>[
+          PermissionRule(
+            action: 'shell',
+            resource: '*',
+            effect: PermissionEffect.allow,
+          ),
+        ],
+      ),
     );
 
     final ToolResult result = await _shell(host);
@@ -134,8 +140,10 @@ void main() {
       host.child,
       host.tools,
       SubAgentPermission.inherit,
-      gate: AutoApproval(true),
-      extraRules: const <PermissionRule>[_denyEdit],
+      options: SubAgentPermissionOptions(
+        gate: AutoApproval(true),
+        extraRules: const <PermissionRule>[_denyEdit],
+      ),
     );
 
     final ToolResult result = await _write(host);
@@ -155,7 +163,7 @@ void main() {
       host.child,
       host.tools,
       SubAgentPermission.inherit,
-      gate: AutoApproval(false),
+      options: SubAgentPermissionOptions(gate: AutoApproval(false)),
     );
 
     final ToolResult result = await _write(host);
