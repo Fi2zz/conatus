@@ -11,10 +11,16 @@ abstract interface class RagIndexBackend {
   /// 模型、维度或索引版本不一致时抛 `rag_index_stale`，需先 [clear]。
   Future<void> init(RagSnapshotMeta meta);
 
-  /// 先按 [filter] 过滤再按余弦取前 [k]；[queryVector] 缺省时分数为 0，按 id 升序。
-  Future<List<RagHit>> search(RetrievalRequest request, RagFilter filter,
-      {required int k, List<double>? queryVector});
+  /// 先按 [filter] 过滤（租户、标签交集、来源白名单、时间窗），再按
+  /// `queryVector · chunkVector` 的余弦分取前 [k]。同分按 chunk id 升序。
+  /// 调用方负责把请求的 sourceIds/from/to 并入 [filter]。
+  Future<List<RagHit>> search(
+    RagFilter filter, {
+    required List<double> queryVector,
+    required int k,
+  });
 
+  /// 向量维度必须与索引内已有向量一致，否则抛 [ArgumentError]。
   Future<void> upsert(List<RagChunk> chunks, List<List<double>> vectors);
 
   /// 删除匹配切片，并清掉匹配来源的游标。
@@ -99,12 +105,15 @@ class InMemoryRagBackend implements RagIndexBackend {
   }
 
   @override
-  Future<List<RagHit>> search(RetrievalRequest request, RagFilter filter,
-      {required int k, List<double>? queryVector}) async {
+  Future<List<RagHit>> search(
+    RagFilter filter, {
+    required List<double> queryVector,
+    required int k,
+  }) async {
     final List<_Scored> scored = <_Scored>[
       for (final RagChunk chunk in _chunks.values)
         if (chunkMatches(chunk, filter))
-          _Scored(chunk, _scoreOf(chunk.id, queryVector)),
+          _Scored(chunk, cosineSimilarity(queryVector, _vectors[chunk.id]!)),
     ]..sort(_compareScored);
     return <RagHit>[
       for (final _Scored item in scored.take(k))
@@ -112,21 +121,28 @@ class InMemoryRagBackend implements RagIndexBackend {
     ];
   }
 
-  double _scoreOf(String id, List<double>? queryVector) {
-    if (queryVector == null) {
-      return 0.0;
-    }
-    return cosineSimilarity(queryVector, _vectors[id]!);
-  }
-
   @override
   Future<void> upsert(List<RagChunk> chunks, List<List<double>> vectors) async {
     if (chunks.length != vectors.length) {
       throw ArgumentError('切片与向量数量不一致：${chunks.length} != ${vectors.length}');
     }
+    _checkDimensions(vectors);
     for (int i = 0; i < chunks.length; i++) {
       _chunks[chunks[i].id] = chunks[i];
       _vectors[chunks[i].id] = List<double>.unmodifiable(vectors[i]);
+    }
+  }
+
+  void _checkDimensions(List<List<double>> vectors) {
+    if (vectors.isEmpty) {
+      return;
+    }
+    final int expected =
+        _vectors.isEmpty ? vectors.first.length : _vectors.values.first.length;
+    for (final List<double> vector in vectors) {
+      if (vector.length != expected) {
+        throw ArgumentError('向量维度应为 $expected，实际为 ${vector.length}');
+      }
     }
   }
 

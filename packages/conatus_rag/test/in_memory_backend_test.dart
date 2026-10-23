@@ -18,8 +18,8 @@ void main() {
     final RagScope scope =
         RagScope(tenantId: 't1', visibilityTags: {'dept:fin'});
     final List<RagHit> hits = await backend.search(
-        RetrievalRequest(query: 'q', scope: scope),
         RagFilter(tenantId: 't1', anyTags: scope.visibilityTags),
+        queryVector: <double>[1, 0],
         k: 10);
     expect(hits.map((RagHit h) => h.chunk.id), <String>['a']);
   });
@@ -32,17 +32,17 @@ void main() {
     ]);
     expect(
         await backend.search(
-            RetrievalRequest(query: 'q', scope: RagScope(tenantId: 't1')),
             const RagFilter(tenantId: 't1', anyTags: <String>{}),
+            queryVector: <double>[1, 0],
             k: 10),
         isEmpty);
     expect(
         await backend.search(
-            RetrievalRequest(query: 'q', scope: RagScope(tenantId: 't1')),
             RagFilter(
                 tenantId: 't1',
                 anyTags: {'tenant:t1'},
                 from: DateTime.utc(2026, 6)),
+            queryVector: <double>[1, 0],
             k: 10),
         isEmpty);
   });
@@ -82,11 +82,27 @@ void main() {
       <double>[1, 0]
     ]);
     final List<RagHit> hits = await backend.search(
-        RetrievalRequest(query: 'q', scope: RagScope(tenantId: 't1')),
         const RagFilter(tenantId: 't1'),
         k: 10,
         queryVector: <double>[1, 0]);
     expect(hits.map((RagHit h) => h.chunk.id), <String>['a', 'b']);
+  });
+
+  test('upsert 维度与索引内已有向量不一致抛 ArgumentError', () async {
+    await backend.upsert(<RagChunk>[
+      chunk('a', 't1', {'tenant:t1'}, 0)
+    ], <List<double>>[
+      <double>[1, 0]
+    ]);
+    expect(
+      () => backend.upsert(<RagChunk>[
+        chunk('b', 't1', {'tenant:t1'}, 1)
+      ], <List<double>>[
+        <double>[1, 0, 0]
+      ]),
+      throwsArgumentError,
+    );
+    expect(await backend.count(), 1);
   });
 
   test('upsert 长度不一致抛 ArgumentError', () async {
