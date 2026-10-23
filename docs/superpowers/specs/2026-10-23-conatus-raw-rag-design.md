@@ -160,6 +160,7 @@ class RagFilter {                   // 由 VisibilityPolicy 生成，下推给�
 }
 
 abstract interface class Embedder {
+  String get model;                 // 参与索引版本校验（换模型必须 rebuild）
   int get dimension;
   Future<List<double>> embed(String text);
   Future<List<List<double>>> embedBatch(List<String> texts);
@@ -183,8 +184,20 @@ abstract interface class Reranker {
       String query, List<RagHit> candidates, {required int topK});
 }
 
+class RagSource {                    // 一次摄入的来源与归属
+  final String sourceKind;          // v1 = 'session'
+  final String sourceId;            // v1 = sessionId
+  final RagScope scope;
+}
+
+class ChunkerConfig {
+  final int chunkChars;
+  final int overlapChars;
+  final int maxChunkChars;
+}
+
 abstract interface class Retriever {
-  Future<List<RagHit>> retrieve(RetrievalRequest request);
+  Future<List<RagHit>> retrieve(RetrievalRequest request, RagFilter filter);
 }
 
 /// 检索前下推过滤；检索后复核（防御后端实现错误与越权）。
@@ -199,12 +212,17 @@ typedef ScopeResolver = Future<RagScope> Function(String sourceId);
 abstract interface class RagIndexBackend {
   Future<RagSnapshotMeta?> meta();
   Future<void> init(RagSnapshotMeta meta);              // 模型/版本变化时重建
-  Future<List<RagHit>> search(RetrievalRequest request, RagFilter filter);
+  Future<List<RagHit>> search(RetrievalRequest request, RagFilter filter,
+      {required int k});
   Future<void> upsert(List<RagChunk> chunks, List<List<double>> vectors);
-  Future<int> delete(RagFilter filter);                 // 会话 / 租户 / 时间
+  Future<int> delete(RagFilter filter);                 // 连带删除匹配来源的游标
+  Future<int> count();                                  // 索引块总数（运维/统计）
+  Future<void> clear();                                 // 清空索引与游标
   Future<RagCursor?> cursorOf(String sourceId);
-  Future<void> saveCursor(String sourceId, RagCursor cursor);
+  Future<void> saveCursor(RagCursor cursor);
 }
+
+RagCursor {tenantId, sourceId, lastSeq}               // 游标属于来源，带租户便于清理
 
 class RagService {
   Future<int> ingestSession(String sourceId);           // scope 经 ScopeResolver
@@ -216,7 +234,7 @@ class RagService {
   Future<int> forgetScope(RagScope scope);              // 按租户 / 主体
   Future<void> rebuild();                               // 模型或切片变更后重建
   Future<void> clear();
-  RagStats get stats;
+  Future<RagStats> stats();
 }
 
 RagService provideRag(Context ctx, {
@@ -224,6 +242,7 @@ RagService provideRag(Context ctx, {
   required ScopeResolver scopeOf,
   RagScope? scope,                 // 本 Context 内工具调用的默认 scope；null 时工具 fail closed
   RagIndexBackend? backend,
+  SessionLog? log,                 // 缺省取上下文里的 'sessionLog'
 });
 ```
 
