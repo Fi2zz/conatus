@@ -675,7 +675,7 @@ print(picked[SelectionMode.lite]!.id);   // 成本优先
 
 用固定用例衡量 Agent 表现：`Evaluator` 注入 `EvalRunner`（跑一轮 `AgentLoop.run`
 或子 Agent），按 `EvalJudge`（默认 `defaultEvalJudge`：期望工具子集 + 输出关键词 +
-步数上限）判分，汇总 `EvalReport`，可与基线 `compareTo` 得到 `EvalDiff`。
+步数上限 + `checks` 断言）判分，汇总 `EvalReport`，可与基线 `compareTo` 得到 `EvalDiff`。
 
 ```dart
 final evaluator = Evaluator(run: (input) => agent.run(input));
@@ -685,6 +685,24 @@ final report = await evaluator.runAll(<EvalCase>[
 print('通过率 ${report.passRate}');        // 0.0–1.0
 print(report.compareTo(baseline));        // 通过率 +…%，平均步数 ±…
 ```
+
+断言是可 JSON 往返的数据，不跑任意代码：`OutputContains` / `OutputMatches`
+（均可 `absent: true` 表示「不得出现」）、`ToolUse`（`required: false` 表示「不得调用」）、
+`RoundsWithin`。
+
+```dart
+const EvalCase(id: 'time', input: '现在几点', checks: <EvalCheck>[
+  OutputContains('12:00'),
+  OutputMatches(r'1\d:\d\d'),
+  ToolUse('get_time'),
+  ToolUse('web_search', required: false),
+  RoundsWithin(4),
+]);
+```
+
+`EvalSuite` 把一套用例冻结：`hash` 由内容决定（与顺序无关），`fromJson` 会校验记录的
+hash，篡改即拒绝加载。`Evaluator.runAll` / `runSuite` 产出的报告带 `suiteHash`，
+两份 hash 不同的报告 `compareTo` 直接抛 `StateError`，避免拿不同的测试集互相比较。
 
 `EvalCase` / `EvalReport` 支持 `toJson` / `fromJson`，便于把基线持久化到数据库。
 
@@ -1702,6 +1720,8 @@ root.provide('x', 1);
 | `EvalCase({id, input, expectedTools, expectedOutput, maxRounds})` | 评估用例 |
 | `Evaluator({run, judge})` / `runAll(cases)` / `evaluate(case)` | 评估器 |
 | `EvalResult` / `EvalReport` / `EvalDiff` / `defaultEvalJudge` | 结果 / 报告 / 差异 / 默认判分 |
+| `EvalCheck` / `OutputContains` / `OutputMatches` / `ToolUse` / `RoundsWithin` | 确定性断言（可 JSON 往返） |
+| `EvalSuite` / `hashEvalCases` / `Evaluator.runSuite` | 冻结测试集（内容 hash，防漂移） |
 
 ### `approval`
 

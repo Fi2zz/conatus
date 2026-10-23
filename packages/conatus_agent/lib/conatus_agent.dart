@@ -78,13 +78,20 @@ export 'src/cost.dart' show CostAccumulator, ModelRate, TokenUsage;
 export 'src/eval.dart'
     show
         EvalCase,
+        EvalCheck,
         EvalDiff,
         EvalJudge,
         EvalReport,
         EvalResult,
         EvalRunner,
+        EvalSuite,
         Evaluator,
-        defaultEvalJudge;
+        OutputContains,
+        OutputMatches,
+        RoundsWithin,
+        ToolUse,
+        defaultEvalJudge,
+        hashEvalCases;
 export 'src/execution_profile.dart'
     show
         ExecutionProfile,

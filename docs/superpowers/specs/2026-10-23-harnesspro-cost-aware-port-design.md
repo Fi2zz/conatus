@@ -243,3 +243,6 @@ HarnessPro 的 harness 是目录：`model_instructions.md` + `policy.json` + `ho
   退化（极值相等、空集、全部相同）都有测试覆盖。
 - 偏差：未调整 `tool_result_eviction` 默认阈值（见计划文档「范围修正」）；nava 侧
   配置开关未接入，后续按需接。
+- S5（评测升级的确定性部分）：`eval_checks.dart` / `eval_suite.dart` /
+  `eval_report.dart`——断言 JSON 化、测试集内容 hash、跨测试集比较 fail-fast。
+  仍未做的是「LLM 合成测试」本身：需要可执行语料与沙箱，等 nava 有稳定任务回放再启动。
