@@ -6,6 +6,7 @@
   `AgentTurnTracker`、`conatus_tasks` 的轮次追踪、`conatus_intent` 的
   `EmbeddingProvider` 四通道先例
 - 来源：[MemAgent: Learning to Manage Heterogeneous Memory Providers for LLM Agents](https://arxiv.org/abs/2609.32521)（arXiv:2609.32521）
+- 论文精读：[docs/MemAgent-论文精读与记忆策略取舍.md](../MemAgent-论文精读与记忆策略取舍.md)
 
 ## 1. 背景
 
