@@ -51,6 +51,22 @@ void main() {
     expect(chunks.single.citation.sourceId, 's1');
   });
 
+  test('同一长事件跨多个重叠窗口时块 id 互不相同且可复现', () {
+    final SessionEvent long =
+        ev(0, kUserMessageEvent, <String, Object?>{'text': 'y' * 200});
+    const ChunkerConfig config =
+        ChunkerConfig(chunkChars: 40, overlapChars: 8, maxChunkChars: 400);
+    final List<RagChunk> first =
+        chunkEvents(source, <SessionEvent>[long], config);
+    final List<RagChunk> second =
+        chunkEvents(source, <SessionEvent>[long], config);
+    expect(first.length, greaterThan(1));
+    expect(first.map((RagChunk c) => c.firstSeq).toSet(), <int>{0});
+    expect(first.map((RagChunk c) => c.lastSeq).toSet(), <int>{0});
+    expect(first.map((RagChunk c) => c.id).toSet(), hasLength(first.length));
+    expect(first.map((RagChunk c) => c.id), second.map((RagChunk c) => c.id));
+  });
+
   test('长会话切多块、块 id 稳定可复现', () {
     final List<SessionEvent> events = <SessionEvent>[
       for (int i = 0; i < 6; i++)

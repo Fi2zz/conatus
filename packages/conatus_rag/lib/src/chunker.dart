@@ -27,7 +27,8 @@ List<RagChunk> chunkEvents(
         .where((_Line l) => l.start < end && l.end > start)
         .toList(growable: false);
     if (hit.isNotEmpty) {
-      chunks.add(_buildChunk(source, buffer.substring(start, end), hit));
+      chunks.add(_buildChunk(
+          source, buffer.substring(start, end), hit, chunks.length));
     }
     if (end == buffer.length) break;
   }
@@ -67,13 +68,18 @@ String _clip(String text, int maxChars) => text.length <= maxChars
     ? text
     : '${text.substring(0, maxChars)}$_truncationMark';
 
-RagChunk _buildChunk(RagSource source, String text, List<_Line> hit) {
+RagChunk _buildChunk(
+  RagSource source,
+  String text,
+  List<_Line> hit,
+  int windowIndex,
+) {
   final List<DateTime> times =
       hit.map((_Line l) => l.event.time).toList(growable: false);
   final int firstSeq = hit.first.event.seq;
   final int lastSeq = hit.last.event.seq;
   return RagChunk(
-    id: '${source.sourceKind}/${source.sourceId}/$firstSeq-$lastSeq',
+    id: '${source.sourceKind}/${source.sourceId}/$firstSeq-$lastSeq-$windowIndex',
     tenantId: source.scope.tenantId,
     sourceKind: source.sourceKind,
     sourceId: source.sourceId,
