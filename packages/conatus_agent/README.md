@@ -31,6 +31,7 @@ for (final step in turn.steps) print('${step.call.name}: ${step.result.content}'
 | 自省与重试 | `provideReflection` | 失败轮次反思，`reflectAndRetry` 按策略重试 |
 | 目标延续 | `provideGoal` | 长期目标（`Goal`）驱动多轮延续，`GoalRoundDriver` 按轮推进 |
 | 审批 | `provideApproval` / `instrumentApproval` | `Approval` 契约 + `AskUserApproval` / `AutoApproval` / `RuleBasedApproval`；中间件形式挂进工具管线 |
+| 权限 | `instrumentPermission` + `PermissionRule` / `PermissionScope` / `PermissionScopeSlot` | 规则化 `allow` / `ask` / `deny`，动作归一（`read` / `edit` / `shell` / …），路径按工作目录与真实路径匹配；`ask` 在无审批人时拒绝（`PERMISSION_ASK_UNATTENDED`） |
 | 遥测 | `provideTelemetry` | `Telemetry` 契约 + console / in-memory 实现；`instrumentTools` 埋点，`TelemetryLlmProvider` 包模型调用 |
 | 评估 | `EvalRunner` / `Evaluator` / `EvalJudge` | 固定用例跑一轮 Agent，产出 `EvalReport` 对比 |
 | 压缩 | `provideLayeredCompaction` | 在 `conatus_compaction` 契约上分层折叠（工具结果压成指针、用户偏好留原文），`RuleBasedContentClassifier` 分类 |

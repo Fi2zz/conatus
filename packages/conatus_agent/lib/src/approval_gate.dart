@@ -7,7 +7,10 @@ import 'package:conatus_foundation/conatus_foundation.dart';
 import 'approval.dart';
 import 'telemetry.dart';
 
-/// 审批中间件的分类标记：子代理自带审批策略时据它从继承管线里排除宿主审批层。
+/// 审批中间件的分类标记：子代理自带策略时据它从继承管线里排除宿主层。
+///
+/// 根上下文的 `instrumentPermission` 复用同一个 tag——排除它会同时移除
+/// 「权限 + 审批」两层，避免非 inherit 子代理重复判定。
 const String kApprovalMiddlewareTag = 'approval';
 
 /// 在工具表上挂审批中间件：对风险不低于 [threshold] 的工具，先经 [approval]

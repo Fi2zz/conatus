@@ -117,6 +117,38 @@ export 'src/layered_compaction.dart'
     show LayeredCompactor, provideLayeredCompaction;
 export 'src/model_visible_invariant.dart'
     show assertModelVisibleInvariant, checkModelVisibleInvariant, sameJson;
+export 'src/permissions/permission_action.dart'
+    show
+        permissionActionFor,
+        permissionActionUsesPath,
+        permissionBoundaryPathsFor,
+        permissionPathsFor,
+        permissionResourcesFor;
+export 'src/permissions/permission_effect.dart' show PermissionEffect;
+export 'src/permissions/permission_engine.dart' show PermissionEngine;
+export 'src/permissions/permission_evaluator.dart'
+    show PermissionEvaluator, kExternalDirectoryAction;
+export 'src/permissions/permission_gate.dart' show instrumentPermission;
+export 'src/permissions/permission_matcher.dart'
+    show lastMatchingRule, permissionPatternMatches;
+export 'src/permissions/permission_patch.dart' show permissionPatchPaths;
+export 'src/permissions/permission_path.dart'
+    show
+        canonicalPermissionPath,
+        canonicalPermissionPattern,
+        normalizePermissionPath,
+        permissionDirectoryBoundary,
+        permissionPathSpellings,
+        permissionPathUnder,
+        permissionPatternSpellings,
+        resolvePermissionPath;
+export 'src/permissions/permission_rule.dart' show PermissionRule;
+export 'src/permissions/permission_scope.dart' show PermissionScope;
+export 'src/permissions/permission_scope_slot.dart'
+    show PermissionScopeSlot, kPermissionScopeService;
+export 'src/permissions/permission_store.dart'
+    show PermissionStore, PermissionStoreException;
+export 'src/permissions/permission_verdict.dart' show PermissionVerdict;
 export 'src/plan.dart'
     show
         Plan,
@@ -205,7 +237,11 @@ export 'src/sub_agent.dart'
         kDefaultSubAgentPrompt,
         provideSpawnAgent;
 export 'src/sub_agent_permission.dart'
-    show SubAgentPermission, parseSubAgentPermission, tightenBelow;
+    show
+        SubAgentPermission,
+        applySubAgentPermission,
+        parseSubAgentPermission,
+        tightenBelow;
 export 'src/sub_agent_progress.dart'
     show
         ProgressTool,
