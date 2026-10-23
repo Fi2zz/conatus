@@ -3,5 +3,6 @@ library;
 
 export 'src/chunker.dart';
 export 'src/cosine.dart';
+export 'src/rag_backend.dart';
 export 'src/rag_types.dart';
 export 'src/vector_index.dart';
