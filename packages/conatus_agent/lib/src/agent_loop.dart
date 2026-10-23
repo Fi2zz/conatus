@@ -11,6 +11,7 @@ import 'package:conatus_llm/conatus_llm.dart';
 import 'agent_cancel.dart';
 import 'agent_events.dart';
 import 'agent_types.dart';
+import 'cost.dart';
 import 'goal_round_driver.dart';
 import 'plan.dart';
 import 'reflection.dart';
@@ -38,6 +39,7 @@ class AgentLoop {
     this.memory,
     this.reflector,
     this.router,
+    this.rate,
     this.onEvent,
     this.maxSteps = 8,
     this.memoryLimit = 5,
@@ -69,6 +71,9 @@ class AgentLoop {
 
   /// 调模型前的确定性路由器；null 表示不路由（直接落模型）。
   final Router? router;
+
+  /// 成本费率；null 表示未知（此时只累计用量，不算钱）。
+  final ModelRate? rate;
 
   /// 每轮的观察口（Observability 埋点）：`agent.round` / `agent.finished`。
   final void Function(String type, Map<String, Object?> data)? onEvent;
@@ -103,6 +108,9 @@ class AgentLoop {
 
   int _historyStart = 0;
   bool _needsReplan = false;
+
+  /// 本轮成本累计器；每轮开头重置。未配置费率时照常累计用量、成本为 null。
+  CostAccumulator _meter = CostAccumulator();
 
   /// 跑一轮：从 [userInput] 到最终文本回复。
   ///
@@ -154,6 +162,7 @@ class AgentLoop {
   }) async {
     final Session? session = this.session;
     ensureSessionOpen(session);
+    _meter = CostAccumulator(rate: rate);
     session?.append(
       kUserMessageEvent,
       data: <String, Object?>{
@@ -236,6 +245,7 @@ class AgentLoop {
         cancel,
       );
       usages.add(result.usage);
+      _meter.add(result.usage);
       onEvent?.call('agent.round', <String, Object?>{
         'step': step,
         'toolCalls': result.toolCalls.length,
@@ -366,9 +376,11 @@ class AgentLoop {
     String reply,
     String userInput,
   ) async {
+    final double? cost = _meter.cost;
     onEvent?.call('agent.finished', <String, Object?>{
       'replyLength': reply.length,
       'steps': steps.length,
+      if (cost != null) 'cost': cost,
     });
     messages.add(LlmMessage('assistant', reply));
     session?.append(kAssistantMessageEvent,
@@ -381,7 +393,13 @@ class AgentLoop {
       );
     }
     return AgentTurn(
-        reply: reply, steps: steps, messages: messages, usage: usage);
+      reply: reply,
+      steps: steps,
+      messages: messages,
+      usage: usage,
+      cost: cost,
+      tokens: _meter.tokens,
+    );
   }
 
   String _systemText(String userInput) => buildSystemText(

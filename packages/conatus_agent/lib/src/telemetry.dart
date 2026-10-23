@@ -11,7 +11,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
-import 'package:conatus_llm/conatus_llm.dart';
 
 /// 一条遥测事件。
 class TelemetryEvent {
@@ -155,58 +154,4 @@ Disposer instrumentTools(Context ctx,
           }
         },
       ));
-}
-
-/// 给任意 [LlmProvider] 加 `llm.request` / `llm.failed` 埋点的装饰器。
-class TelemetryLlmProvider implements LlmProvider {
-  TelemetryLlmProvider(this.inner, {required this.telemetry});
-
-  /// 被包装的 provider。
-  final LlmProvider inner;
-
-  /// 遥测导出器。
-  final Telemetry telemetry;
-
-  @override
-  String get name => inner.name;
-
-  @override
-  Future<LlmResult> chat(
-    List<LlmMessage> messages, {
-    Map<String, dynamic>? options,
-    List<Map<String, dynamic>>? tools,
-  }) async {
-    final Stopwatch watch = Stopwatch()..start();
-    try {
-      final LlmResult result =
-          await inner.chat(messages, options: options, tools: tools);
-      telemetry.emit(TelemetryEvent('llm.request', data: <String, Object?>{
-        'provider': inner.name,
-        'model': result.model,
-        'ms': watch.elapsedMilliseconds,
-        'messages': messages.length,
-        'tools': tools?.length ?? 0,
-        'toolCalls': result.toolCalls.length,
-      }));
-      return result;
-    } catch (error) {
-      telemetry.emit(TelemetryEvent('llm.failed', data: <String, Object?>{
-        'provider': inner.name,
-        'ms': watch.elapsedMilliseconds,
-        'error': '$error',
-      }));
-      rethrow;
-    }
-  }
-
-  @override
-  Stream<LlmStreamEvent> chatStream(
-    List<LlmMessage> messages, {
-    Map<String, dynamic>? options,
-    List<Map<String, dynamic>>? tools,
-  }) =>
-      inner.chatStream(messages, options: options, tools: tools);
-
-  @override
-  void close() => inner.close();
 }

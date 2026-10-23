@@ -261,9 +261,9 @@ export 'src/telemetry.dart'
         Telemetry,
         TelemetryContext,
         TelemetryEvent,
-        TelemetryLlmProvider,
         instrumentTools,
         provideTelemetry;
+export 'src/telemetry_llm.dart' show TelemetryLlmProvider;
 export 'src/tool_result_eviction.dart'
     show
         ToolResultEviction,

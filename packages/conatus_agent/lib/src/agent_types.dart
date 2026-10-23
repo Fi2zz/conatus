@@ -7,6 +7,7 @@ library;
 
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
+import 'cost.dart';
 
 // 消息事件名由 `conatus_foundation` 的会话词汇拥有（压缩与 Agent Loop 都要
 // 按事件类型判断），此处只做转出，保持 `agent_types.dart` 的既有导入面。
@@ -48,6 +49,8 @@ class AgentTurn {
     required this.steps,
     required this.messages,
     this.usage = const <Map<String, dynamic>>[],
+    this.cost,
+    this.tokens = TokenUsage.zero,
   });
 
   /// 最终文本回复。
@@ -63,4 +66,10 @@ class AgentTurn {
   ///
   /// 供成本折算与可观测性使用；无模型调用（如确定性路由直答）时为空。
   final List<Map<String, dynamic>> usage;
+
+  /// 本轮成本；未提供费率或没有用量时为 `null`。
+  final double? cost;
+
+  /// 本轮归一后的累计用量。
+  final TokenUsage tokens;
 }
