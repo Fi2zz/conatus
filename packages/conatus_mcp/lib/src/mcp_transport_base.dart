@@ -14,25 +14,43 @@ import 'mcp_sse.dart';
 import 'mcp_transport.dart';
 import 'mcp_types.dart';
 
+part 'mcp_transport_auth.dart';
+
 /// JSON-RPC over HTTP 的公共基类。
 ///
 /// 一个传输实例是**一次性**的：`disconnect` 之后再 `connect` 不会重新建立
 /// 可用的会话（消息/诊断控制器已关闭），[connected] 也会复位为 `false`。
 abstract class McpHttpTransport implements McpTransport {
   /// 构造。[client] 为空时自建一个，并在 [closeClient] 时关闭它。
+  ///
+  /// [authHeaders] 在每次请求前调用，返回值合并进（并覆盖）[headers]；
+  /// [refreshAuth] 只在收到 401 后调用一次，用于换新令牌并重试。两个钩子都
+  /// 由 OAuth 运行时提供，**不得把令牌写进诊断或错误消息**。
+  // REASON: 鉴权需要「取头」与「401 后刷新」两个钩子；拆成对象只会让
+  // 传输构造多绕一层，仓库里已有同类参数聚合豁免。
   McpHttpTransport({
     required Uri url,
     Map<String, String> headers = const <String, String>{},
     http.Client? client,
+    Future<Map<String, String>> Function()? authHeaders,
+    Future<Map<String, String>> Function()? refreshAuth,
   })  : _url = url,
         _headers = headers,
         _client = client ?? http.Client(),
-        _owned = client == null;
+        _owned = client == null {
+    _http = _AuthedHttp(
+      client: _client,
+      baseHeaders: _headers,
+      authHeaders: authHeaders,
+      refreshAuth: refreshAuth,
+    );
+  }
 
   final Uri _url;
   final Map<String, String> _headers;
   final http.Client _client;
   final bool _owned;
+  late final _AuthedHttp _http;
   final StreamController<McpMessage> _messages = StreamController<McpMessage>();
   final StreamController<String> _diagnostics =
       StreamController<String>.broadcast();
@@ -79,17 +97,11 @@ abstract class McpHttpTransport implements McpTransport {
   /// POST 一条 JSON-RPC 消息到 [target]。
   ///
   /// 非 200 抛 [McpException]（`http-status`）而非往 [messages] 灌错误：
-  /// 一次 HTTP 失败不该判定整个会话断连，由调用方按次收敛。
+  /// 一次 HTTP 失败不该判定整个会话断连，由调用方按次收敛。401 先尝试刷新
+  /// 一次令牌并重试；仍 401 抛 `needs_auth`。
   Future<void> postJson(Uri target, McpMessage message) async {
-    final http.Response response = await _client.post(
-      target,
-      headers: <String, String>{
-        'Content-Type': 'application/json',
-        'Accept': 'application/json, text/event-stream',
-        ..._headers,
-      },
-      body: jsonEncode(message.toJson()),
-    );
+    final http.Response response =
+        await _http.post(target, jsonEncode(message.toJson()));
     if (response.statusCode != 200) {
       throw McpException(
         'http-status',
@@ -102,13 +114,9 @@ abstract class McpHttpTransport implements McpTransport {
   /// 对 [target] 发起 `Accept: text/event-stream` 的 GET 长连接。
   ///
   /// 非 200 抛 [McpException]（`http-status`）；返回的响应流由调用方消费。
+  /// 401 同样只刷新一次。
   Future<http.StreamedResponse> openStream(Uri target) async {
-    final http.Request request = http.Request('GET', target)
-      ..headers.addAll(<String, String>{
-        'Accept': 'text/event-stream',
-        ..._headers,
-      });
-    final http.StreamedResponse response = await _client.send(request);
+    final http.StreamedResponse response = await _http.stream(target);
     if (response.statusCode != 200) {
       throw McpException('http-status', 'MCP SSE ${response.statusCode}');
     }

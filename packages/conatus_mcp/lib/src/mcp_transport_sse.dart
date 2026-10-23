@@ -16,10 +16,13 @@ import 'mcp_types.dart';
 /// 之后 [connected] 为 `false`，不再支持重连。
 class SseTransport extends McpHttpTransport {
   /// 构造。[client] 传入时由调用方负责关闭，否则传输层自建自关。
+  // REASON: 同 `McpHttpTransport`：鉴权需要取头与 401 刷新两个钩子。
   SseTransport({
     required String url,
     super.headers,
     super.client,
+    super.authHeaders,
+    super.refreshAuth,
   }) : super(url: Uri.parse(url));
 
   StreamSubscription<SseEvent>? _events;

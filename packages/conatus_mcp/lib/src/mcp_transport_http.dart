@@ -14,10 +14,13 @@ import 'mcp_transport_base.dart';
 /// 只用一次：[disconnect] 之后 [connected] 为 `false`，不再支持重连。
 class HttpTransport extends McpHttpTransport {
   /// 构造。[client] 传入时由调用方负责关闭，否则传输层自建自关。
+  // REASON: 同 `McpHttpTransport`：鉴权需要取头与 401 刷新两个钩子。
   HttpTransport({
     required String url,
     super.headers,
     super.client,
+    super.authHeaders,
+    super.refreshAuth,
   }) : super(url: Uri.parse(url));
 
   @override

@@ -64,3 +64,66 @@ class McpAuthServerMetadata {
   /// 服务端声明的可用 scope。
   final List<String> scopesSupported;
 }
+
+/// 一次授权换来的令牌；**字段就是凭据，不得写进日志或错误消息**。
+///
+/// [expiresAt] 为 `null` 表示服务端没给 `expires_in`，只能等 401 再刷新。
+/// [needsRefresh] 采用「过期前 60 秒」的提前量，避免请求在途中过期。
+class McpOAuthToken {
+  /// 直接构造。
+  const McpOAuthToken({
+    required this.accessToken,
+    this.refreshToken,
+    this.expiresAt,
+    this.scope,
+  });
+
+  /// 从令牌端点的 JSON 响应解析；缺 `access_token` 抛 [FormatException]。
+  factory McpOAuthToken.fromJson(Map<String, Object?> json) {
+    final Object? access = json['access_token'];
+    if (access is! String || access.isEmpty) {
+      throw const FormatException('令牌 JSON 缺少 access_token');
+    }
+    final Object? expiresAt = json['expires_at'];
+    return McpOAuthToken(
+      accessToken: access,
+      refreshToken: _stringOrNull(json['refresh_token']),
+      expiresAt: expiresAt is String ? DateTime.tryParse(expiresAt) : null,
+      scope: _stringOrNull(json['scope']),
+    );
+  }
+
+  /// 访问令牌。
+  final String accessToken;
+
+  /// 刷新令牌；服务端未下发时为 `null`（过期后只能重新授权）。
+  final String? refreshToken;
+
+  /// 绝对过期时刻；`null` 表示未知。
+  final DateTime? expiresAt;
+
+  /// 服务端授予的 scope（空格分隔）。
+  final String? scope;
+
+  /// 距离过期不足 60 秒（或已过期）时为真；没有过期时间时为假。
+  bool get needsRefresh {
+    final DateTime? expires = expiresAt;
+    if (expires == null) return false;
+    return !DateTime.now()
+        .isBefore(expires.subtract(const Duration(seconds: 60)));
+  }
+
+  /// 序列化（存储与测试用）；键名遵循令牌端点响应。
+  Map<String, Object?> toJson() => <String, Object?>{
+        'access_token': accessToken,
+        if (refreshToken != null) 'refresh_token': refreshToken,
+        if (expiresAt != null) 'expires_at': expiresAt!.toIso8601String(),
+        if (scope != null) 'scope': scope,
+      };
+
+  @override
+  String toString() => 'McpOAuthToken(accessToken: <redacted>)';
+}
+
+String? _stringOrNull(Object? value) =>
+    value is String && value.isNotEmpty ? value : null;

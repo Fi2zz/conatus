@@ -51,6 +51,20 @@ class FakeAs {
     'client_id': 'dcr-client-1',
   };
 
+  /// 令牌端点收到的表单（按请求顺序）。
+  final List<Map<String, String>> tokenRequests = <Map<String, String>>[];
+
+  /// 令牌端点返回的 HTTP 状态码。
+  int tokenStatus = HttpStatus.ok;
+
+  /// 令牌端点返回的 JSON 体。
+  Map<String, Object?> tokenResponse = <String, Object?>{
+    'access_token': 'access-1',
+    'refresh_token': 'refresh-1',
+    'expires_in': 3600,
+    'scope': 'mcp',
+  };
+
   /// 以 `http://127.0.0.1:<port>` 形式的 origin。
   Uri get origin => issuer;
 
@@ -92,6 +106,14 @@ class FakeAs {
       ) as Map<String, Object?>;
       request.response.statusCode = registrationStatus;
       await _json(request, registrationResponse);
+      return;
+    }
+    if (request.uri.path == '/token' && request.method == 'POST') {
+      tokenRequests.add(
+        Uri.splitQueryString(await utf8.decoder.bind(request).join()),
+      );
+      request.response.statusCode = tokenStatus;
+      await _json(request, tokenResponse);
       return;
     }
     request.response.statusCode = HttpStatus.notFound;
