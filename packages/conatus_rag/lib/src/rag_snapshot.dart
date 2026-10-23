@@ -44,9 +44,27 @@ class RagSnapshotMeta {
       embeddingModel == expected.embeddingModel &&
       dimension == expected.dimension &&
       indexVersion == expected.indexVersion;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+        'embeddingModel': embeddingModel,
+        'dimension': dimension,
+        'indexVersion': indexVersion,
+        'updatedAt': updatedAt?.toIso8601String(),
+      };
+
+  factory RagSnapshotMeta.fromJson(Map<String, Object?> json) {
+    final String? updatedAt = json['updatedAt'] as String?;
+    return RagSnapshotMeta(
+      embeddingModel: json['embeddingModel']! as String,
+      dimension: json['dimension']! as int,
+      indexVersion: json['indexVersion']! as int,
+      updatedAt: updatedAt == null ? null : DateTime.parse(updatedAt),
+    );
+  }
 }
 
 /// 索引的完整快照：切片、与之一一对应的向量、以及各来源游标。
+/// `meta` 为空表示尚未 init；此时切片仍可能已写入（与内存实现一致）。
 class RagSnapshot {
   const RagSnapshot({
     required this.meta,
@@ -55,8 +73,43 @@ class RagSnapshot {
     required this.cursors,
   });
 
-  final RagSnapshotMeta meta;
+  final RagSnapshotMeta? meta;
   final List<RagChunk> chunks;
   final List<List<double>> vectors;
   final List<RagCursor> cursors;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+        'meta': meta?.toJson(),
+        'chunks': <Object?>[
+          for (final RagChunk chunk in chunks) chunk.toJson()
+        ],
+        'vectors': vectors,
+        'cursors': <Object?>[
+          for (final RagCursor cursor in cursors) cursor.toJson(),
+        ],
+      };
+
+  factory RagSnapshot.fromJson(Map<String, Object?> json) {
+    final Object? rawMeta = json['meta'];
+    return RagSnapshot(
+      meta: rawMeta == null
+          ? null
+          : RagSnapshotMeta.fromJson(rawMeta as Map<String, Object?>),
+      chunks: <RagChunk>[
+        for (final Object? item in json['chunks']! as List<Object?>)
+          RagChunk.fromJson(item! as Map<String, Object?>),
+      ],
+      vectors: <List<double>>[
+        for (final Object? vector in json['vectors']! as List<Object?>)
+          <double>[
+            for (final Object? value in vector! as List<Object?>)
+              (value! as num).toDouble(),
+          ],
+      ],
+      cursors: <RagCursor>[
+        for (final Object? item in json['cursors']! as List<Object?>)
+          RagCursor.fromJson(item! as Map<String, Object?>),
+      ],
+    );
+  }
 }

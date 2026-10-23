@@ -172,6 +172,15 @@ class InMemoryRagBackend implements RagIndexBackend {
     _meta = null;
   }
 
+  RagSnapshot snapshot() => RagSnapshot(
+        meta: _meta,
+        chunks: _chunks.values.toList(),
+        vectors: <List<double>>[
+          for (final RagChunk chunk in _chunks.values) _vectors[chunk.id]!,
+        ],
+        cursors: _cursors.values.toList(),
+      );
+
   @override
   Future<RagCursor?> cursorOf(String sourceId) async => _cursors[sourceId];
 
