@@ -31,6 +31,9 @@ const String kToolCallEvent = 'tool/call';
 /// 用户插话；返回空列表表示没有。抛异常视为编程错误，向上传播不吞。
 typedef SteeringSource = Future<List<String>> Function();
 
+/// 单轮证据提供者：返回可直接注入的原文证据块；空串表示无证据。
+typedef EvidenceSource = Future<String> Function(String userInput);
+
 /// 一次工具调用在循环中的步骤记录。
 class AgentStep {
   const AgentStep({required this.call, required this.result});
