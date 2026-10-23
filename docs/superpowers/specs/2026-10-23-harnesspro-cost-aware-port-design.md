@@ -233,6 +233,8 @@ HarnessPro 的 harness 是目录：`model_instructions.md` + `policy.json` + `ho
 
 ## 10. 落地记录
 
+完整实现记录（开关、示例、未搬项与原因）见 `docs/harnesspro-成本感知移植-实现记录.md`。
+
 - S1：`conatus_agent/lib/src/cost.dart` + `AgentTurn.cost` / `.tokens` +
   `llm.request` 的 `cost` 字段；费率经服务键 `'modelRate'` 注入，缺省关闭。
 - S2：`tool_budget_policy.dart` + `tool_budget_hooks.dart`；中间件 tag `toolBudget`，

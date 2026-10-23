@@ -72,3 +72,8 @@ conatus 恰好横跨这条线的两侧，对应论文 §14.2 描述的 **harness
 ## 七、一句话总结
 
 这篇论文是对 conatus_code/nava 所在赛道（coding agent harness）的第一份系统解剖报告：它的七子系统框架可以用来给 conatus 做架构体检（大部分维度已对齐主流收敛），它的 twin absences 印证了我们的技术路线，而 conatus 的可逆效应/反应式共效应底层是论文全部 11 个语料系统都不具备的差异点。论文 §16 的 18 条建议可直接作为 conatus 后续演进的 checklist。
+
+---
+
+> 相关：HarnessPro（arXiv:2610.26770）的移植实现记录见
+> [`harnesspro-成本感知移植-实现记录.md`](harnesspro-成本感知移植-实现记录.md)。

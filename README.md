@@ -637,6 +637,9 @@ for (final e in ctx.telemetry.recent) print(e.name); // tool.called / llm.reques
 
 ### `cost` / `tool-budget` / `execution-profile` — 成本感知（HarnessPro 移植）
 
+完整实现记录（开关矩阵、取舍、未搬项）见
+[`docs/harnesspro-成本感知移植-实现记录.md`](docs/harnesspro-成本感知移植-实现记录.md)。
+
 三者都**默认不生效**，按需装配：
 
 ```dart
