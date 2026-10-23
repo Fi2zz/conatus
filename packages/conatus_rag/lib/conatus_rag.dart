@@ -7,4 +7,6 @@ export 'src/embedder.dart';
 export 'src/json_backend.dart';
 export 'src/rag_backend.dart';
 export 'src/rag_types.dart';
+export 'src/reranker.dart';
+export 'src/retriever.dart';
 export 'src/vector_index.dart';
