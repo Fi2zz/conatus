@@ -29,7 +29,7 @@ Agent 能力。
 ```
 ├── pubspec.yaml            # 伞包；workspace: packages/*（glob，SDK ^3.11.0 起支持）
 ├── lib/conatus.dart        # 伞包入口：只 re-export，不写实现
-├── packages/               # 25 个目录（见下方分类）
+├── packages/               # 28 个目录（见下方分类）
 ├── test/                   # 根包测试：integration/（跨包集成）+ integration_e2e_test.dart
 ├── example/                # 演示：main.dart（交互式 Agent，需 API Key）、
 │                           #        demo.dart（离线脚本化模型）、voice_plan_mode.dart
@@ -40,11 +40,11 @@ Agent 能力。
 └── docs/superpowers/       # superpowers 工作流的 plans/ 与 specs/
 ```
 
-### packages/ 分类（25 个目录）
+### packages/ 分类（28 个目录：15 稳定 + 12 实验性 + 1 子模块）
 
 | 类别 | 包 | 说明 |
 |------|----|------|
-| **稳定模块包 ×14**（进伞包） | `conatus_core` | 核心范式：Context / EffectScope / Reactor，零运行时依赖 |
+| **稳定模块包 ×15**（进伞包） | `conatus_core` | 核心范式：Context / EffectScope / Reactor，零运行时依赖 |
 | | `conatus_foundation` | 基础设施：timer / logger / loader / tools / shell / fs / session / session-log / system-prompt / memory / database / ask-user |
 | | `conatus_credentials` | 凭据能力缝：env / 内存 / 文件 / Vault KV v2 / AWS Secrets Manager |
 | | `conatus_llm` | 大模型接入（豆包 / DeepSeek，chat 与 responses 两种形态，FallbackLlm 回退链） |
@@ -56,7 +56,8 @@ Agent 能力。
 | | `conatus_compaction` | 压缩能力缝：滚动摘要 + `compaction/*` 日志事件 |
 | | `conatus_agent` | Agent Loop 与产品化：plan / sub-agent / reflection / telemetry / eval / approval / skill / recovery |
 | | `conatus_tasks` | 任务中心：运行时任务追踪（任务树 + `list_tasks` / `cancel_task`） |
-| **实验性包 ×10**（进伞包导出，API 可能破坏性变更） | `conatus_alerting` / `conatus_browser_use` / `conatus_computer_use` / `conatus_context` / `conatus_doc` / `conatus_intent` / `conatus_observability` / `conatus_team` / `conatus_workflow` / `conatus_ontology` | 告警 / 浏览器操作 / 桌面操作 / 上下文压缩与 CCR 可逆取回 / 文档补丁引擎（人机双写故事层） / 意图路由 / 可观测性导出 / 多智能体协作 / 流程编排 / 自进化本体层（EvoOntology 适配） |
+| | `conatus_rag` | 会话原文的 Raw-RAG 检索内核：切分 / 嵌入 / 索引 + 租户可见性过滤的稠密检索（可选能力包，不进 agent 依赖闭包） |
+| **实验性包 ×12**（进伞包导出，API 可能破坏性变更） | `conatus_alerting` / `conatus_browser_use` / `conatus_computer_use` / `conatus_context` / `conatus_doc` / `conatus_harness` / `conatus_intent` / `conatus_memory` / `conatus_observability` / `conatus_team` / `conatus_workflow` / `conatus_ontology` | 告警 / 浏览器操作 / 桌面操作 / 上下文压缩与 CCR 可逆取回 / 文档补丁引擎（人机双写故事层） / 可版本化 harness 制品 / 意图路由 / 记忆写入策略（保留判定 + 轮次记录） / 可观测性导出 / 多智能体协作 / 流程编排 / 自进化本体层（EvoOntology 适配） |
 | **子模块 ×1** | `conatus_code` | 独立仓库：终端编码智能体 nava（github.com/Fi2zz/conatus_code）；根包仅在 `dev_dependencies` 以 git 源引用，workspace 内解析到本地成员。不开发时无需拉取。原 `cowriter` 产品已并入 nava 并归档 |
 
 依赖方向自上而下无环：`conatus` → `conatus_agent` → `conatus_llm` / `conatus_foundation` /
@@ -183,7 +184,7 @@ filter 的作用：checkout 时恢复 `pubspec.yaml` 的 `resolution: workspace`
 
 ## 8. 发布与部署
 
-分发方式为 **git 源**：全部 24 个包 `publish_to: none`，不发布 pub.dev（也从未
+分发方式为 **git 源**：全部 27 个包 `publish_to: none`，不发布 pub.dev（也从未
 发布过），用户以 git 依赖伞包即获得全部子包（见 README「安装」）。
 
 1. 版本演进由 git tag 承载：`git tag v0.17.0 && git push --tags`；各 pubspec 的
@@ -226,4 +227,6 @@ filter 的作用：checkout 时恢复 `pubspec.yaml` 的 `resolution: workspace`
 - 未拉取子模块时 `dart pub get` 照常工作（glob 自动跳过无 pubspec.yaml 的目录）；
   拉取后根包 dev 依赖 `conatus_code` 解析到本地成员。
 - 实验性包 API 可能在无 major 版本号变更的情况下破坏性变更，勿在生产依赖。
+- `conatus_rag` 是可选能力包，不进入 `conatus_agent` 的依赖闭包，接线由宿主完成
+  （经 `provideAgentLoop` 的 `evidence` 参数，或直接调用 `RagService`）。
 - 本文件为仓库级指南；更细的 API 用法、参数表、设计取舍一律以根 `README.md` 与各包 README 为准。

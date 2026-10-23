@@ -21,6 +21,7 @@ export 'src/agent_types.dart'
     show
         AgentStep,
         AgentTurn,
+        EvidenceSource,
         SteeringSource,
         kAssistantMessageEvent,
         kLlmRequestEvent,
@@ -74,16 +75,32 @@ export 'src/content_classifier.dart'
         RuleBasedContentClassifier,
         provideContentClassifier;
 export 'src/context_metrics.dart' show estimateMessagesTokens, estimateTokens;
+export 'src/cost.dart' show CostAccumulator, ModelRate, TokenUsage;
 export 'src/eval.dart'
     show
         EvalCase,
+        EvalCheck,
         EvalDiff,
         EvalJudge,
         EvalReport,
         EvalResult,
         EvalRunner,
+        EvalSuite,
         Evaluator,
-        defaultEvalJudge;
+        OutputContains,
+        OutputMatches,
+        RoundsWithin,
+        ToolUse,
+        defaultEvalJudge,
+        hashEvalCases;
+export 'src/execution_profile.dart'
+    show
+        ExecutionProfile,
+        LlmProfileSelector,
+        ProfileSelector,
+        kDefaultExecutionProfiles,
+        provideProfileSelector;
+export 'src/execution_profile_rubric.dart' show kExecutionProfileRubric;
 export 'src/exit_plan_mode.dart' show ExitPlanModeTool, kExitPlanModeToolName;
 export 'src/goal.dart'
     show
@@ -117,6 +134,13 @@ export 'src/layered_compaction.dart'
     show LayeredCompactor, provideLayeredCompaction;
 export 'src/model_visible_invariant.dart'
     show assertModelVisibleInvariant, checkModelVisibleInvariant, sameJson;
+export 'src/pareto.dart'
+    show
+        SelectionCandidate,
+        SelectionMode,
+        paretoFrontier,
+        selectRepresentative,
+        selectRepresentatives;
 export 'src/permissions/permission_action.dart'
     show
         permissionActionFor,
@@ -263,9 +287,12 @@ export 'src/telemetry.dart'
         Telemetry,
         TelemetryContext,
         TelemetryEvent,
-        TelemetryLlmProvider,
         instrumentTools,
         provideTelemetry;
+export 'src/telemetry_llm.dart' show TelemetryLlmProvider;
+export 'src/tool_budget_hooks.dart'
+    show ToolBudget, provideToolBudget, toolBudgetMiddleware;
+export 'src/tool_budget_policy.dart' show ToolBudgetPolicy, ToolBudgetStage;
 export 'src/tool_result_eviction.dart'
     show
         ToolResultEviction,

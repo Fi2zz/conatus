@@ -6,12 +6,15 @@ import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 import 'agent_loop.dart';
+import 'agent_types.dart';
 import 'caching.dart';
+import 'cost.dart';
 import 'reflection.dart';
 import 'router.dart';
 import 'session_log_integration.dart';
 import 'session_log_llm.dart';
 import 'telemetry.dart';
+import 'telemetry_llm.dart';
 
 /// `ctx.agentLoop`：当前上下文可见的 Agent Loop。
 extension AgentContext on Context {
@@ -30,18 +33,20 @@ AgentLoop provideAgentLoop(
   int maxSteps = 8,
   bool planning = false,
   void Function(LlmStreamEvent event)? onStream,
+  EvidenceSource? evidence,
 }) {
   final LlmProvider llm = ctx.require<LlmProvider>('llm');
   final ToolRegistry tools = ctx.require<ToolRegistry>('tools');
   final Telemetry? telemetry = ctx.get<Telemetry>('telemetry');
   final ContextCache? cache = ctx.get<ContextCache>('contextCache');
+  final ModelRate? rate = ctx.get<ModelRate>('modelRate');
   final SessionLogRecorder? recorder =
       ctx.get<SessionLogRecorder>('sessionLogRecorder');
   final Session? target = session ?? _soleOpenSession(ctx);
   final AgentLoop resolved = agent ??
       AgentLoop(
         llm: composeLlm(llm,
-            telemetry: telemetry, cache: cache, recorder: recorder),
+            telemetry: telemetry, cache: cache, recorder: recorder, rate: rate),
         tools: tools,
         session: target,
         systemPrompt: ctx.get<SystemPrompt>('systemPrompt'),
@@ -49,9 +54,11 @@ AgentLoop provideAgentLoop(
         memory: ctx.get<MemoryStore>('memory'),
         reflector: ctx.get<Reflector>('reflection'),
         router: ctx.get<Router>('router'),
+        rate: rate,
         maxSteps: maxSteps,
         planning: planning,
         onStream: onStream,
+        evidence: evidence,
         onEvent: telemetry == null
             ? null
             : (String type, Map<String, Object?> data) =>
@@ -75,10 +82,11 @@ LlmProvider composeLlm(
   Telemetry? telemetry,
   ContextCache? cache,
   SessionLogRecorder? recorder,
+  ModelRate? rate,
 }) {
   LlmProvider composed = base;
   if (telemetry != null) {
-    composed = TelemetryLlmProvider(composed, telemetry: telemetry);
+    composed = TelemetryLlmProvider(composed, telemetry: telemetry, rate: rate);
   }
   if (cache != null) {
     composed = CachingLlmProvider(composed, cache: cache);

@@ -225,7 +225,7 @@ void main() {
       expect(provider.calls.last.first.content, contains('你是翻译。'));
     });
 
-    test('长期记忆召回进 system，回复记入记忆', () async {
+    test('长期记忆召回进 system；未挂写入能力时不自动记记忆', () async {
       final MemoryStore memory = MemoryStore();
       await memory.remember('用户喜欢京剧', tags: <String>{'偏好'});
       final _ScriptedProvider provider =
@@ -239,8 +239,11 @@ void main() {
       await loop.run('给我讲讲京剧');
 
       expect(provider.calls.first.first.content, contains('用户喜欢京剧'));
-      expect(memory.length, 2);
-      expect(memory.entries.last.tags, contains('conversation'));
+      expect(
+        memory.length,
+        1,
+        reason: '自动写入属于 conatus_memory 能力，AgentLoop 不承担保留策略',
+      );
     });
 
     test('压缩：超预算时产出摘要并窗口化历史', () async {

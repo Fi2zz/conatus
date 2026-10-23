@@ -6,11 +6,13 @@ library;
 import 'dart:async';
 
 import 'package:conatus_compaction/conatus_compaction.dart';
+import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 import 'agent_cancel.dart';
 import 'agent_events.dart';
 import 'agent_types.dart';
+import 'cost.dart';
 import 'goal_round_driver.dart';
 import 'plan.dart';
 import 'reflection.dart';
@@ -38,12 +40,14 @@ class AgentLoop {
     this.memory,
     this.reflector,
     this.router,
+    this.rate,
     this.onEvent,
     this.maxSteps = 8,
     this.memoryLimit = 5,
     this.planning = false,
     this.defaultSystemPrompt = '你是一个可靠的助手。需要外部信息或操作时调用工具；否则直接回答。',
     this.onStream,
+    this.evidence,
   });
 
   /// 模型接入。
@@ -70,6 +74,9 @@ class AgentLoop {
   /// 调模型前的确定性路由器；null 表示不路由（直接落模型）。
   final Router? router;
 
+  /// 成本费率；null 表示未知（此时只累计用量，不算钱）。
+  final ModelRate? rate;
+
   /// 每轮的观察口（Observability 埋点）：`agent.round` / `agent.finished`。
   final void Function(String type, Map<String, Object?> data)? onEvent;
 
@@ -89,6 +96,10 @@ class AgentLoop {
   /// 供实时渲染；缺省 null 不透传（行为与纯非流式一致）。
   final void Function(LlmStreamEvent event)? onStream;
 
+  /// 单轮证据提供者；非空时每轮组请求前取回原文证据注入 system（缺省 null，
+  /// 不注入）。抛错静默忽略（[AgentCancelled] 除外，向上传播），空串不注入。
+  final EvidenceSource? evidence;
+
   /// Goal 续行驱动器；非空时，一轮收口后按其决策自动续行（缺省 null，
   /// 不续行）。由 `provideGoal` 在 `goal` 与 `agentLoop` 齐备时后置挂载。
   GoalRoundDriver? goalDriver;
@@ -97,12 +108,27 @@ class AgentLoop {
   /// （缺省 null，不注入）。与 [goalDriver] 一样由宿主后置挂载。
   SteeringSource? steering;
 
-  /// 每轮生命周期钩子（TaskCenter 等运行时追踪接入）；缺省 null，不追踪。
-  /// 与 [goalDriver] 一样由插件在 `agentLoop` 可用时经 `ctx.inject` 后置挂载。
-  AgentTurnTracker? turnTracker;
+  /// 每轮生命周期钩子（多订阅）。各能力经 [addTurnTracker] 独立接入、互不知情，
+  /// 撤销函数随上下文卸载自动摘除。
+  final List<AgentTurnTracker> _trackers = <AgentTurnTracker>[];
+
+  /// 当前挂载的轮次钩子（注册顺序）。
+  List<AgentTurnTracker> get turnTrackers =>
+      List<AgentTurnTracker>.unmodifiable(_trackers);
+
+  /// 订阅轮次生命周期；返回撤销函数（幂等）。同一 tracker 重复订阅会各收一次。
+  Disposer addTurnTracker(AgentTurnTracker tracker) {
+    _trackers.add(tracker);
+    return () {
+      _trackers.remove(tracker);
+    };
+  }
 
   int _historyStart = 0;
   bool _needsReplan = false;
+
+  /// 本轮成本累计器；每轮开头重置。未配置费率时照常累计用量、成本为 null。
+  CostAccumulator _meter = CostAccumulator();
 
   /// 跑一轮：从 [userInput] 到最终文本回复。
   ///
@@ -118,16 +144,39 @@ class AgentLoop {
     AgentCancel? cancel,
     List<LlmImage> images = const <LlmImage>[],
   }) async {
-    final AgentTurnTracker? tracker = turnTracker;
-    await tracker?.beginTurn(userInput);
+    final List<AgentTurnTracker> trackers =
+        List<AgentTurnTracker>.of(_trackers);
+    for (final AgentTurnTracker tracker in trackers) {
+      await _notifyTracker(tracker, () => tracker.beginTurn(userInput));
+    }
     try {
       final AgentTurn turn =
           await _continue(userInput, cancel: cancel, images: images);
-      await tracker?.endTurn(result: turn.reply);
+      for (final AgentTurnTracker tracker in trackers) {
+        await _notifyTracker(
+            tracker, () => tracker.endTurn(result: turn.reply));
+      }
       return turn;
     } catch (error) {
-      await tracker?.endTurn(error: error);
+      for (final AgentTurnTracker tracker in trackers) {
+        await _notifyTracker(tracker, () => tracker.endTurn(error: error));
+      }
       rethrow;
+    }
+  }
+
+  /// 调用单个钩子；失败隔离为 `agent.tracker.failed`，不影响其他钩子与当轮结果。
+  Future<void> _notifyTracker(
+    AgentTurnTracker tracker,
+    Future<void> Function() action,
+  ) async {
+    try {
+      await action();
+    } catch (error) {
+      onEvent?.call('agent.tracker.failed', <String, Object?>{
+        'tracker': tracker.runtimeType.toString(),
+        'error': '$error',
+      });
     }
   }
 
@@ -154,6 +203,7 @@ class AgentLoop {
   }) async {
     final Session? session = this.session;
     ensureSessionOpen(session);
+    _meter = CostAccumulator(rate: rate);
     session?.append(
       kUserMessageEvent,
       data: <String, Object?>{
@@ -179,8 +229,10 @@ class AgentLoop {
           cancel,
         );
 
+    final String evidenceText = await _readEvidence(userInput);
     final List<LlmMessage> messages = <LlmMessage>[
       LlmMessage('system', _systemText(userInput), cacheable: true),
+      if (evidenceText.isNotEmpty) LlmMessage('system', evidenceText),
       ...deriveAgentMessages(recentAgentEvents(session, _historyStart)),
     ];
     if (planning && session != null && readPlan(session) == null) {
@@ -201,7 +253,7 @@ class AgentLoop {
       final RouteDecision routed = await _race(router.route(userInput), cancel);
       switch (routed) {
         case RouteReply(:final String text):
-          return _finish(session, messages, steps, usages, text, userInput);
+          return _finish(session, messages, steps, usages, text);
         case RouteTools(:final List<LlmToolCall> calls):
           await _runPrepared(session, messages, steps, calls, invoke);
         case RoutePass():
@@ -236,14 +288,14 @@ class AgentLoop {
         cancel,
       );
       usages.add(result.usage);
+      _meter.add(result.usage);
       onEvent?.call('agent.round', <String, Object?>{
         'step': step,
         'toolCalls': result.toolCalls.length,
         'contentLength': result.content.length,
       });
       if (result.toolCalls.isEmpty) {
-        return _finish(
-            session, messages, steps, usages, result.content.trim(), userInput);
+        return _finish(session, messages, steps, usages, result.content.trim());
       }
       messages.add(
         LlmMessage(
@@ -285,8 +337,7 @@ class AgentLoop {
         steps.add(AgentStep(call: call, result: outcome));
       }
     }
-    return _finish(
-        session, messages, steps, usages, '（已达到最大步数 $maxSteps，未收口）', userInput);
+    return _finish(session, messages, steps, usages, '（已达到最大步数 $maxSteps，未收口）');
   }
 
   /// 轮内注入：组下一次模型请求前取回排队的用户插话——逐条写会话
@@ -364,24 +415,38 @@ class AgentLoop {
     List<AgentStep> steps,
     List<Map<String, dynamic>> usage,
     String reply,
-    String userInput,
   ) async {
+    final double? cost = _meter.cost;
     onEvent?.call('agent.finished', <String, Object?>{
       'replyLength': reply.length,
       'steps': steps.length,
+      if (cost != null) 'cost': cost,
     });
     messages.add(LlmMessage('assistant', reply));
     session?.append(kAssistantMessageEvent,
         data: <String, Object?>{'text': reply});
-    final MemoryStore? memory = this.memory;
-    if (memory != null && reply.isNotEmpty) {
-      await memory.remember(
-        '用户：$userInput\n助手：$reply',
-        tags: <String>{'conversation'},
-      );
-    }
     return AgentTurn(
-        reply: reply, steps: steps, messages: messages, usage: usage);
+      reply: reply,
+      steps: steps,
+      messages: messages,
+      usage: usage,
+      cost: cost,
+      tokens: _meter.tokens,
+    );
+  }
+
+  /// 取回单轮证据：未接线或返回空串时给空串（不注入）；抛错静默忽略，
+  /// 但 [AgentCancelled] 向上传播（取消优先级高于证据降级）。
+  Future<String> _readEvidence(String input) async {
+    final EvidenceSource? source = evidence;
+    if (source == null) return '';
+    try {
+      return (await source(input)).trim();
+    } on AgentCancelled {
+      rethrow;
+    } catch (_) {
+      return '';
+    }
   }
 
   String _systemText(String userInput) => buildSystemText(

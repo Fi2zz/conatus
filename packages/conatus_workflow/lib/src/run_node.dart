@@ -16,6 +16,7 @@ class RunNode {
     required this.inputs,
     this.outputs,
     this.error,
+    this.meta = const <String, Object?>{},
     this.startedAt,
     this.finishedAt,
     this.attempts = 0,
@@ -29,6 +30,11 @@ class RunNode {
   final Map<String, Object?> inputs;
   final Object? outputs;
   final Object? error;
+
+  /// 运行期元数据（成本、缓存键、产物指纹等）；由执行器经
+  /// `WorkflowEngine.recordNodeMeta` 写入，不改变节点状态。
+  final Map<String, Object?> meta;
+
   final DateTime? startedAt;
   final DateTime? finishedAt;
   final int attempts;
@@ -39,12 +45,13 @@ class RunNode {
     return (finishedAt ?? DateTime.now()).difference(startedAt!);
   }
 
-  /// 返回更新后的副本；[outputs] / [error] / [startedAt] / [finishedAt]
-  /// 传 null 表示清除。
+  /// 返回更新后的副本；[outputs] / [error] / [meta] / [startedAt] /
+  /// [finishedAt] 传 null 表示清除。
   RunNode copyWith({
     RunNodeStatus? status,
     Object? outputs = _unset,
     Object? error = _unset,
+    Object? meta = _unset,
     Object? startedAt = _unset,
     Object? finishedAt = _unset,
     int? attempts,
@@ -55,6 +62,11 @@ class RunNode {
       inputs: inputs,
       outputs: identical(outputs, _unset) ? this.outputs : outputs,
       error: identical(error, _unset) ? this.error : error,
+      meta: identical(meta, _unset)
+          ? this.meta
+          : <String, Object?>{
+              if (meta is Map) ...Map<String, Object?>.from(meta),
+            },
       startedAt: identical(startedAt, _unset)
           ? this.startedAt
           : startedAt as DateTime?,
@@ -71,6 +83,7 @@ class RunNode {
         'inputs': inputs,
         'outputs': outputs,
         'error': error,
+        'meta': meta,
         'startedAt': startedAt?.toIso8601String(),
         'finishedAt': finishedAt?.toIso8601String(),
         'attempts': attempts,
@@ -83,6 +96,7 @@ class RunNode {
         inputs: requiredStringMap(json, 'inputs'),
         outputs: json['outputs'],
         error: json['error'],
+        meta: optionalStringMap(json, 'meta'),
         startedAt: optionalDateTime(json, 'startedAt'),
         finishedAt: optionalDateTime(json, 'finishedAt'),
         attempts: json['attempts'] is int ? json['attempts'] as int : 0,

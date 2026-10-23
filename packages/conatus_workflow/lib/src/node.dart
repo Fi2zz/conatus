@@ -2,9 +2,10 @@
 ///
 /// [WorkflowNode] 是 sealed 基类，三种节点 —— [ToolNode]（调用已注册
 /// 工具）/ [AgentNode]（创建团队成员执行任务）/ [SubWorkflowNode]
-/// （调用另一个流程）—— 共享 `id` / `dependsOn` / `when`。JSON 序列化
-/// 用 `type` 字段区分节点种类，反序列化按 [WorkflowNode.fromJson] 分派。
-/// `{{nodeId.output}}` 形式的引用只作为字符串原样保存，解析是引擎的职责。
+/// （调用另一个流程）—— 共享 `id` / `dependsOn` / `when` / `label` /
+/// `metadata`。JSON 序列化用 `type` 字段区分节点种类，反序列化按
+/// [WorkflowNode.fromJson] 分派。`{{nodeId.output}}` 形式的引用只作为
+/// 字符串原样保存，解析是引擎的职责。
 library;
 
 import 'errors.dart';
@@ -18,11 +19,22 @@ final Map<String, WorkflowNode Function(Map<String, Object?>)> _nodeFactories =
   'subworkflow': SubWorkflowNode.fromJson,
 };
 
+/// 节点公共字段的 JSON 投影；子类 `toJson` 先摊平再补自身字段。
+Map<String, Object?> _nodeBaseJson(WorkflowNode node) => <String, Object?>{
+      'id': node.id,
+      'dependsOn': node.dependsOn,
+      'when': node.when,
+      if (node.label != null) 'label': node.label,
+      if (node.metadata.isNotEmpty) 'metadata': node.metadata,
+    };
+
 /// 流程节点。三种类型：tool / agent / subworkflow。
 sealed class WorkflowNode {
   const WorkflowNode({
     required this.id,
     required this.dependsOn,
+    this.label,
+    this.metadata = const <String, Object?>{},
     this.when,
   });
 
@@ -31,6 +43,12 @@ sealed class WorkflowNode {
 
   /// 依赖哪些节点。全部完成才能执行。
   final List<String> dependsOn;
+
+  /// 展示标签（如「生成报告」）；缺省为 null，宿主可回退到 [id]。
+  final String? label;
+
+  /// 节点级元数据（分组、UI 提示、成本上限提示等）；引擎不解释其内容。
+  final Map<String, Object?> metadata;
 
   /// 条件表达式。为 null 时无条件执行。
   /// 表达式只能引用已完成节点的输出。
@@ -56,6 +74,8 @@ class ToolNode extends WorkflowNode {
     required super.dependsOn,
     required this.tool,
     this.arguments = const <String, Object?>{},
+    super.label,
+    super.metadata,
     super.when,
   });
 
@@ -68,9 +88,7 @@ class ToolNode extends WorkflowNode {
   @override
   Map<String, Object?> toJson() => <String, Object?>{
         'type': 'tool',
-        'id': id,
-        'dependsOn': dependsOn,
-        'when': when,
+        ..._nodeBaseJson(this),
         'tool': tool,
         'arguments': arguments,
       };
@@ -80,6 +98,8 @@ class ToolNode extends WorkflowNode {
         dependsOn: requiredStringList(json, 'dependsOn'),
         tool: requiredString(json, 'tool'),
         arguments: optionalStringMap(json, 'arguments'),
+        label: optionalString(json, 'label'),
+        metadata: optionalStringMap(json, 'metadata'),
         when: optionalString(json, 'when'),
       );
 }
@@ -93,6 +113,8 @@ class AgentNode extends WorkflowNode {
     this.name,
     this.tools,
     this.systemPrompt,
+    super.label,
+    super.metadata,
     super.when,
   });
 
@@ -111,9 +133,7 @@ class AgentNode extends WorkflowNode {
   @override
   Map<String, Object?> toJson() => <String, Object?>{
         'type': 'agent',
-        'id': id,
-        'dependsOn': dependsOn,
-        'when': when,
+        ..._nodeBaseJson(this),
         'task': task,
         'name': name,
         'tools': tools,
@@ -127,6 +147,8 @@ class AgentNode extends WorkflowNode {
         name: optionalString(json, 'name'),
         tools: nullableStringList(json, 'tools'),
         systemPrompt: optionalString(json, 'systemPrompt'),
+        label: optionalString(json, 'label'),
+        metadata: optionalStringMap(json, 'metadata'),
         when: optionalString(json, 'when'),
       );
 }
@@ -138,6 +160,8 @@ class SubWorkflowNode extends WorkflowNode {
     required super.dependsOn,
     required this.workflow,
     this.inputs = const <String, Object?>{},
+    super.label,
+    super.metadata,
     super.when,
   });
 
@@ -150,9 +174,7 @@ class SubWorkflowNode extends WorkflowNode {
   @override
   Map<String, Object?> toJson() => <String, Object?>{
         'type': 'subworkflow',
-        'id': id,
-        'dependsOn': dependsOn,
-        'when': when,
+        ..._nodeBaseJson(this),
         'workflow': workflow,
         'inputs': inputs,
       };
@@ -163,6 +185,8 @@ class SubWorkflowNode extends WorkflowNode {
         dependsOn: requiredStringList(json, 'dependsOn'),
         workflow: requiredString(json, 'workflow'),
         inputs: optionalStringMap(json, 'inputs'),
+        label: optionalString(json, 'label'),
+        metadata: optionalStringMap(json, 'metadata'),
         when: optionalString(json, 'when'),
       );
 }

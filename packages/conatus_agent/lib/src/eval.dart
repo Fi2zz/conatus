@@ -3,11 +3,18 @@
 /// 与具体 Agent 装配解耦：调用方注入一个 [EvalRunner]（通常是「跑一轮
 /// `AgentLoop.run`」或子 Agent 委托），[Evaluator] 负责跑 case、判分、汇总
 /// [EvalReport]，并可 [EvalReport.compareTo] 基线报告。
+///
+/// 报告会带上用例集 hash：同一份测试集才能互相比较，防止候选之间测试漂移。
 library;
 
 import 'agent_types.dart';
+import 'eval_report.dart';
+import 'eval_suite.dart';
 import 'eval_types.dart';
 
+export 'eval_checks.dart';
+export 'eval_report.dart';
+export 'eval_suite.dart';
 export 'eval_types.dart';
 
 /// 跑一条 case，返回该轮的 [AgentTurn]。
@@ -48,12 +55,21 @@ class Evaluator {
     );
   }
 
-  /// 跑一批 case，汇总为报告。
+  /// 跑一批 case，汇总为报告（带用例集 hash）。
   Future<EvalReport> runAll(List<EvalCase> cases) async {
     final List<EvalResult> results = <EvalResult>[];
     for (final EvalCase evalCase in cases) {
       results.add(await evaluate(evalCase));
     }
-    return EvalReport(results);
+    return EvalReport(results, suiteHash: hashEvalCases(cases));
+  }
+
+  /// 跑一套冻结用例。
+  Future<EvalReport> runSuite(EvalSuite suite) async {
+    final List<EvalResult> results = <EvalResult>[];
+    for (final EvalCase evalCase in suite.cases) {
+      results.add(await evaluate(evalCase));
+    }
+    return EvalReport(results, suiteHash: suite.hash);
   }
 }

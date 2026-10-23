@@ -7,6 +7,7 @@ library;
 
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
+import 'cost.dart';
 
 // 消息事件名由 `conatus_foundation` 的会话词汇拥有（压缩与 Agent Loop 都要
 // 按事件类型判断），此处只做转出，保持 `agent_types.dart` 的既有导入面。
@@ -30,6 +31,9 @@ const String kToolCallEvent = 'tool/call';
 /// 用户插话；返回空列表表示没有。抛异常视为编程错误，向上传播不吞。
 typedef SteeringSource = Future<List<String>> Function();
 
+/// 单轮证据提供者：返回可直接注入的原文证据块；空串表示无证据。
+typedef EvidenceSource = Future<String> Function(String userInput);
+
 /// 一次工具调用在循环中的步骤记录。
 class AgentStep {
   const AgentStep({required this.call, required this.result});
@@ -48,6 +52,8 @@ class AgentTurn {
     required this.steps,
     required this.messages,
     this.usage = const <Map<String, dynamic>>[],
+    this.cost,
+    this.tokens = TokenUsage.zero,
   });
 
   /// 最终文本回复。
@@ -63,4 +69,10 @@ class AgentTurn {
   ///
   /// 供成本折算与可观测性使用；无模型调用（如确定性路由直答）时为空。
   final List<Map<String, dynamic>> usage;
+
+  /// 本轮成本；未提供费率或没有用量时为 `null`。
+  final double? cost;
+
+  /// 本轮归一后的累计用量。
+  final TokenUsage tokens;
 }

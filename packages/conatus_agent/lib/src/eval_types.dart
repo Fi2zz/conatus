@@ -1,5 +1,9 @@
-/// evaluation 的类型词汇：用例、结果、报告与默认判分。
+/// evaluation 的类型词汇：用例与实测结果。
+///
+/// 报告、基线与判分见 `eval_report.dart`；冻结测试集见 `eval_suite.dart`。
 library;
+
+import 'eval_checks.dart';
 
 /// 判分函数：给定 case 与实测结果，返回是否通过。
 typedef EvalJudge = bool Function(EvalCase evalCase, EvalResult result);
@@ -12,6 +16,7 @@ class EvalCase {
     this.expectedTools = const <String>[],
     this.expectedOutput,
     this.maxRounds,
+    this.checks = const <EvalCheck>[],
   });
 
   /// 从 JSON 反序列化。
@@ -25,6 +30,12 @@ class EvalCase {
         ],
         expectedOutput: json['expectedOutput'] as String?,
         maxRounds: json['maxRounds'] as int?,
+        checks: <EvalCheck>[
+          for (final Object? item
+              in (json['checks'] as List<Object?>?) ?? const <Object?>[])
+            if (item is Map)
+              EvalCheck.fromJson(Map<String, Object?>.from(item)),
+        ],
       );
 
   /// 用例 id。
@@ -42,6 +53,9 @@ class EvalCase {
   /// 最大步数限制。
   final int? maxRounds;
 
+  /// 确定性断言；与上面三个旧字段同时生效。
+  final List<EvalCheck> checks;
+
   /// 序列化为 JSON。
   Map<String, Object?> toJson() => <String, Object?>{
         'id': id,
@@ -49,6 +63,10 @@ class EvalCase {
         if (expectedTools.isNotEmpty) 'expectedTools': expectedTools,
         if (expectedOutput != null) 'expectedOutput': expectedOutput,
         if (maxRounds != null) 'maxRounds': maxRounds,
+        if (checks.isNotEmpty)
+          'checks': <Map<String, Object?>>[
+            for (final EvalCheck check in checks) check.toJson(),
+          ],
       };
 }
 
@@ -104,77 +122,4 @@ class EvalResult {
         'rounds': rounds,
         'durationMs': duration.inMilliseconds,
       };
-}
-
-/// 一次评估的报告。
-class EvalReport {
-  const EvalReport(this.results);
-
-  /// 从 JSON 反序列化。
-  factory EvalReport.fromJson(Map<String, Object?> json) =>
-      EvalReport(<EvalResult>[
-        for (final Object? item
-            in (json['results'] as List<Object?>?) ?? const <Object?>[])
-          if (item is Map) EvalResult.fromJson(Map<String, Object?>.from(item)),
-      ]);
-
-  /// 各用例结果。
-  final List<EvalResult> results;
-
-  /// 通过数。
-  int get passedCount => results.where((EvalResult r) => r.passed).length;
-
-  /// 通过率（无用例时为 0）。
-  double get passRate => results.isEmpty ? 0 : passedCount / results.length;
-
-  /// 平均步数（无用例时为 0）。
-  double get averageRounds => results.isEmpty
-      ? 0
-      : results.fold<int>(0, (int sum, EvalResult r) => sum + r.rounds) /
-          results.length;
-
-  /// 与基线对比。
-  EvalDiff compareTo(EvalReport baseline) => EvalDiff(
-        passRateDelta: passRate - baseline.passRate,
-        averageRoundsDelta: averageRounds - baseline.averageRounds,
-      );
-
-  /// 序列化为 JSON。
-  Map<String, Object?> toJson() => <String, Object?>{
-        'results': <Map<String, Object?>>[
-          for (final EvalResult r in results) r.toJson(),
-        ],
-      };
-}
-
-/// 报告与基线的差异。
-class EvalDiff {
-  const EvalDiff({
-    required this.passRateDelta,
-    required this.averageRoundsDelta,
-  });
-
-  /// 通过率差。
-  final double passRateDelta;
-
-  /// 平均步数差。
-  final double averageRoundsDelta;
-
-  @override
-  String toString() => '通过率 ${_signed(passRateDelta * 100)}%，'
-      '平均步数 ${_signed(averageRoundsDelta)}';
-
-  static String _signed(double value) =>
-      value >= 0 ? '+${value.toStringAsFixed(1)}' : value.toStringAsFixed(1);
-}
-
-/// 默认判分：期望工具为实际工具子集、输出含关键词、步数不超限。
-bool defaultEvalJudge(EvalCase evalCase, EvalResult result) {
-  final bool toolsOk =
-      evalCase.expectedTools.every(result.actualTools.contains);
-  final bool outputOk = evalCase.expectedOutput == null ||
-      result.actualOutput.contains(evalCase.expectedOutput!);
-  final bool roundsOk =
-      evalCase.maxRounds == null || result.rounds <= evalCase.maxRounds!;
-  return toolsOk && outputOk && roundsOk;
 }

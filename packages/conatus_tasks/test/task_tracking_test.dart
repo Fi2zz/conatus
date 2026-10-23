@@ -86,7 +86,8 @@ void main() {
       final AgentLoop loop = AgentLoop(
         llm: _ScriptedProvider(<LlmResult>[_text('你好')]),
         tools: ToolRegistry(),
-      )..turnTracker = tracking;
+      );
+      addTearDown(loop.addTurnTracker(tracking));
 
       final AgentTurn turn = await loop.run('在吗');
 
@@ -108,7 +109,8 @@ void main() {
         llm: _ScriptedProvider(<LlmResult>[_text('x')]),
         tools: ToolRegistry(),
         session: session,
-      )..turnTracker = tracking;
+      );
+      addTearDown(loop.addTurnTracker(tracking));
 
       await expectLater(loop.run('hi'), throwsStateError);
 
@@ -195,7 +197,7 @@ void main() {
       expect(identical(ctx.tasks, center), isTrue);
       expect(tools.get(kListTasksToolName), isNotNull);
       expect(tools.get(kCancelTasksToolName), isNotNull);
-      expect(identical(loop.turnTracker, tracking), isTrue);
+      expect(loop.turnTrackers, contains(tracking));
 
       await loop.run('在吗');
       expect(
@@ -208,7 +210,7 @@ void main() {
 
       addTearDown(() {
         ctx.dispose();
-        expect(loop.turnTracker, isNull, reason: '释放后钩子摘除');
+        expect(loop.turnTrackers, isEmpty, reason: '释放后钩子摘除');
         expect(ctx.has('tasks'), isFalse, reason: '服务随上下文移除');
       });
     });

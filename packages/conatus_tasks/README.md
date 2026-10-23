@@ -38,7 +38,7 @@ controller.configureSession = (Context ctx, Session session) {
 
 | 类型 | 来源 |
 |------|------|
-| `agentTurn` | Agent Loop 的一轮（`AgentLoop.turnTracker`，metadata 关联 goalId / planMode） |
+| `agentTurn` | Agent Loop 的一轮（`AgentLoop.addTurnTracker`，metadata 关联 goalId / planMode） |
 | `subAgent` | `spawn_agent` 委托（中间件按结果值 `status` 判定成败） |
 | `shell` | 后台 / 前台 shell 执行（`TrackingShellExecutor`） |
 | `schedule` | 定时提醒交付（`trackScheduleDelivery`） |
