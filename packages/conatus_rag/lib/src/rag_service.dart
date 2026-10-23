@@ -141,6 +141,9 @@ class RagService {
   String formatHits(List<RagHit> hits) => evidence.formatHits(hits);
 
   /// 删除单个会话的切片；租户不匹配抛异常。返回删除块数。
+  ///
+  /// 一旦遗忘，该来源在显式 [clear] 之前不再回到索引（[RagIndexer.rebuild]
+  /// 保留遗忘集合），后续新增事件也不会让它复活。
   Future<int> forgetSession(String sourceId, {required RagScope scope}) async {
     final RagScope resolved = await _scopeOf(sourceId);
     if (resolved.tenantId != scope.tenantId) {

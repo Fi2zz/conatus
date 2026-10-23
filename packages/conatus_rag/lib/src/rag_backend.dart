@@ -1,8 +1,8 @@
-import 'cosine.dart';
 import 'rag_chunk.dart';
 import 'rag_query.dart';
 import 'rag_snapshot.dart';
-import 'rag_stats.dart';
+
+export 'in_memory_backend.dart';
 
 /// 索引后端端口。内存与 JSON 实现只是参考，后续 pgvector 等实现同一契约。
 abstract interface class RagIndexBackend {
@@ -24,12 +24,12 @@ abstract interface class RagIndexBackend {
   Future<void> upsert(List<RagChunk> chunks, List<List<double>> vectors);
 
   /// 删除匹配切片，清掉匹配来源的游标，并把其来源记入遗忘集合，
-  /// 避免懒补齐重新摄入（rebuild/clear 会清空遗忘集合）。
+  /// 避免懒补齐重新摄入（[RagIndexer.rebuild] 保留、[clear] 清空遗忘集合）。
   Future<int> delete(RagFilter filter);
 
   Future<int> count();
 
-  /// 清空切片、向量、游标、遗忘集合与 meta。
+  /// 清空切片、向量、游标、遗忘集合与 meta（显式全量清除）。
   Future<void> clear();
 
   Future<RagCursor?> cursorOf(String sourceId);
@@ -38,6 +38,12 @@ abstract interface class RagIndexBackend {
 
   /// 该来源是否已被遗忘。
   Future<bool> sourceForgotten(String sourceId);
+
+  /// 返回被遗忘来源 id 集合；[RagIndexer.rebuild] 前捕获以便恢复。
+  Future<Set<String>> forgottenSources();
+
+  /// 标记来源为遗忘（幂等）。
+  Future<void> markForgotten(String sourceId);
 }
 
 /// 切片是否对过滤条件可见：租户相等、标签交集、来源白名单、时间窗相交。
@@ -61,157 +67,4 @@ bool _overlapsWindow(RagChunk chunk, DateTime? from, DateTime? to) {
     return false;
   }
   return to == null || !chunk.startTime.isAfter(to);
-}
-
-bool _cursorMatches(RagCursor cursor, RagFilter filter) {
-  if (cursor.tenantId != filter.tenantId) {
-    return false;
-  }
-  return filter.sourceIds == null ||
-      filter.sourceIds!.contains(cursor.sourceId);
-}
-
-class _Scored {
-  const _Scored(this.chunk, this.score);
-
-  final RagChunk chunk;
-  final double score;
-}
-
-int _compareScored(_Scored a, _Scored b) {
-  final int byScore = b.score.compareTo(a.score);
-  if (byScore != 0) {
-    return byScore;
-  }
-  return a.chunk.id.compareTo(b.chunk.id);
-}
-
-/// 内存参考实现，适合测试与万级以下的块规模。
-class InMemoryRagBackend implements RagIndexBackend {
-  RagSnapshotMeta? _meta;
-  final Map<String, RagChunk> _chunks = <String, RagChunk>{};
-  final Map<String, List<double>> _vectors = <String, List<double>>{};
-  final Map<String, RagCursor> _cursors = <String, RagCursor>{};
-  final Set<String> _forgotten = <String>{};
-
-  @override
-  Future<RagSnapshotMeta?> meta() async => _meta;
-
-  @override
-  Future<void> init(RagSnapshotMeta meta) async {
-    final RagSnapshotMeta? current = _meta;
-    if (current == null) {
-      _meta = meta;
-      return;
-    }
-    if (!current.matches(meta)) {
-      throw const RagException('rag_index_stale', '索引元信息与当前配置不一致，需先清空后重建');
-    }
-  }
-
-  @override
-  Future<List<RagHit>> search(
-    RagFilter filter, {
-    required List<double> queryVector,
-    required int k,
-  }) async {
-    final List<_Scored> scored = <_Scored>[
-      for (final RagChunk chunk in _chunks.values)
-        if (chunkMatches(chunk, filter))
-          _Scored(chunk, cosineSimilarity(queryVector, _vectors[chunk.id]!)),
-    ]..sort(_compareScored);
-    return <RagHit>[
-      for (final _Scored item in scored.take(k))
-        RagHit(chunk: item.chunk, score: item.score),
-    ];
-  }
-
-  @override
-  Future<void> upsert(List<RagChunk> chunks, List<List<double>> vectors) async {
-    if (chunks.length != vectors.length) {
-      throw ArgumentError('切片与向量数量不一致：${chunks.length} != ${vectors.length}');
-    }
-    _checkDimensions(vectors);
-    for (int i = 0; i < chunks.length; i++) {
-      _chunks[chunks[i].id] = chunks[i];
-      _vectors[chunks[i].id] = List<double>.unmodifiable(vectors[i]);
-    }
-  }
-
-  void _checkDimensions(List<List<double>> vectors) {
-    if (vectors.isEmpty) {
-      return;
-    }
-    final int expected =
-        _vectors.isEmpty ? vectors.first.length : _vectors.values.first.length;
-    for (final List<double> vector in vectors) {
-      if (vector.length != expected) {
-        throw ArgumentError('向量维度应为 $expected，实际为 ${vector.length}');
-      }
-    }
-  }
-
-  @override
-  Future<int> delete(RagFilter filter) async {
-    final List<String> ids = <String>[
-      for (final RagChunk chunk in _chunks.values)
-        if (chunkMatches(chunk, filter)) chunk.id,
-    ];
-    final Set<String> forgotten = <String>{
-      for (final String id in ids) _chunks[id]!.sourceId,
-    };
-    for (final String id in ids) {
-      _chunks.remove(id);
-      _vectors.remove(id);
-    }
-    final List<String> cursorSources = <String>[
-      for (final MapEntry<String, RagCursor> entry in _cursors.entries)
-        if (_cursorMatches(entry.value, filter)) entry.key,
-    ];
-    for (final String sourceId in cursorSources) {
-      _cursors.remove(sourceId);
-    }
-    forgotten.addAll(cursorSources);
-    _forgotten.addAll(forgotten);
-    return ids.length;
-  }
-
-  @override
-  Future<int> count() async => _chunks.length;
-
-  @override
-  Future<void> clear() async {
-    _chunks.clear();
-    _vectors.clear();
-    _cursors.clear();
-    _forgotten.clear();
-    _meta = null;
-  }
-
-  RagSnapshot snapshot() => RagSnapshot(
-        meta: _meta,
-        chunks: _chunks.values.toList(),
-        vectors: <List<double>>[
-          for (final RagChunk chunk in _chunks.values) _vectors[chunk.id]!,
-        ],
-        cursors: _cursors.values.toList(),
-        forgotten: Set<String>.from(_forgotten),
-      );
-
-  @override
-  Future<RagCursor?> cursorOf(String sourceId) async => _cursors[sourceId];
-
-  @override
-  Future<void> saveCursor(RagCursor cursor) async {
-    _cursors[cursor.sourceId] = cursor;
-  }
-
-  @override
-  Future<bool> sourceForgotten(String sourceId) async =>
-      _forgotten.contains(sourceId);
-
-  /// 反序列化时恢复遗忘集合（仅 [JsonRagBackend] 调用）。
-  void restoreForgotten(Iterable<String> forgotten) {
-    _forgotten.addAll(forgotten);
-  }
 }

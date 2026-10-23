@@ -130,4 +130,29 @@ void main() {
         throwsA(isA<RagException>()
             .having((RagException e) => e.code, 'code', 'rag_index_stale')));
   });
+
+  test('遗忘集合跨实例持久化，clear 清空遗忘', () async {
+    final Directory dir = await _tempDir();
+    final File file = File('${dir.path}/index.json');
+    final JsonRagBackend first = JsonRagBackend(file: file);
+    await first.init(const RagSnapshotMeta(
+        embeddingModel: 'e', dimension: 2, indexVersion: 1));
+    await first.upsert(<RagChunk>[
+      chunk('a', 't1', {'tenant:t1'}, 0)
+    ], <List<double>>[
+      <double>[1, 0]
+    ]);
+    await first.saveCursor(
+        const RagCursor(tenantId: 't1', sourceId: 's0', lastSeq: 0));
+    await first.delete(const RagFilter(tenantId: 't1', sourceIds: {'s0'}));
+
+    final JsonRagBackend reopened = JsonRagBackend(file: file);
+    expect(await reopened.sourceForgotten('s0'), isTrue);
+    expect(await reopened.forgottenSources(), contains('s0'));
+
+    await reopened.clear();
+    final JsonRagBackend cleared = JsonRagBackend(file: file);
+    expect(await cleared.sourceForgotten('s0'), isFalse);
+    expect(await cleared.forgottenSources(), isEmpty);
+  });
 }

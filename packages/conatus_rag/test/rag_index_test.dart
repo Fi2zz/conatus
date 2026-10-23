@@ -96,5 +96,59 @@ void main() {
       expect(await indexer.ingestSession('s1'), 0);
       expect(await backend.count(), 0);
     });
+
+    test('rebuild 保留遗忘集合，遗忘来源不被复活', () async {
+      final InMemorySessionLog log = InMemorySessionLog();
+      await log.append(SessionEvent.create(
+          sessionId: 's1',
+          seq: 0,
+          type: kUserMessageEvent,
+          data: <String, Object?>{'text': '事实 A'}));
+      final InMemoryRagBackend backend = InMemoryRagBackend();
+      final RagIndexer indexer = RagIndexer(
+          backend: backend,
+          embedder: _Embedder(),
+          log: log,
+          scopeOf: (String id) async => RagScope(tenantId: 't1'),
+          chunking: const ChunkerConfig(
+              chunkChars: 700, overlapChars: 90, maxChunkChars: 1200),
+          indexVersion: 1);
+      expect(await indexer.ingestSession('s1'), 1);
+      await backend
+          .delete(const RagFilter(tenantId: 't1', sourceIds: <String>{'s1'}));
+      expect(await backend.sourceForgotten('s1'), isTrue);
+
+      await indexer.rebuild();
+      expect(await backend.count(), 0);
+      expect(await backend.sourceForgotten('s1'), isTrue);
+      expect(await indexer.ingestSession('s1'), 0);
+    });
+
+    test('clear 清空遗忘集合后来源可再次摄入', () async {
+      final InMemorySessionLog log = InMemorySessionLog();
+      await log.append(SessionEvent.create(
+          sessionId: 's1',
+          seq: 0,
+          type: kUserMessageEvent,
+          data: <String, Object?>{'text': '事实 A'}));
+      final InMemoryRagBackend backend = InMemoryRagBackend();
+      final RagIndexer indexer = RagIndexer(
+          backend: backend,
+          embedder: _Embedder(),
+          log: log,
+          scopeOf: (String id) async => RagScope(tenantId: 't1'),
+          chunking: const ChunkerConfig(
+              chunkChars: 700, overlapChars: 90, maxChunkChars: 1200),
+          indexVersion: 1);
+      expect(await indexer.ingestSession('s1'), 1);
+      await backend
+          .delete(const RagFilter(tenantId: 't1', sourceIds: <String>{'s1'}));
+      expect(await backend.sourceForgotten('s1'), isTrue);
+
+      await backend.clear();
+      expect(await backend.sourceForgotten('s1'), isFalse);
+      expect(await indexer.ingestSession('s1'), 1);
+      expect(await backend.count(), 1);
+    });
   });
 }

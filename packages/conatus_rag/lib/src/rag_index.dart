@@ -55,6 +55,10 @@ class RagIndexer {
   }
 
   /// 摄取单个会话；返回新增切片数。
+  ///
+  /// 被遗忘的来源（经 [RagIndexBackend.delete] 记入遗忘集合）在此直接返回 0，
+  /// 不重新摄入：一旦遗忘，来源在显式 [RagIndexBackend.clear] 之前都不再回到
+  /// 索引，新增事件也不会让它复活；[rebuild] 会保留遗忘集合。
   Future<int> ingestSession(String sourceId) async {
     if (await _backend.sourceForgotten(sourceId)) return 0;
     final RagScope scope = await _resolveScope(sourceId);
@@ -139,10 +143,15 @@ class RagIndexer {
     await ingestAll();
   }
 
-  /// 清空并重建索引。
+  /// 清空并重建索引；保留遗忘集合（清空前捕获，重建后逐个恢复），
+  /// 因此遗忘的来源不会因换模型/切片参数升级而被复活。
   Future<void> rebuild() async {
+    final Set<String> forgotten = await _backend.forgottenSources();
     await _backend.clear();
     await _backend.init(_expectedMeta());
+    for (final String sourceId in forgotten) {
+      await _backend.markForgotten(sourceId);
+    }
     await ingestAll();
   }
 }

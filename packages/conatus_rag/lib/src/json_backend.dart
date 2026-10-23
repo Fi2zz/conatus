@@ -87,6 +87,19 @@ class JsonRagBackend implements RagIndexBackend {
     return _memory.sourceForgotten(sourceId);
   }
 
+  @override
+  Future<Set<String>> forgottenSources() async {
+    await _ensureLoaded();
+    return _memory.forgottenSources();
+  }
+
+  @override
+  Future<void> markForgotten(String sourceId) async {
+    await _ensureLoaded();
+    await _memory.markForgotten(sourceId);
+    await _save();
+  }
+
   Future<void> _ensureLoaded() async {
     if (_loaded) {
       return;
