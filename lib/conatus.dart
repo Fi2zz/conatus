@@ -32,6 +32,7 @@
 /// * [conatus_browser_use]  — 浏览器操作（Browser Use）
 /// * [conatus_computer_use] — 桌面操作（Computer Use）
 /// * [conatus_doc]         — 文档补丁引擎（人机双写故事层数据内核）
+/// * [conatus_harness]      — 可版本化 harness 制品（实验性）
 /// * [conatus_intent]       — 意图路由
 /// * [conatus_observability]— 可观测性导出（trace/span 构建）
 /// * [conatus_ontology]     — 自进化本体层（EvoOntology 适配）
@@ -51,6 +52,7 @@ export 'package:conatus_credentials/conatus_credentials.dart';
 export 'package:conatus_cron/conatus_cron.dart';
 export 'package:conatus_doc/conatus_doc.dart';
 export 'package:conatus_foundation/conatus_foundation.dart';
+export 'package:conatus_harness/conatus_harness.dart';
 export 'package:conatus_intent/conatus_intent.dart';
 export 'package:conatus_llm/conatus_llm.dart';
 export 'package:conatus_mcp/conatus_mcp.dart';

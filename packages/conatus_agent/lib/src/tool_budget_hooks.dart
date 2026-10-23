@@ -39,6 +39,26 @@ class ToolBudget {
   }
 }
 
+/// 预算中间件工厂：宿主需要在别处装配自己的预算实例时复用同一实现。
+ToolMiddleware toolBudgetMiddleware(ToolBudget budget) =>
+    (ToolCall call, Future<ToolResult> Function() next) async {
+      final int count = budget.tick();
+      final ToolBudgetStage stage = budget.policy.stageOf(count);
+      final String? denial = budget.policy.denialFor(count, call.name);
+      if (denial != null) {
+        budget.record(call.name, count, stage, true);
+        return ToolResult.failure(
+          denial,
+          error: ToolError('TOOL_BUDGET_EXHAUSTED', denial),
+        );
+      }
+      final ToolResult result = await next();
+      budget.record(call.name, count, stage, false);
+      final String? note = budget.policy.note(count);
+      if (note == null) return result;
+      return _withNote(result, note, stage, count);
+    };
+
 /// 在工具表上安装预算中间件，返回计数器。
 ///
 /// 与驱逐 / 压缩中间件同层；顺序按「后注册者在内层」决定——预算层只追加尾部
@@ -54,26 +74,7 @@ ToolBudget provideToolBudget(
     telemetry: telemetry ?? ctx.get<Telemetry>('telemetry'),
   );
   final ToolRegistry registry = tools ?? ctx.tools;
-  ctx.effect(() => registry.use(
-        (ToolCall call, Future<ToolResult> Function() next) async {
-          final int count = budget.tick();
-          final ToolBudgetStage stage = budget.policy.stageOf(count);
-          final String? denial = budget.policy.denialFor(count, call.name);
-          if (denial != null) {
-            budget.record(call.name, count, stage, true);
-            return ToolResult.failure(
-              denial,
-              error: ToolError('TOOL_BUDGET_EXHAUSTED', denial),
-            );
-          }
-          final ToolResult result = await next();
-          budget.record(call.name, count, stage, false);
-          final String? note = budget.policy.note(count);
-          if (note == null) return result;
-          return _withNote(result, note, stage, count);
-        },
-        tag: 'toolBudget',
-      ));
+  ctx.effect(() => registry.use(toolBudgetMiddleware(budget), tag: 'toolBudget'));
   ctx.provide('toolBudget', budget);
   return budget;
 }

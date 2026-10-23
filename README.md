@@ -77,6 +77,7 @@ make clean      # 删除 packages/conatus_code/dist
 | `conatus_computer_use` | 桌面操作：经 MCP 接 Cua Driver，截屏 / 鼠标 / 键盘 | `conatus_agent`、`conatus_core`、`conatus_credentials`、`conatus_foundation`、`conatus_mcp`、`conatus_tasks` | [README](packages/conatus_computer_use/README.md) |
 | `conatus_context` | 上下文压缩：工具结果按内容类型结构化压缩 + CCR 可逆取回（`context_retrieve` / `context_stats`） | `conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_context/README.md) |
 | `conatus_doc` | 文档补丁引擎：人机双写故事层数据内核（只追加补丁序列 + supersede + fold + 游标 + 依赖图失锚） | `conatus_core`、`conatus_foundation` | [README](packages/conatus_doc/README.md) |
+| `conatus_harness` | 可版本化 harness 制品：manifest（档位 + 指令段 + 工具边界）JSON 往返、Context 子树装配与回滚、人可读 diff | `conatus_agent`、`conatus_core`、`conatus_foundation` | [README](packages/conatus_harness/README.md) |
 | `conatus_intent` | 意图路由：正则 + 向量本地匹配，命中走确定性动作，未命中落回 Agent Loop | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_intent/README.md) |
 | `conatus_observability` | 可观测性导出器：span 语义 + 从 Session Log 派生 trace | `conatus_agent`、`conatus_foundation` | [README](packages/conatus_observability/README.md) |
 | `conatus_team` | 多智能体协作：任务板（DAG + CAS）+ 成员运行时 + 协作模式 | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_team/README.md) |

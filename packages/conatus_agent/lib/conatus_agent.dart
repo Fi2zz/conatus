@@ -279,7 +279,8 @@ export 'src/telemetry.dart'
         instrumentTools,
         provideTelemetry;
 export 'src/telemetry_llm.dart' show TelemetryLlmProvider;
-export 'src/tool_budget_hooks.dart' show ToolBudget, provideToolBudget;
+export 'src/tool_budget_hooks.dart'
+    show ToolBudget, provideToolBudget, toolBudgetMiddleware;
 export 'src/tool_budget_policy.dart' show ToolBudgetPolicy, ToolBudgetStage;
 export 'src/tool_result_eviction.dart'
     show
