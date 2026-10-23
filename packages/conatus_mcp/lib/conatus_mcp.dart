@@ -24,6 +24,10 @@ library;
 export 'src/mcp.dart'
     show McpContext, provideMcp, resolveCredentialPlaceholders;
 export 'src/mcp_client.dart' show McpClient;
+export 'src/mcp_oauth_discovery.dart'
+    show discoverAuthServer, registerOAuthClient;
+export 'src/mcp_oauth_pkce.dart' show generatePkce, PkcePair;
+export 'src/mcp_oauth_types.dart' show McpAuthServerMetadata, McpOAuthConfig;
 export 'src/mcp_prompt_types.dart'
     show McpPrompt, McpPromptArgument, McpPromptMessage;
 export 'src/mcp_protocol.dart'
