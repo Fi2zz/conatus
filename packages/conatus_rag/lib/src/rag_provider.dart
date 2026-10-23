@@ -15,6 +15,7 @@ import 'rag_tool.dart';
 /// [scope] 是本上下文内 `rag_search` 工具的检索作用域；为 null 时工具
 /// fail closed。多租户宿主应为每个请求/租户建子上下文并传入对应 scope。
 /// [log] 缺省取上下文里的 `'sessionLog'`；[backend] 缺省 [InMemoryRagBackend]。
+/// 上下文释放时回收 [config.embedder]（要求 `dispose` 幂等）。
 RagService provideRag(
   Context ctx, {
   required RagConfig config,
@@ -30,8 +31,10 @@ RagService provideRag(
     scopeOf: scopeOf,
     log: log ?? ctx.require<SessionLog>('sessionLog'),
     audit: audit,
+    logger: ctx.get<LoggerService>('logger')?.logger('rag'),
   );
   ctx.provide('rag', service);
+  ctx.onDispose(config.embedder.dispose);
   final ToolRegistry? tools = ctx.get<ToolRegistry>('tools');
   if (tools != null) {
     ctx.effect(

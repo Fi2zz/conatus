@@ -20,6 +20,7 @@ class DenseRetriever implements Retriever {
     this.candidates = 128,
     this.topK = 15,
     this.tokenBudget = 2000,
+    this.onRerankFallback,
   });
 
   final Embedder embedder;
@@ -28,6 +29,9 @@ class DenseRetriever implements Retriever {
   final int candidates;
   final int topK;
   final int tokenBudget;
+
+  /// 重排抛错、回退余弦顺序时回调（供上层统计与告警）。
+  final void Function()? onRerankFallback;
 
   @override
   Future<List<RagHit>> retrieve(
@@ -53,6 +57,7 @@ class DenseRetriever implements Retriever {
     try {
       return await reranker.rerank(query, candidates, topK: effectiveTopK);
     } on Object {
+      onRerankFallback?.call();
       return candidates;
     }
   }
@@ -64,6 +69,7 @@ RagFilter mergeFilter(RagFilter filter, RetrievalRequest request) {
   return RagFilter(
     tenantId: filter.tenantId,
     anyTags: filter.anyTags,
+    includeTenantWide: filter.includeTenantWide,
     sourceIds: _mergeSourceIds(filter.sourceIds, request.sourceIds),
     from: _laterOf(filter.from, request.from),
     to: _earlierOf(filter.to, request.to),

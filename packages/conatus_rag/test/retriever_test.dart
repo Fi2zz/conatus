@@ -49,8 +49,7 @@ void main() {
       ],
     );
     final RagScope scope = RagScope(tenantId: 't1');
-    final RagFilter filter =
-        RagFilter(tenantId: 't1', anyTags: scope.visibilityTags);
+    const RagFilter filter = RagFilter(tenantId: 't1', includeTenantWide: true);
     final RetrievalRequest request = RetrievalRequest(
       query: 'q',
       scope: scope,
@@ -76,6 +75,30 @@ void main() {
     expect(fallback.first.chunk.id, 'a');
   });
 
+  test('重排失败触发 onRerankFallback 回调', () async {
+    final InMemoryRagBackend backend = InMemoryRagBackend();
+    await backend.upsert(
+      <RagChunk>[
+        chunk('a', 't1', <String>{'tenant:t1'}, 0),
+      ],
+      <List<double>>[
+        <double>[1, 0]
+      ],
+    );
+    int fallbacks = 0;
+    final DenseRetriever retriever = DenseRetriever(
+      embedder: _Embedder(),
+      backend: backend,
+      reranker: _ThrowingReranker(),
+      onRerankFallback: () => fallbacks++,
+    );
+    await retriever.retrieve(
+      RetrievalRequest(query: 'q', scope: RagScope(tenantId: 't1')),
+      const RagFilter(tenantId: 't1', includeTenantWide: true),
+    );
+    expect(fallbacks, 1);
+  });
+
   test('retriever 的 topK 作为硬上限截断请求 limit', () async {
     final InMemoryRagBackend backend = InMemoryRagBackend();
     await backend.upsert(
@@ -91,8 +114,7 @@ void main() {
       ],
     );
     final RagScope scope = RagScope(tenantId: 't1');
-    final RagFilter filter =
-        RagFilter(tenantId: 't1', anyTags: scope.visibilityTags);
+    const RagFilter filter = RagFilter(tenantId: 't1', includeTenantWide: true);
     final RetrievalRequest request = RetrievalRequest(
       query: 'q',
       scope: scope,

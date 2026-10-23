@@ -78,4 +78,24 @@ void main() {
       expect(e.message, isNot(contains('SECRET')));
     }
   });
+
+  test('嵌入请求超时抛 rag_embed_failed，消息不含 key', () async {
+    final OpenAiEmbedder slow = OpenAiEmbedder(
+        baseUrl: 'https://api.test/v3',
+        model: 'm',
+        apiKey: 'SECRET',
+        dimension: 2,
+        timeout: const Duration(milliseconds: 10),
+        client: MockClient((Request req) async {
+          await Future<void>.delayed(const Duration(milliseconds: 200));
+          return Response('{}', 200);
+        }));
+    try {
+      await slow.embed('x');
+      fail('应当抛错');
+    } on RagException catch (e) {
+      expect(e.code, 'rag_embed_failed');
+      expect(e.message, isNot(contains('SECRET')));
+    }
+  });
 }

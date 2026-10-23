@@ -289,7 +289,8 @@ RagService provideRag(Context ctx, {
 
 **D8 事件白名单。** 只索引 `user/message`、`assistant/message`、`tool/call`、
 `tool/result`；跳过 `llm/*`（与消息重复）、`plan/*`、`goal/*`、`compaction/*` 等派生
-事件。文本抽取按类型取 `text` / `content` / `args`，未知类型退回 JSON 字符串并截断。
+事件。文本抽取按类型取 `text` / `content` / `args`；未知类型返回空串（仅白名单，
+不回退 JSON 字符串）。
 
 **D9 能力包与 Agent 解耦。** agent 不 import rag，只暴露通用 `EvidenceSource`
 函数钩子；宿主决定接不接。rag 需要网络与外部端点，不能成为 agent 的硬依赖。

@@ -39,6 +39,15 @@ SessionLog ─▶ Chunker ─▶ Embedder ─▶ RagIndexBackend
 可选重排（`reranker`，缺省 `NoopReranker`，重排失败静默回退原序）→ 按 token 预算
 累加截断（至少保留 1 条，不超过 `topK`）。
 
+- **审计钩子两条路径都触发**：`RetrievalAudit` 由 `RagService.retrieve` 统一发出，
+  因此 `rag_search` 工具检索与 `evidenceBlock` 每轮自动注入都会各记一条审计事件
+  （只含 scope、命中 id、token 数与耗时，不含正文）。
+- **标签下推 + 检索后复核**：`TenantTagPolicy.filterFor` 把剔除 `tenant:` 后的额外
+  标签下推成 `RagFilter.anyTags`（`includeTenantWide: true`），后端先按「租户相等 +
+  额外标签交集」过滤再取 `candidates` 个候选，随后 `allows` 二次复核。因为受限块在
+  下推阶段即被排除，`candidates` 不会先被同租户的受限块占满——`candidates` 只约束
+  召回宽度，不影响可见性正确性。
+
 ## 最小用法 ①：独立工具
 
 `provideRag` 把 `RagService` 提供为 `'rag'` 服务，并在 `tools` 已就绪时自动注册
@@ -143,6 +152,10 @@ provideAgentLoop(app, evidence: (q) => rag.evidenceBlock(q, scope));
   标签过滤隔离；需要**强隔离**时，每租户一个独立后端文件，或换外部向量库实现。
 - **索引含原文**：切片把会话原文落盘，与会话日志处于同一暴露面；`RetrievalAudit`
   只记计数与耗时、不含正文，但索引文件本身需要同等级别的访问控制。
+- **每次检索都会懒补齐**：`retrieve` / `evidenceBlock` 开头调用 `ensureIngested`，
+  当前实现会**重读全部会话日志**判断是否有新事件（尚未做增量 `latestSeq` 缓存），
+  因此会话多、日志大时每次检索都有可观的读取成本；长历史高并发场景应自行限流或
+  在空闲时主动 `ingestAll`。
 - **短会话收益低**：检索有固定的嵌入与过滤成本，会话极短时收益不抵开销，按需接线。
 
 ## 清理
@@ -150,3 +163,9 @@ provideAgentLoop(app, evidence: (q) => rag.evidenceBlock(q, scope));
 `clear()` 是**损坏索引的恢复入口**：`JsonRagBackend` 遇到文件损坏抛
 `rag_backend_broken` 且不会静默清空；此时直接 `clear()` 可在损坏文件上覆盖为空索引，
 再 `rebuild()` 重新摄入。
+
+## 客户端生命周期
+
+`provideRag` 会在上下文释放时调用 `config.embedder.dispose()` 回收底层 HTTP 连接。
+因此注入的 `Embedder` 必须实现幂等的 `dispose`（内置 `OpenAiEmbedder` 只关闭自己
+创建的 client，注入的 client 不关闭）。自行实现契约时请保证多次 `dispose` 安全。

@@ -150,5 +150,60 @@ void main() {
       expect(await indexer.ingestSession('s1'), 1);
       expect(await backend.count(), 1);
     });
+
+    test('ingestAll 吞掉作用域解析失败并计数，继续处理后续来源', () async {
+      final InMemorySessionLog log = InMemorySessionLog();
+      await log.append(SessionEvent.create(
+          sessionId: 's1',
+          seq: 0,
+          type: kUserMessageEvent,
+          data: <String, Object?>{'text': '事实 A'}));
+      await log.append(SessionEvent.create(
+          sessionId: 's2',
+          seq: 0,
+          type: kUserMessageEvent,
+          data: <String, Object?>{'text': '事实 B'}));
+      final InMemoryRagBackend backend = InMemoryRagBackend();
+      final RagIndexer indexer = RagIndexer(
+          backend: backend,
+          embedder: _Embedder(),
+          log: log,
+          scopeOf: (String id) async {
+            if (id == 's2') throw StateError('解析挂了');
+            return RagScope(tenantId: 't1');
+          },
+          chunking: const ChunkerConfig(
+              chunkChars: 700, overlapChars: 90, maxChunkChars: 1200),
+          indexVersion: 1);
+      expect(await indexer.ingestAll(), 1);
+      expect(indexer.ingestFailures, 1);
+      expect(await backend.count(), 1);
+    });
+
+    test('ingestAll 吞掉非 RagException 失败并计数，不中断批次', () async {
+      final InMemorySessionLog log = InMemorySessionLog();
+      await log.append(SessionEvent.create(
+          sessionId: 's1',
+          seq: 0,
+          type: kUserMessageEvent,
+          data: <String, Object?>{'text': '事实 A'}));
+      await log.append(SessionEvent.create(
+          sessionId: 's2',
+          seq: 0,
+          type: kUserMessageEvent,
+          data: <String, Object?>{'text': '事实 B'}));
+      final InMemoryRagBackend backend = InMemoryRagBackend();
+      final RagIndexer indexer = RagIndexer(
+          backend: backend,
+          embedder: _Embedder(),
+          log: log,
+          scopeOf: (String id) async => RagScope(tenantId: 't1'),
+          chunking: const ChunkerConfig(
+              chunkChars: 700, overlapChars: 900, maxChunkChars: 1200),
+          indexVersion: 1);
+      expect(await indexer.ingestAll(), 0);
+      expect(indexer.ingestFailures, 2);
+      expect(await backend.count(), 0);
+    });
   });
 }

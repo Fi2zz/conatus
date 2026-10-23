@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -34,16 +35,19 @@ class HttpReranker implements Reranker {
     required String baseUrl,
     required String model,
     required String apiKey,
+    Duration timeout = const Duration(seconds: 20),
     http.Client? client,
   })  : _baseUrl = baseUrl.replaceFirst(RegExp(r'/+$'), ''),
         _model = model,
         _apiKey = apiKey,
+        _timeout = timeout,
         _client = client ?? http.Client(),
         _ownsClient = client == null;
 
   final String _baseUrl;
   final String _model;
   final String _apiKey;
+  final Duration _timeout;
   final http.Client _client;
   final bool _ownsClient;
 
@@ -69,21 +73,25 @@ class HttpReranker implements Reranker {
   Future<http.Response> _post(
       String query, List<RagHit> candidates, int topK) async {
     try {
-      return await _client.post(
-        Uri.parse('$_baseUrl/rerank'),
-        headers: <String, String>{
-          'Authorization': 'Bearer $_apiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(<String, Object?>{
-          'model': _model,
-          'query': query,
-          'documents': <String>[
-            for (final RagHit hit in candidates) hit.chunk.text
-          ],
-          'top_n': topK,
-        }),
-      );
+      return await _client
+          .post(
+            Uri.parse('$_baseUrl/rerank'),
+            headers: <String, String>{
+              'Authorization': 'Bearer $_apiKey',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode(<String, Object?>{
+              'model': _model,
+              'query': query,
+              'documents': <String>[
+                for (final RagHit hit in candidates) hit.chunk.text
+              ],
+              'top_n': topK,
+            }),
+          )
+          .timeout(_timeout);
+    } on TimeoutException {
+      throw const RagException('rag_rerank_failed', '重排请求超时');
     } on Object catch (error) {
       throw RagException('rag_rerank_failed', '重排请求失败：${error.runtimeType}');
     }

@@ -29,13 +29,17 @@ class RagFilter {
     this.sourceIds,
     this.from,
     this.to,
+    this.includeTenantWide = false,
   });
 
   final String tenantId;
 
-  /// 与切片的 `visibilityTags` 求交，空集即无匹配。
+  /// 与切片的 `visibilityTags` 求交（剔除 `tenant:` 标签后），空集即无匹配。
   final Set<String>? anyTags;
   final Set<String>? sourceIds;
   final DateTime? from;
   final DateTime? to;
+
+  /// 租户级块（无额外标签）是否可见；缺省 false，删除等场景只按显式标签匹配。
+  final bool includeTenantWide;
 }

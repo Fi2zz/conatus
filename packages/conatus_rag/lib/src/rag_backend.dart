@@ -49,7 +49,7 @@ abstract interface class RagIndexBackend {
 /// 切片是否对过滤条件可见：租户相等、标签交集、来源白名单、时间窗相交。
 bool chunkMatches(RagChunk chunk, RagFilter filter) =>
     chunk.tenantId == filter.tenantId &&
-    _matchesTags(chunk, filter.anyTags) &&
+    _matchesTags(chunk, filter) &&
     _matchesScope(chunk, filter);
 
 bool _matchesScope(RagChunk chunk, RagFilter filter) =>
@@ -59,8 +59,17 @@ bool _matchesScope(RagChunk chunk, RagFilter filter) =>
 bool _matchesSources(RagChunk chunk, Set<String>? sourceIds) =>
     sourceIds == null || sourceIds.contains(chunk.sourceId);
 
-bool _matchesTags(RagChunk chunk, Set<String>? anyTags) =>
-    anyTags == null || chunk.visibilityTags.any(anyTags.contains);
+/// 标签下推：只比较剔除 `tenant:` 后的额外标签，租户级块按 [RagFilter.includeTenantWide]
+/// 放行；`anyTags` 为空集时拒绝一切带额外标签的块（fail closed）。
+bool _matchesTags(RagChunk chunk, RagFilter filter) {
+  final Set<String>? anyTags = filter.anyTags;
+  if (anyTags == null) return true;
+  final Set<String> extra = chunk.visibilityTags
+      .where((String tag) => !tag.startsWith('tenant:'))
+      .toSet();
+  if (extra.isEmpty) return filter.includeTenantWide;
+  return extra.any(anyTags.contains);
+}
 
 bool _overlapsWindow(RagChunk chunk, DateTime? from, DateTime? to) {
   if (from != null && chunk.endTime.isBefore(from)) {

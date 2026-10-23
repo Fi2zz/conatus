@@ -34,8 +34,13 @@ class RagIndexer {
   final ChunkerConfig _chunking;
   final int _indexVersion;
 
+  int _ingestFailures = 0;
+
   RagIndexBackend get backend => _backend;
   Embedder get embedder => _embedder;
+
+  /// 摄取失败的来源数（含嵌入失败、作用域解析失败等），每源只计一次。
+  int get ingestFailures => _ingestFailures;
 
   RagSnapshotMeta _expectedMeta() => RagSnapshotMeta(
         embeddingModel: _embedder.model,
@@ -134,6 +139,10 @@ class RagIndexer {
       return await ingestSession(id);
     } on RagException catch (error) {
       if (error.code == 'rag_index_stale') rethrow;
+      _ingestFailures++;
+      return 0;
+    } on Object {
+      _ingestFailures++;
       return 0;
     }
   }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
@@ -23,12 +24,14 @@ class OpenAiEmbedder implements Embedder {
     required String apiKey,
     required int dimension,
     int batchSize = 16,
+    Duration timeout = const Duration(seconds: 20),
     http.Client? client,
   })  : _baseUrl = baseUrl.replaceFirst(RegExp(r'/+$'), ''),
         _model = model,
         _apiKey = apiKey,
         _dimension = dimension,
         _batchSize = batchSize,
+        _timeout = timeout,
         _client = client ?? http.Client(),
         _ownsClient = client == null;
 
@@ -37,6 +40,7 @@ class OpenAiEmbedder implements Embedder {
   final String _apiKey;
   final int _dimension;
   final int _batchSize;
+  final Duration _timeout;
   final http.Client _client;
   final bool _ownsClient;
 
@@ -80,14 +84,19 @@ class OpenAiEmbedder implements Embedder {
 
   Future<http.Response> _post(List<String> input) async {
     try {
-      return await _client.post(
-        Uri.parse('$_baseUrl/embeddings'),
-        headers: <String, String>{
-          'Authorization': 'Bearer $_apiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(<String, Object?>{'model': _model, 'input': input}),
-      );
+      return await _client
+          .post(
+            Uri.parse('$_baseUrl/embeddings'),
+            headers: <String, String>{
+              'Authorization': 'Bearer $_apiKey',
+              'Content-Type': 'application/json',
+            },
+            body:
+                jsonEncode(<String, Object?>{'model': _model, 'input': input}),
+          )
+          .timeout(_timeout);
+    } on TimeoutException {
+      throw const RagException('rag_embed_failed', '嵌入请求超时');
     } on Object catch (error) {
       throw RagException(
         'rag_embed_failed',

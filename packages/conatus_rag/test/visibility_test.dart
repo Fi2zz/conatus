@@ -13,7 +13,9 @@ void main() {
           isFalse);
       expect(policy.allows(chunk('c', 't2', {'tenant:t2'}, 2), fin), isFalse);
       final RagScope bare = RagScope(tenantId: 't1');
-      expect(policy.filterFor(bare).anyTags, <String>{'tenant:t1'});
+      final RagFilter filter = policy.filterFor(bare);
+      expect(filter.anyTags, isEmpty);
+      expect(filter.includeTenantWide, isTrue);
       expect(policy.allows(chunk('d', 't1', {'tenant:t1'}, 3), bare), isTrue);
       expect(policy.allows(chunk('x', 't1', {'tenant:t1', 'dept:hr'}, 4), bare),
           isFalse);

@@ -51,5 +51,28 @@ void main() {
 
       reranker.dispose();
     });
+
+    test('重排请求超时抛 rag_rerank_failed，消息不含 key', () async {
+      final HttpReranker slow = HttpReranker(
+        baseUrl: 'https://api.example.com',
+        model: 'rerank-model',
+        apiKey: 'test-key',
+        timeout: const Duration(milliseconds: 10),
+        client: MockClient((Request request) async {
+          await Future<void>.delayed(const Duration(milliseconds: 200));
+          return Response('{}', 200);
+        }),
+      );
+      final List<RagHit> candidates = <RagHit>[
+        RagHit(chunk: chunk('a', 't1', <String>{'tag'}, 0), score: 0.75),
+      ];
+      try {
+        await slow.rerank('query', candidates, topK: 1);
+        fail('应当抛错');
+      } on RagException catch (e) {
+        expect(e.code, 'rag_rerank_failed');
+        expect(e.message, isNot(contains('test-key')));
+      }
+    });
   });
 }

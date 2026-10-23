@@ -16,8 +16,13 @@ class TenantTagPolicy implements VisibilityPolicy {
   const TenantTagPolicy();
 
   @override
-  RagFilter filterFor(RagScope scope) =>
-      RagFilter(tenantId: scope.tenantId, anyTags: scope.visibilityTags);
+  RagFilter filterFor(RagScope scope) => RagFilter(
+        tenantId: scope.tenantId,
+        anyTags: scope.visibilityTags
+            .where((String tag) => !tag.startsWith('tenant:'))
+            .toSet(),
+        includeTenantWide: true,
+      );
 
   @override
   bool allows(RagChunk chunk, RagScope scope) {

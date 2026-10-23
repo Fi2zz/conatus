@@ -37,7 +37,7 @@ class RagChunk {
     this.lastSeq,
   });
 
-  /// `<sourceKind>/<sourceId>/<first>-<last>`，稳定幂等。
+  /// `<sourceKind>/<sourceId>/<first>-<last>-<windowIndex>`，稳定幂等。
   final String id;
   final String tenantId;
   final String sourceKind;

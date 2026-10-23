@@ -19,10 +19,12 @@ class RagService {
     required ScopeResolver scopeOf,
     SessionLog? log,
     evidence.RetrievalObserver? audit,
+    Logger? logger,
   })  : _backend = backend,
         _config = config,
         _scopeOf = scopeOf,
         _audit = audit,
+        _logger = logger,
         _visibility = config.visibility,
         _indexer = log == null
             ? null
@@ -43,15 +45,21 @@ class RagService {
   final RagConfig _config;
   final ScopeResolver _scopeOf;
   final evidence.RetrievalObserver? _audit;
+  final Logger? _logger;
   final VisibilityPolicy _visibility;
   final RagIndexer? _indexer;
 
   int _retrievals = 0;
   int _emptyResults = 0;
+  int _rerankFallbacks = 0;
+  int _embedFailures = 0;
   DateTime? _lastIngestAt;
 
   /// 后端只读访问，供测试与运维使用。
   RagIndexBackend get backend => _backend;
+
+  /// 摄入失败的来源数（由内部索引器聚合）。
+  int get ingestFailures => _indexer?.ingestFailures ?? 0;
 
   /// 检索：可见性过滤 → 嵌入 → 后端搜索 → 二次过滤 → 审计。
   Future<List<RagHit>> retrieve(RetrievalRequest request) async {
@@ -72,8 +80,18 @@ class RagService {
       candidates: _config.candidates,
       topK: _config.topK,
       tokenBudget: _config.tokenBudget,
+      onRerankFallback: _onRerankFallback,
     );
-    final List<RagHit> found = await retriever.retrieve(request, filter);
+    final List<RagHit> found;
+    try {
+      found = await retriever.retrieve(request, filter);
+    } on RagException catch (error) {
+      if (error.code == 'rag_embed_failed') {
+        _embedFailures++;
+        _logCode('rag_embed_failed');
+      }
+      rethrow;
+    }
     final List<RagHit> visible = found
         .where((RagHit h) => _visibility.allows(h.chunk, request.scope))
         .take(request.limit)
@@ -99,8 +117,18 @@ class RagService {
       );
 
   Future<void> _ensureIngested() async {
-    if (_indexer == null) return;
-    await _indexer.ensureIngested();
+    final RagIndexer? indexer = _indexer;
+    if (indexer == null) return;
+    final int before = indexer.ingestFailures;
+    try {
+      await indexer.ensureIngested();
+    } on RagException catch (error) {
+      if (error.code == 'rag_index_stale') _logCode('rag_index_stale');
+      rethrow;
+    }
+    if (indexer.ingestFailures > before) {
+      _logCode('rag_embed_failed');
+    }
     _lastIngestAt = DateTime.now();
   }
 
@@ -109,27 +137,39 @@ class RagService {
 
   /// 摄取单个会话；未配置 [SessionLog] 时不可用。
   Future<int> ingestSession(String sourceId) async {
-    if (_indexer == null) {
+    final RagIndexer? indexer = _indexer;
+    if (indexer == null) {
       throw const RagException('rag_ingest_unavailable', '未配置 SessionLog');
     }
-    return _indexer.ingestSession(sourceId);
+    try {
+      return await indexer.ingestSession(sourceId);
+    } on RagException catch (error) {
+      if (error.code == 'rag_index_stale') _logCode('rag_index_stale');
+      rethrow;
+    }
   }
 
   /// 摄取全部会话；未配置 [SessionLog] 时不可用。
   Future<int> ingestAll() async {
-    if (_indexer == null) {
+    final RagIndexer? indexer = _indexer;
+    if (indexer == null) {
       throw const RagException('rag_ingest_unavailable', '未配置 SessionLog');
     }
-    return _indexer.ingestAll();
+    try {
+      return await indexer.ingestAll();
+    } on RagException catch (error) {
+      if (error.code == 'rag_index_stale') _logCode('rag_index_stale');
+      rethrow;
+    }
   }
 
-  /// 生成证据块：检索 → 格式化（不触发审计）。
+  /// 生成证据块：走与工具一致的检索路径（含审计）。
   Future<String> evidenceBlock(
     String query,
     RagScope scope, {
     int? limit,
   }) async {
-    final List<RagHit> hits = await _retrieveCore(RetrievalRequest(
+    final List<RagHit> hits = await retrieve(RetrievalRequest(
       query: query,
       scope: scope,
       limit: limit ?? _config.injectLimit,
@@ -145,7 +185,13 @@ class RagService {
   /// 一旦遗忘，该来源在显式 [clear] 之前不再回到索引（[RagIndexer.rebuild]
   /// 保留遗忘集合），后续新增事件也不会让它复活。
   Future<int> forgetSession(String sourceId, {required RagScope scope}) async {
-    final RagScope resolved = await _scopeOf(sourceId);
+    final RagScope resolved;
+    try {
+      resolved = await _scopeOf(sourceId);
+    } on Object {
+      _logCode('rag_scope_unresolved');
+      throw const RagException('rag_scope_unresolved', '无法解析来源作用域');
+    }
     if (resolved.tenantId != scope.tenantId) {
       throw const RagException('rag_scope_denied', '来源归属与请求租户不一致');
     }
@@ -171,20 +217,34 @@ class RagService {
 
   /// 重建索引；委托给内部索引器。
   Future<void> rebuild() async {
-    if (_indexer == null) return;
-    await _indexer.rebuild();
+    final RagIndexer? indexer = _indexer;
+    if (indexer == null) return;
+    try {
+      await indexer.rebuild();
+    } on RagException catch (error) {
+      if (error.code == 'rag_index_stale') _logCode('rag_index_stale');
+      rethrow;
+    }
   }
 
-  /// 统计：后端切片数 + 服务计数。
+  /// 统计：后端切片数 + 服务计数。`embedFailures` 汇总查询侧嵌入失败与摄入侧
+  /// 失败（摄入侧以 [RagIndexer.ingestFailures] 计，因其以嵌入失败为主）。
   Future<RagStats> stats() async {
     final int chunks = await _backend.count();
     return RagStats(
       chunks: chunks,
       retrievals: _retrievals,
       emptyResults: _emptyResults,
-      rerankFallbacks: 0,
-      embedFailures: 0,
+      rerankFallbacks: _rerankFallbacks,
+      embedFailures: _embedFailures + (_indexer?.ingestFailures ?? 0),
       lastIngestAt: _lastIngestAt,
     );
   }
+
+  void _onRerankFallback() {
+    _rerankFallbacks++;
+  }
+
+  /// 只记录错误码，绝不落查询原文或证据正文。
+  void _logCode(String code) => _logger?.error(code);
 }

@@ -1,9 +1,10 @@
+import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_rag/conatus_rag.dart';
 import 'package:test/test.dart';
 
 void main() {
   group('RagService', () {
-    test('检索走策略过滤，审计不含正文，注入块带 citation', () async {
+    test('检索与注入都走审计，审计不含正文，注入块带 citation', () async {
       final InMemoryRagBackend backend = InMemoryRagBackend();
       await backend.upsert(
         <RagChunk>[
@@ -30,9 +31,33 @@ void main() {
       final String block = await service.evidenceBlock('订单号', scope);
       expect(block, contains('[相关历史证据]'));
       expect(block, contains('session:s0 seq:0-0'));
-      expect(audits.single.tenantId, 't1');
+      expect(audits, hasLength(2));
+      expect(audits.first.tenantId, 't1');
+      expect(audits.first.hitIds, <String>['a']);
+      expect(audits.first.tokens, estimateTokens('用户：我的订单号是 A-1024'));
+      expect(audits.last.hitIds, <String>['a']);
+    });
+
+    test('evidenceBlock 单独调用也会发出一条例审计事件', () async {
+      final InMemoryRagBackend backend = InMemoryRagBackend();
+      await backend.upsert(
+        <RagChunk>[
+          chunk('a', 't1', <String>{'tenant:t1'}, 0, text: '用户：我的订单号是 A-1024'),
+        ],
+        <List<double>>[
+          <double>[1, 0],
+        ],
+      );
+      final List<RetrievalAudit> audits = <RetrievalAudit>[];
+      final RagService service = RagService(
+        backend: backend,
+        config: RagConfig(embedder: _FakeEmbedder()),
+        scopeOf: (String id) async => RagScope(tenantId: 't1'),
+        audit: audits.add,
+      );
+      await service.evidenceBlock('订单号', RagScope(tenantId: 't1'));
+      expect(audits, hasLength(1));
       expect(audits.single.hitIds, <String>['a']);
-      expect(audits.single.tokens, estimateTokens('用户：我的订单号是 A-1024'));
     });
 
     test('forgetSession/forgetScope 返回删除块数并校验租户与 principal', () async {
@@ -73,6 +98,24 @@ void main() {
       );
       expect(await service.forgetScope(RagScope(tenantId: 't1')), 1);
       expect(await service.backend.count(), 0);
+    });
+
+    test('forgetSession 作用域解析失败抛 rag_scope_unresolved', () async {
+      final RagService service = RagService(
+        backend: InMemoryRagBackend(),
+        config: RagConfig(embedder: _FakeEmbedder()),
+        scopeOf: (String id) async => throw StateError('解析挂了'),
+      );
+      await expectLater(
+        service.forgetSession('s0', scope: RagScope(tenantId: 't1')),
+        throwsA(
+          isA<RagException>().having(
+            (RagException e) => e.code,
+            'code',
+            'rag_scope_unresolved',
+          ),
+        ),
+      );
     });
 
     test('clear 清空全部索引', () async {
@@ -116,6 +159,97 @@ void main() {
         RetrievalRequest(query: '订单', scope: RagScope(tenantId: 't1')),
       );
       expect((await service.stats()).retrievals, 1);
+    });
+
+    test('重排失败计入 stats().rerankFallbacks', () async {
+      final InMemoryRagBackend backend = InMemoryRagBackend();
+      await backend.upsert(
+        <RagChunk>[
+          chunk('a', 't1', <String>{'tenant:t1'}, 0),
+        ],
+        <List<double>>[
+          <double>[1, 0]
+        ],
+      );
+      final RagService service = RagService(
+        backend: backend,
+        config:
+            RagConfig(embedder: _FakeEmbedder(), reranker: _ThrowingReranker()),
+        scopeOf: (String id) async => RagScope(tenantId: 't1'),
+      );
+      await service.retrieve(
+        RetrievalRequest(query: 'q', scope: RagScope(tenantId: 't1')),
+      );
+      expect((await service.stats()).rerankFallbacks, 1);
+    });
+
+    test('入库嵌入失败计入 stats().embedFailures', () async {
+      final InMemorySessionLog log = InMemorySessionLog();
+      await log.append(SessionEvent.create(
+          sessionId: 's1',
+          seq: 0,
+          type: kUserMessageEvent,
+          data: <String, Object?>{'text': '事实 A'}));
+      final RagService service = RagService(
+        backend: InMemoryRagBackend(),
+        config: RagConfig(embedder: _ThrowingEmbedder()),
+        scopeOf: (String id) async => RagScope(tenantId: 't1'),
+        log: log,
+      );
+      await service.ingestAll();
+      expect((await service.stats()).embedFailures, 1);
+      expect(service.ingestFailures, 1);
+    });
+
+    test('查询嵌入失败记录 rag_embed_failed 日志（只含错误码）', () async {
+      final LoggerService loggerService = LoggerService();
+      final _RecordingExporter exporter = _RecordingExporter();
+      loggerService.addExporter(exporter);
+      final RagService service = RagService(
+        backend: InMemoryRagBackend(),
+        config: RagConfig(embedder: _ThrowingEmbedder()),
+        scopeOf: (String id) async => RagScope(tenantId: 't1'),
+        logger: loggerService.logger('rag'),
+      );
+      await expectLater(
+        service.retrieve(
+          RetrievalRequest(query: 'q', scope: RagScope(tenantId: 't1')),
+        ),
+        throwsA(isA<RagException>()),
+      );
+      expect(
+        exporter.records.any((LogRecord r) => r.message == 'rag_embed_failed'),
+        isTrue,
+      );
+    });
+
+    test('回归：租户级块不被 200 个受限块挤出候选', () async {
+      final InMemoryRagBackend backend = InMemoryRagBackend();
+      final List<RagChunk> chunks = <RagChunk>[
+        chunk('tenant-wide', 't1', <String>{'tenant:t1'}, 0, text: '租户级公共证据'),
+        for (int i = 1; i <= 200; i++)
+          chunk('c$i', 't1', <String>{'tenant:t1', 'dept:hr'}, i,
+              text: '受限证据 $i'),
+      ];
+      await backend.upsert(
+        chunks,
+        <List<double>>[
+          for (int i = 0; i < chunks.length; i++) <double>[1, 0],
+        ],
+      );
+      final RagService service = RagService(
+        backend: backend,
+        config: RagConfig(embedder: _FakeEmbedder(), candidates: 64),
+        scopeOf: (String id) async => RagScope(tenantId: 't1'),
+      );
+      final List<RagHit> hits = await service.retrieve(
+        RetrievalRequest(query: '证据', scope: RagScope(tenantId: 't1')),
+      );
+      expect(hits.map((RagHit h) => h.chunk.id), contains('tenant-wide'));
+      expect(
+        hits.every((RagHit h) => !h.chunk.visibilityTags.contains('dept:hr')),
+        isTrue,
+      );
     });
 
     test('formatHits 空、按时间升序、时间格式与 id 去重', () {
@@ -201,4 +335,37 @@ class _FakeEmbedder implements Embedder {
 
   @override
   void dispose() {}
+}
+
+class _ThrowingEmbedder implements Embedder {
+  @override
+  String get model => 'broken';
+
+  @override
+  int get dimension => 2;
+
+  @override
+  Future<List<double>> embed(String text) async =>
+      throw const RagException('rag_embed_failed', '嵌入失败');
+
+  @override
+  Future<List<List<double>>> embedBatch(List<String> texts) async =>
+      throw const RagException('rag_embed_failed', '嵌入失败');
+
+  @override
+  void dispose() {}
+}
+
+class _ThrowingReranker implements Reranker {
+  @override
+  Future<List<RagHit>> rerank(String query, List<RagHit> candidates,
+          {required int topK}) async =>
+      throw StateError('重排挂了');
+}
+
+class _RecordingExporter implements LogExporter {
+  final List<LogRecord> records = <LogRecord>[];
+
+  @override
+  void export(LogRecord record) => records.add(record);
 }
