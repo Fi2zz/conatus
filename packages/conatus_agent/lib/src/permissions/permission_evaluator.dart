@@ -93,12 +93,25 @@ class PermissionEvaluator {
         rule: verdict.rule,
       );
 
+  /// 规则展开缓存：同一作用域对象（规则列表身份稳定）只做一次真实路径 IO。
+  ///
+  /// 规则展开原本每次工具调用都做，路径规则多时会把 `resolveSymbolicLinksSync`
+  /// 堆在 TUI 事件循环上。作用域只在配置 / 会话 / 模式变化时替换，因此按
+  /// workdir + 规则列表身份缓存；上限 8，够覆盖根作用域与子 Agent。
+  static final Map<String, PermissionScope> _expandedScopes =
+      <String, PermissionScope>{};
+  static final Map<String, String?> _canonicalRoots = <String, String?>{};
+
   /// 规则里路径 pattern 的全部拼写（词法 / workdir / 真实路径）。
   ///
   /// 规则展开发生在判定时，因此库用法（不经过 `PermissionWiring`）也享有
   /// 同一套拼写；已展开的规则再次展开是幂等的。
   PermissionScope _expandRules(PermissionScope scope, String? root) {
     if (root == null || root.isEmpty) return scope;
+    final String key =
+        '$root#${identityHashCode(scope.rules)}#${scope.rules.length}';
+    final PermissionScope? cached = _expandedScopes[key];
+    if (cached != null) return cached;
     final List<PermissionRule> rules = <PermissionRule>[];
     for (final PermissionRule rule in scope.rules) {
       if (!permissionActionUsesPath(rule.action)) {
@@ -116,14 +129,20 @@ class PermissionEvaluator {
                 resource: spelling,
                 effect: rule.effect,
                 source: rule.source,
+                configuredResource: rule.displayResource,
               ));
       }
     }
-    return PermissionScope(
+    final PermissionScope expanded = PermissionScope(
       rules: rules,
       askThreshold: scope.askThreshold,
       agentId: scope.agentId,
     );
+    if (_expandedScopes.length >= 8) {
+      _expandedScopes.remove(_expandedScopes.keys.first);
+    }
+    _expandedScopes[key] = expanded;
+    return expanded;
   }
 
   /// 调用侧资源拼写：路径动作补 workdir / 真实路径，非路径动作原样。
@@ -154,8 +173,11 @@ class PermissionEvaluator {
     }) input,
   ) {
     final String? root = workdir;
-    if (root == null || !permissionActionUsesPath(input.action)) return null;
-    final String? realRoot = canonicalPermissionPath(root);
+    if (root == null || input.paths.isEmpty) return null;
+    final String? realRoot = _canonicalRoots.putIfAbsent(
+      root,
+      () => canonicalPermissionPath(root),
+    );
     final Set<String> roots = <String>{
       normalizePermissionPath(root),
       if (realRoot != null) normalizePermissionPath(realRoot),

@@ -15,12 +15,13 @@ class PermissionRule {
     required this.resource,
     required this.effect,
     this.source,
+    this.configuredResource,
   });
 
   /// 动作标识，精确匹配。
   final String action;
 
-  /// 资源通配 pattern。
+  /// 资源通配 pattern（可能已按 workdir / 真实路径展开）。
   final String resource;
 
   /// 命中后的处置。
@@ -29,7 +30,15 @@ class PermissionRule {
   /// 规则来源标记（如 `config` / `project` / `session`），仅用于展示与排查。
   final String? source;
 
+  /// 用户在配置里写的原始 pattern；展开后的规则用它上屏，避免审批框显示
+  /// `/private/var/...` 这类内部拼写。
+  final String? configuredResource;
+
+  /// 展示用 pattern：优先原始配置，其次匹配用 pattern。
+  String get displayResource => configuredResource ?? resource;
+
   @override
-  String toString() => 'PermissionRule($action, $resource, ${effect.name})'
+  String toString() =>
+      'PermissionRule($action, $displayResource, ${effect.name})'
       '${source == null ? '' : ' @$source'}';
 }
