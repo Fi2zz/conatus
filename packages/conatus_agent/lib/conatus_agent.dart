@@ -85,6 +85,14 @@ export 'src/eval.dart'
         EvalRunner,
         Evaluator,
         defaultEvalJudge;
+export 'src/execution_profile.dart'
+    show
+        ExecutionProfile,
+        LlmProfileSelector,
+        ProfileSelector,
+        kDefaultExecutionProfiles,
+        provideProfileSelector;
+export 'src/execution_profile_rubric.dart' show kExecutionProfileRubric;
 export 'src/exit_plan_mode.dart' show ExitPlanModeTool, kExitPlanModeToolName;
 export 'src/goal.dart'
     show
