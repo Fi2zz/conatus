@@ -74,6 +74,7 @@ export 'src/content_classifier.dart'
         RuleBasedContentClassifier,
         provideContentClassifier;
 export 'src/context_metrics.dart' show estimateMessagesTokens, estimateTokens;
+export 'src/cost.dart' show CostAccumulator, ModelRate, TokenUsage;
 export 'src/eval.dart'
     show
         EvalCase,
