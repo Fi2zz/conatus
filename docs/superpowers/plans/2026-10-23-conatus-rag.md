@@ -268,7 +268,7 @@ Expected: FAIL。
 - `eventText`：`user/message` → `用户：<text>`；`assistant/message` → `助手：<text>`；`tool/call` → `工具调用 <name>(<json args>)`；`tool/result` → `工具结果 <name>：<content>`；其余返回 `''`。
 - 每行先按 `maxChunkChars` 截断并追加 `…[截断]`。
 - 建 `_Line {event, start, end}`，拼成整串后按 `chunkChars` 滑窗、步长 `chunkChars - overlapChars`。
-- 每块：`id = '<sourceKind>/<sourceId>/<firstSeq>-<lastSeq>'`；`eventIds` 取与窗口相交的行；时间取相交行的 min/max；跳过没有相交行的窗口。
+- 每块：`id = '<sourceKind>/<sourceId>/<firstSeq>-<lastSeq>-<windowIndex>'`（窗口序号必须入 id：同一组事件可能被重叠窗切成多块，只用 seq 区间会互相覆盖）；`eventIds` 取与窗口相交的行；时间取相交行的 min/max；跳过没有相交行的窗口。
 - 不合并空行；正文保持原文（除截断）。
 
 - [ ] **Step 4: 运行确认通过**
@@ -334,8 +334,8 @@ void main() {
     ]);
     final RagScope scope = RagScope(tenantId: 't1', visibilityTags: {'dept:fin'});
     final List<RagHit> hits = await backend.search(
-      RetrievalRequest(query: 'q', scope: scope), 
-      RagFilter(tenantId: 't1', anyTags: scope.visibilityTags), k: 10);
+      RagFilter(tenantId: 't1', anyTags: scope.visibilityTags),
+      queryVector: <double>[1, 0], k: 10);
     expect(hits.map((RagHit h) => h.chunk.id), <String>['a']);
   });
 
@@ -344,12 +344,12 @@ void main() {
       chunk('a', 't1', <String>{'tenant:t1'}, 0, time: DateTime.utc(2026, 1, 1)),
     ], <List<double>>[<double>[1, 0]]);
     expect(await backend.search(
-      RetrievalRequest(query: 'q', scope: RagScope(tenantId: 't1')),
-      RagFilter(tenantId: 't1', anyTags: const <String>{}), k: 10), isEmpty);
+      RagFilter(tenantId: 't1', anyTags: const <String>{}),
+      queryVector: <double>[1, 0], k: 10), isEmpty);
     expect(await backend.search(
-      RetrievalRequest(query: 'q', scope: RagScope(tenantId: 't1')),
       RagFilter(tenantId: 't1', anyTags: {'tenant:t1'},
-          from: DateTime.utc(2026, 6, 1)), k: 10), isEmpty);
+          from: DateTime.utc(2026, 6, 1)),
+      queryVector: <double>[1, 0], k: 10), isEmpty);
   });
 
   test('meta、游标、delete 连带清游标、count', () async {
@@ -630,7 +630,7 @@ Expected: FAIL。
 
 - [ ] **Step 3: 实现**
 
-- `DenseRetriever.retrieve`：`embedder.embed(query)` → `backend.search(request, filter, k: candidates)` → `reranker?.rerank(...)`（捕获任何异常，回退原序并计数由 service 处理）→ 按 `tokenBudget` 累加截断（至少保留 1 条）→ `take(topK)`。
+- `DenseRetriever.retrieve`：`embedder.embed(query)` → 把 `request.sourceIds/from/to` 合入 `filter` → `backend.search(effectiveFilter, queryVector: vector, k: candidates)` → `reranker?.rerank(...)`（捕获任何异常，回退原序并计数由 service 处理）→ 按 `tokenBudget` 累加截断（至少保留 1 条）→ `take(topK)`。
 - 预算用 `estimateTokens`；超预算的条目跳过，总预算不再增加。
 - `NoopReranker` 原样 `take(topK)`。
 - `HttpReranker`：`POST $baseUrl/rerank`，体 `{model, query, documents: [text...], top_n: topK}`；解析 `results[{index, relevance_score}]`；失败抛 `RagException('rag_rerank_failed')`。
@@ -664,7 +664,8 @@ git commit -m "feat(rag): 重排与预算内稠密检索"
   - `abstract interface class VisibilityPolicy { RagFilter filterFor(RagScope scope); bool allows(RagChunk chunk, RagScope scope); }`
   - `class TenantTagPolicy implements VisibilityPolicy`
   - `typedef ScopeResolver = Future<RagScope> Function(String sourceId);`
-  - `class RagIndexer { RagIndexer({required backend, required embedder, required log, required scopeOf, required config}); final RagIndexBackend backend; final Embedder embedder; Future<int> ingestSession(String sourceId); Future<int> ingestAll(); Future<void> ensureIngested(); Future<void> rebuild(); }`
+  - `class RagIndexer { RagIndexer({required backend, required embedder, required log, required scopeOf, required chunking, required indexVersion}); final RagIndexBackend backend; final Embedder embedder; Future<int> ingestSession(String sourceId); Future<int> ingestAll(); Future<void> ensureIngested(); Future<void> rebuild(); }`
+  - 说明：`RagIndexer` 不依赖 `RagConfig`（它在 Task 9 才出现），只接收 `ChunkerConfig` 与 `indexVersion`；Task 9 的 `RagConfig` 负责把它们组装进来。
 
 - [ ] **Step 1: 写失败测试（visibility）**
 
@@ -692,7 +693,9 @@ test('重复摄取幂等，新事件增量，失败不推进游标', () async {
   final RagIndexer indexer = RagIndexer(
     backend: backend, embedder: _Embedder(), log: log,
     scopeOf: (String id) async => RagScope(tenantId: 't1'),
-    config: RagConfig(embedder: _Embedder()));
+    chunking: const ChunkerConfig(
+        chunkChars: 700, overlapChars: 90, maxChunkChars: 1200),
+    indexVersion: 1);
   expect(await indexer.ingestSession('s1'), 1);
   expect(await indexer.ingestSession('s1'), 0);
   await log.append(SessionEvent.create(sessionId: 's1', seq: 1,
@@ -702,7 +705,9 @@ test('重复摄取幂等，新事件增量，失败不推进游标', () async {
   final RagIndexer failing = RagIndexer(
     backend: InMemoryRagBackend(), embedder: _ThrowingEmbedder(), log: log,
     scopeOf: (String id) async => RagScope(tenantId: 't1'),
-    config: RagConfig(embedder: _ThrowingEmbedder()));
+    chunking: const ChunkerConfig(
+        chunkChars: 700, overlapChars: 90, maxChunkChars: 1200),
+    indexVersion: 1);
   await expectLater(failing.ingestSession('s1'), throwsA(isA<RagException>()));
   expect(await failing.backend.cursorOf('s1'), isNull);
 });
@@ -715,10 +720,10 @@ Expected: FAIL。
 
 - [ ] **Step 4: 实现**
 
-- `TenantTagPolicy.filterFor`：`RagFilter(tenantId: scope.tenantId, anyTags: scope.visibilityTags)`。`allows`：同租户 && `scope.visibilityTags.isNotEmpty` && 交集非空。
+- `TenantTagPolicy.filterFor`：`RagFilter(tenantId: scope.tenantId, anyTags: scope.visibilityTags)`。`allows`：同一租户；标签比较剔除 `tenant:` 前缀——块没有额外标签（租户级）→ 可见；否则要求与主体额外标签有交集；主体没有额外标签 → 只能看租户级块（fail closed）。
 - `RagIndexer` 暴露 `final RagIndexBackend backend;` 与 `final Embedder embedder;`（测试与 service 都要读）。
-- `RagIndexer._expectedMeta`：`RagSnapshotMeta(embeddingModel: config.embedder.model, dimension: config.embedder.dimension, indexVersion: config.indexVersion)`；首次 `backend.meta() == null` 时 `init`。
-- `ingestSession`：`scopeOf` 抛错 → `RagException('rag_scope_unresolved')`；读游标 `lastSeq`；`log.read(id)` 过滤 `event.seq > lastSeq`；无新事件返回 0；`chunkEvents` → `embedBatch` → `upsert` → `saveCursor(RagCursor(tenantId, id, lastSeq))`；嵌入异常包成 `rag_embed_failed` 且**不写游标**。
+- `RagIndexer._expectedMeta`：`RagSnapshotMeta(embeddingModel: embedder.model, dimension: embedder.dimension, indexVersion: indexVersion)`；首次 `backend.meta() == null` 时 `init`。
+- `ingestSession`：`scopeOf` 抛错 → `RagException('rag_scope_unresolved')`；读游标 `lastSeq`；`log.read(id)` 过滤 `event.seq > lastSeq`；无新事件返回 0；`chunkEvents(source, events, chunking)` → `embedBatch` → `upsert` → `saveCursor(RagCursor(tenantId, id, lastSeq))`；嵌入异常包成 `rag_embed_failed` 且**不写游标**。
 - `ingestAll` / `ensureIngested`：遍历 `await log.list()`，逐个 `ingestSession` 求和；单个会话失败继续（记录计数），但 `RagException('rag_index_stale')` 直接向上抛。
 - `rebuild`：`backend.clear()` → `init` → `ingestAll()`。
 
@@ -763,9 +768,6 @@ RagService serviceWith(InMemoryRagBackend backend) => RagService(
 ```dart
 test('检索走策略过滤，审计不含正文，注入块带 citation', () async {
   final InMemoryRagBackend backend = InMemoryRagBackend();
-  final Session session = Session(id: 's1');
-  session.append(kUserMessageEvent,
-      data: <String, Object?>{'text': '我的订单号是 A-1024'});
   await backend.upsert(<RagChunk>[
     chunk('a', 't1', <String>{'tenant:t1'}, 0, text: '用户：我的订单号是 A-1024'),
     chunk('b', 't2', <String>{'tenant:t2'}, 1, text: '用户：别人的订单号是 B-2048'),
@@ -809,7 +811,7 @@ Expected: FAIL。
 - [ ] **Step 3: 实现**
 
 - `RagConfig`：字段见 spec §5 表，含 `embedder`、`reranker`、`visibility = const TenantTagPolicy()`、`indexVersion = 1`、尺寸参数。
-- `RagService` 组合 `RagIndexer`、`DenseRetriever`、`VisibilityPolicy`；`SessionLog? log` 为 null 时跳过 `ensureIngested()`（宿主自行调用 `ingestSession`），便于单元测试直接种后端数据。
+- `RagService` 组合 `RagIndexer`、`DenseRetriever`、`VisibilityPolicy`；`SessionLog? log` 为 null 时 `_indexer = null` 且跳过 `ensureIngested()`（宿主自行调用 `ingestSession`），便于单元测试直接种后端数据。构造 `RagIndexer` 时用 `chunking: ChunkerConfig(chunkChars: config.chunkChars, overlapChars: config.overlapChars, maxChunkChars: config.maxChunkChars)` 与 `indexVersion: config.indexVersion`。
 - `retrieve`：`ensureIngested()` → `filter = visibility.filterFor(scope)` → `retriever.retrieve` → 再 `where(visibility.allows)` → `take(request.limit)` → 记录审计（`tenantId`、`principalId`、`queryLength`、`hitIds`、`tokens`、`elapsedMs`）→ 计数。
 - `String formatHits(List<RagHit> hits)`：空列表返回 `''`；否则按 `startTime` 升序生成证据块（工具与 `evidenceBlock` 共用），时间格式 `yyyy-MM-dd HH:mm`，手写补零，不引 intl。
 - `evidenceBlock`：`retrieve(limit: injectLimit)`，返回 `formatHits(...)`。

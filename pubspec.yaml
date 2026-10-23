@@ -1,7 +1,7 @@
 name: conatus
 description: >-
   时空可组合性（Spatiotemporal Composability）编程范式的 Dart 实现。
-  伞包 conatus 再导出全部 25 个 conatus_* 模块包（含实验性包），
+  伞包 conatus 再导出全部 27 个 conatus_* 模块包（含实验性包），
   `package:conatus/conatus.dart` 即完整公开 API。
 version: 0.16.0
 repository: https://github.com/Fi2zz/conatus
@@ -18,7 +18,7 @@ environment:
 workspace:
   - packages/*
 
-# 全部 25 个子包（14 稳定 + 11 实验性）以 path 依赖纳入：本包经 git 源被消费时，
+# 全部 27 个子包（15 稳定 + 12 实验性）以 path 依赖纳入：本包经 git 源被消费时，
 # pub 随仓库一次性解析安装全部子包；子包之间的相互依赖同为 path，整条链自洽。
 dependencies:
   conatus_agent: {path: packages/conatus_agent}
@@ -40,6 +40,7 @@ dependencies:
   conatus_memory: {path: packages/conatus_memory}
   conatus_observability: {path: packages/conatus_observability}
   conatus_ontology: {path: packages/conatus_ontology}
+  conatus_rag: {path: packages/conatus_rag}
   conatus_schedule: {path: packages/conatus_schedule}
   conatus_search: {path: packages/conatus_search}
   conatus_skill: {path: packages/conatus_skill}

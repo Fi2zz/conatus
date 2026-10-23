@@ -47,6 +47,7 @@ class AgentLoop {
     this.planning = false,
     this.defaultSystemPrompt = '你是一个可靠的助手。需要外部信息或操作时调用工具；否则直接回答。',
     this.onStream,
+    this.evidence,
   });
 
   /// 模型接入。
@@ -94,6 +95,10 @@ class AgentLoop {
   /// 流式增量回调：模型每产出一个事件（思考 / 正文 / 终态）即透传给宿主，
   /// 供实时渲染；缺省 null 不透传（行为与纯非流式一致）。
   final void Function(LlmStreamEvent event)? onStream;
+
+  /// 单轮证据提供者；非空时每轮组请求前取回原文证据注入 system（缺省 null，
+  /// 不注入）。抛错静默忽略（[AgentCancelled] 除外，向上传播），空串不注入。
+  final EvidenceSource? evidence;
 
   /// Goal 续行驱动器；非空时，一轮收口后按其决策自动续行（缺省 null，
   /// 不续行）。由 `provideGoal` 在 `goal` 与 `agentLoop` 齐备时后置挂载。
@@ -224,8 +229,10 @@ class AgentLoop {
           cancel,
         );
 
+    final String evidenceText = await _readEvidence(userInput);
     final List<LlmMessage> messages = <LlmMessage>[
       LlmMessage('system', _systemText(userInput), cacheable: true),
+      if (evidenceText.isNotEmpty) LlmMessage('system', evidenceText),
       ...deriveAgentMessages(recentAgentEvents(session, _historyStart)),
     ];
     if (planning && session != null && readPlan(session) == null) {
@@ -426,6 +433,20 @@ class AgentLoop {
       cost: cost,
       tokens: _meter.tokens,
     );
+  }
+
+  /// 取回单轮证据：未接线或返回空串时给空串（不注入）；抛错静默忽略，
+  /// 但 [AgentCancelled] 向上传播（取消优先级高于证据降级）。
+  Future<String> _readEvidence(String input) async {
+    final EvidenceSource? source = evidence;
+    if (source == null) return '';
+    try {
+      return (await source(input)).trim();
+    } on AgentCancelled {
+      rethrow;
+    } catch (_) {
+      return '';
+    }
   }
 
   String _systemText(String userInput) => buildSystemText(

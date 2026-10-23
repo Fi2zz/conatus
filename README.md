@@ -7,9 +7,9 @@
 
 本仓库是一个 [pub workspace](https://dart.dev/tools/pub/workspaces) monorepo。
 **根包 `conatus` 是伞包（umbrella）**：自身不含实现，统一再导出 `packages/` 下的
-全部 26 个模块包，因此 `import 'package:conatus/conatus.dart';` 是完整公开 API；也可以
+全部 27 个模块包，因此 `import 'package:conatus/conatus.dart';` 是完整公开 API；也可以
 只依赖某个模块包（如 `conatus_core`、`conatus_agent`），以获得更小的依赖面。
-其中 10 个**实验性包**（API 可能随时变更）同样随伞包导出，生产环境依赖前
+其中 12 个**实验性包**（API 可能随时变更）同样随伞包导出，生产环境依赖前
 见下方「实验性包」小节与各包 README。
 
 `packages/conatus_code` 是独立的**子模块**（[Fi2zz/conatus_code](https://github.com/Fi2zz/conatus_code)）：
@@ -63,6 +63,7 @@ make clean      # 删除 packages/conatus_code/dist
 | [`conatus_compaction`](packages/conatus_compaction) | 压缩能力缝：滚动摘要契约 + `compaction/*` 日志事件 + 工具配对平衡切点 | `conatus_core`、`conatus_foundation` |
 | [`conatus_agent`](packages/conatus_agent) | Agent Loop 与产品化：plan / sub-agent / reflection / telemetry / eval / approval / skill / recovery / 成本口径 / 工具预算 / 档位选择 | `conatus_compaction`、`conatus_core`、`conatus_foundation`、`conatus_llm` |
 | [`conatus_tasks`](packages/conatus_tasks) | 任务中心（Task Center）：Agent Loop / sub-agent / shell / schedule 运行时任务追踪（任务树 + `task/changed` 持久化 + `list_tasks` / `cancel_task` 工具） | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_schedule` |
+| [`conatus_rag`](packages/conatus_rag) | 会话原文的 RAG 检索内核：切分 / 嵌入 / 索引 + 租户可见性过滤的稠密检索（Raw-RAG，非知识平台） | `conatus_core`、`conatus_foundation`、`http` |
 
 > 文本 TUI、文件系统工具与编码工具原为 `conatus_tui` / `conatus_fs_tools` /
 > `conatus_coding` 三个包，现已并入 `conatus_code` 子模块：其 `lib/tui.dart` /
@@ -143,14 +144,14 @@ conatus_ontology ──▶ conatus_agent、conatus_llm、conatus_foundation
 - 🗜️ **分层压缩与缓存度量**：`content-classifier`（内容分类器能力缝）、`layered-compaction`（按类别分层折叠：工具结果压成指针、用户偏好留原文）、`context-cache`（可缓存前缀指纹 + 命中遥测）
 - 🔭 **产品化**：`telemetry`（事件导出 + 埋点）、`evaluation`（用例评估 + 基线对比）、`approval`（高危工具审批）、`skill`（技能沉淀）、`skill-catalog`（技能加载：发现 `SKILL.md` 指令集 + 目录注入 + `skill` 工具）、`recovery`（会话快照恢复）
 - 🕹️ **实验性能力包**（API 可能破坏性变更）：`alerting`（订阅遥测按规则主动告警）、`browser_use` / `computer_use`（经 MCP 驱动浏览器与本地桌面）、`doc`（人机双写文档补丁引擎：只追加补丁序列 + supersede + fold + 游标）、`team`（多智能体协作：任务板 + 成员运行时）、`workflow`（把协作沉淀为声明式流程资产）、`observability`（span 语义 + 从 Session Log 派生 trace）、`ontology`（自进化本体层：Term / Mapping / Constraint / Evidence）
-- ✅ **完整测试覆盖**：26 个模块包 + 根包与集成测试，CI 全量执行
+- ✅ **完整测试覆盖**：27 个模块包 + 根包与集成测试，CI 全量执行
 
 ---
 
 ## 安装
 
-全部 24 个包均为 `publish_to: none`，**不经 pub.dev 分发**（也从未发布过）。
-以 git 源依赖伞包 `conatus`，一次性获得全部 24 个子包——伞包与各子包之间
+全部 27 个包均为 `publish_to: none`，**不经 pub.dev 分发**（也从未发布过）。
+以 git 源依赖伞包 `conatus`，一次性获得全部 27 个子包——伞包与各子包之间
 一律是 path 依赖，随仓库自洽解析，**不需要任何 `dependency_overrides`**：
 
 ```yaml
@@ -1156,11 +1157,43 @@ for (final step in turn.steps) print('${step.call.name}: ${step.result.content}'
 - 循环有界（`maxSteps`，默认 8）；所有依赖可注入以便测试；
 - 会话事件（`user/message` / `assistant/message` / `tool/result`）可用 `deriveAgentMessages` 还原为模型消息序列。
 
+### `rag` — 会话原文检索（`conatus_rag` 包）
+
+把 `SessionLog` 里的会话原文切块、嵌入、索引，按查询召回最相关的原文片段，作为
+「证据」注入模型。它是**检索内核（Raw-RAG），不是企业知识平台**：原文进、原文出，
+不做事实抽取 / 摘要 / 图谱。详见 [`packages/conatus_rag/README.md`](packages/conatus_rag/README.md)。
+
+```dart
+provideTools(app);
+provideSessionLog(app);
+final rag = provideRag(
+  app,
+  config: RagConfig(embedder: OpenAiEmbedder(
+      baseUrl: 'https://api.example.com/v1', model: 'text-embedding-3-small',
+      apiKey: '…', dimension: 1536)),
+  scopeOf: (sourceId) async => RagScope(tenantId: 'tenant-a'),
+  scope: RagScope(tenantId: 'tenant-a'),   // 工具检索作用域，为 null 则 fail closed
+);
+// 自动注册 rag_search 工具；或直接检索 / 生成证据块：
+final hits = await rag.retrieve(RetrievalRequest(
+    query: '上次讨论的部署方案', scope: RagScope(tenantId: 'tenant-a')));
+```
+
+- 可选接入 Agent：`provideAgentLoop(app, evidence: (q) => rag.evidenceBlock(q, scope))`；
+  未接线时 Agent 行为不变，`conatus_agent` 不依赖本包；
+- **scope 必须显式提供**：`rag_search` 的 `scope` 为 null、`ScopeResolver` 解析失败、
+  或标签无交集时均 **fail closed**（绝不靠 `session_id` 猜租户）；
+- 可见性：`RagScope{tenantId, principalId, visibilityTags}` + 自动 `tenant:<id>` 标签，
+  租户级块 vs 受限块按标签交集过滤；
+- **dense-only**：对精确标识符（错误码 / SKU / 法条号）召回弱，hybrid 是后续项；
+- 删除：`forgetSession` / `forgetScope`（记墓碑，`rebuild()` 保留），`clear()` 才是
+  全量擦除，也是损坏索引的恢复入口。
+
 ---
 
 ## 实验性能力包
 
-以下 10 个包是实验性包（随伞包一并导出，也可只 import 各自包入口，如
+以下 12 个包是实验性包（随伞包一并导出，也可只 import 各自包入口，如
 `import 'package:conatus_alerting/conatus_alerting.dart';`）。API 可能在没有
 major 版本号变更的情况下发生破坏性改动，请勿在生产环境依赖。
 `ontology`（自进化本体层）与 `doc`（人机双写文档补丁引擎）无独立小节，
@@ -1862,7 +1895,7 @@ for d in packages/*/; do (cd "$d" && dart test); done
 
 ## 发版
 
-分发方式为 **git 源**（全部 24 个包 `publish_to: none`，不发布 pub.dev），
+分发方式为 **git 源**（全部 27 个包 `publish_to: none`，不发布 pub.dev），
 版本演进由 git tag 承载：
 
 ```bash

@@ -6,6 +6,7 @@ import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 import 'agent_loop.dart';
+import 'agent_types.dart';
 import 'caching.dart';
 import 'cost.dart';
 import 'reflection.dart';
@@ -32,6 +33,7 @@ AgentLoop provideAgentLoop(
   int maxSteps = 8,
   bool planning = false,
   void Function(LlmStreamEvent event)? onStream,
+  EvidenceSource? evidence,
 }) {
   final LlmProvider llm = ctx.require<LlmProvider>('llm');
   final ToolRegistry tools = ctx.require<ToolRegistry>('tools');
@@ -56,6 +58,7 @@ AgentLoop provideAgentLoop(
         maxSteps: maxSteps,
         planning: planning,
         onStream: onStream,
+        evidence: evidence,
         onEvent: telemetry == null
             ? null
             : (String type, Map<String, Object?> data) =>

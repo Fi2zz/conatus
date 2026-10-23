@@ -111,7 +111,7 @@ class RagScope {
 }
 
 class RagChunk {
-  final String id;                  // <sourceKind>/<sourceId>/<first>-<last>，稳定幂等
+  final String id;                  // <sourceKind>/<sourceId>/<first>-<last>-<window>，稳定且唯一
   final String tenantId;
   final String sourceKind;          // v1 只有 'session'；为文档接入预留
   final String sourceId;            // v1 = sessionId
@@ -212,8 +212,8 @@ typedef ScopeResolver = Future<RagScope> Function(String sourceId);
 abstract interface class RagIndexBackend {
   Future<RagSnapshotMeta?> meta();
   Future<void> init(RagSnapshotMeta meta);              // 模型/版本变化时重建
-  Future<List<RagHit>> search(RetrievalRequest request, RagFilter filter,
-      {required int k});
+  Future<List<RagHit>> search(RagFilter filter,
+      {required List<double> queryVector, required int k});
   Future<void> upsert(List<RagChunk> chunks, List<List<double>> vectors);
   Future<int> delete(RagFilter filter);                 // 连带删除匹配来源的游标
   Future<int> count();                                  // 索引块总数（运维/统计）
@@ -289,7 +289,8 @@ RagService provideRag(Context ctx, {
 
 **D8 事件白名单。** 只索引 `user/message`、`assistant/message`、`tool/call`、
 `tool/result`；跳过 `llm/*`（与消息重复）、`plan/*`、`goal/*`、`compaction/*` 等派生
-事件。文本抽取按类型取 `text` / `content` / `args`，未知类型退回 JSON 字符串并截断。
+事件。文本抽取按类型取 `text` / `content` / `args`；未知类型返回空串（仅白名单，
+不回退 JSON 字符串）。
 
 **D9 能力包与 Agent 解耦。** agent 不 import rag，只暴露通用 `EvidenceSource`
 函数钩子；宿主决定接不接。rag 需要网络与外部端点，不能成为 agent 的硬依赖。
@@ -298,9 +299,11 @@ RagService provideRag(Context ctx, {
 **D10 租户/主体是一等公民。** `RagScope` 出现在每一个摄入与检索入口；`RagChunk`
 自带 `tenantId` 与 `visibilityTags`（摄入时自动补 `tenant:<tenantId>`）。默认策略
 `TenantTagPolicy` 做「同租户 + 标签交集」，检索前下推 `RagFilter`，检索后再
-`allows` 复核；标签为空一律不可见（fail closed）。**禁止事后过滤**（先取全量再筛会
-泄漏存在性与数量）。多租户共享进程时，绝不从 `sessionId` 猜测租户——必须由宿主
-`ScopeResolver` 明确给出；工具所在 Context 未配置 scope 时拒绝执行。
+`allows` 复核（标签比较一律剔除自动补的 `tenant:` 标签：只带租户标签的块是租户级
+公共证据，带额外标签的块要求与主体标签有交集；主体没有任何额外标签时**只能**看到
+租户级块）。**禁止事后过滤**（先取全量再筛会泄漏存在性与数量）。多租户共享进程时，
+绝不从 `sessionId` 猜测租户——必须由宿主 `ScopeResolver` 明确给出；工具所在
+Context 未配置 scope 时拒绝执行。
 
 **D11 后端端口面向企业规模。** 端口是 `search(request, filter)`，不是 `load()` 全量
 快照；内存与 JSON 后端只是参考实现（万级块）。后续 pgvector/Milvus 实现不改公开
