@@ -4,6 +4,7 @@
 library;
 
 import 'mcp_json.dart';
+import 'mcp_types.dart';
 
 /// 本客户端在 `initialize` 中声明的 MCP 协议版本。
 ///
@@ -122,7 +123,7 @@ class McpServerInfo {
     this.name,
     this.version,
     this.instructions,
-    this.capabilities = const <String, Object?>{},
+    this.capabilities = const McpCapabilities(),
   });
 
   /// 从 `initialize` 响应的 `result` 解析。
@@ -138,7 +139,8 @@ class McpServerInfo {
       name: mcpString(info['name']),
       version: mcpString(info['version']),
       instructions: mcpString(json['instructions']),
-      capabilities: mcpMap(json['capabilities']) ?? const <String, Object?>{},
+      capabilities: McpCapabilities.fromJson(
+          mcpMap(json['capabilities']) ?? const <String, Object?>{}),
     );
   }
 
@@ -154,8 +156,8 @@ class McpServerInfo {
   /// 给模型的用法说明（可选）。
   final String? instructions;
 
-  /// 能力声明（`tools` / `resources` / `prompts` ...）。
-  final Map<String, Object?> capabilities;
+  /// 能力声明（`tools` / `resources` / `prompts`）；缺失的按未声明处理。
+  final McpCapabilities capabilities;
 }
 
 McpError? _errorOf(Object? value) {

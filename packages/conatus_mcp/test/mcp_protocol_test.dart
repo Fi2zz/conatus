@@ -122,7 +122,25 @@ void main() {
       expect(info.name, 'fs');
       expect(info.version, '1.2.3');
       expect(info.instructions, '只能用相对路径');
-      expect(info.capabilities.containsKey('tools'), isTrue);
+      expect(info.capabilities.tools, isTrue);
+      expect(info.capabilities.resources, isFalse);
+    });
+
+    test('capabilities：resources / prompts 解析，未知与缺失为 false', () {
+      final McpServerInfo info = McpServerInfo.fromJson(<String, Object?>{
+        'protocolVersion': '2024-11-05',
+        'capabilities': <String, Object?>{
+          'tools': <String, Object?>{},
+          'resources': <String, Object?>{'subscribe': true},
+          'prompts': <String, Object?>{},
+          'logging': <String, Object?>{},
+        },
+      });
+
+      expect(info.capabilities.tools, isTrue);
+      expect(info.capabilities.resources, isTrue);
+      expect(info.capabilities.prompts, isTrue);
+      expect(info.capabilities.none, isFalse);
     });
 
     test('顶层 name / version 也接受；缺版本时用本客户端声明', () {
@@ -132,7 +150,7 @@ void main() {
       expect(info.name, 'echo');
       expect(info.version, '0.0.1');
       expect(info.protocolVersion, kMcpProtocolVersion);
-      expect(info.capabilities, isEmpty);
+      expect(info.capabilities.none, isTrue);
     });
   });
 }

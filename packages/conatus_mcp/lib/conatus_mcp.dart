@@ -3,10 +3,13 @@
 /// 提供三件事：
 ///
 /// * **线协议词汇** — [McpMessage] / [McpError] / [McpServerInfo] / [McpTool] /
-///   [McpToolResult] / [McpContent]，纯数据搬运，可单独用于协议调试；
+///   [McpToolResult] / [McpContent]，以及资源（[McpResource] /
+///   [McpResourceContents]）与提示词（[McpPrompt] / [McpPromptMessage]），
+///   纯数据搬运，可单独用于协议调试；
 /// * **传输与会话** — [McpTransport] 的三个实现（[StdioTransport]、
 ///   [HttpTransport]、[SseTransport]）与 [McpClient]（握手、
-///   `tools/list` 分页发现、`tools/call`、超时与断连收敛）；
+///   `tools/list` / `resources/list` / `prompts/list` 分页发现、
+///   `tools/call` / `resources/read` / `prompts/get`、超时与断连收敛）；
 /// * **工具接入** — [McpToolAdapter] / [mcpToolRisk] 把服务端工具接进
 ///   `ToolRegistry`，[provideMcp] / [McpRegistry] 负责多 server 装配与生命周期。
 ///
@@ -21,12 +24,16 @@ library;
 export 'src/mcp.dart'
     show McpContext, provideMcp, resolveCredentialPlaceholders;
 export 'src/mcp_client.dart' show McpClient;
+export 'src/mcp_prompt_types.dart'
+    show McpPrompt, McpPromptArgument, McpPromptMessage;
 export 'src/mcp_protocol.dart'
     show kMcpProtocolVersion, McpError, McpMessage, McpServerInfo;
 export 'src/mcp_protocol_content.dart'
     show describeMcpContent, McpContent, McpToolResult;
 export 'src/mcp_protocol_tool.dart' show McpTool;
 export 'src/mcp_registry.dart' show McpRegistry;
+export 'src/mcp_resource_types.dart'
+    show McpResource, McpResourceContents, McpResourceTemplate;
 export 'src/mcp_sse.dart' show parseSseEvents, SseEvent;
 export 'src/mcp_tool.dart'
     show
@@ -40,4 +47,4 @@ export 'src/mcp_transport_http.dart' show HttpTransport;
 export 'src/mcp_transport_sse.dart' show SseTransport;
 export 'src/mcp_transport_stdio.dart' show StdioTransport;
 export 'src/mcp_types.dart'
-    show McpException, McpServerConfig, McpTransportType;
+    show McpCapabilities, McpException, McpServerConfig, McpTransportType;

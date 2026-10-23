@@ -64,33 +64,88 @@ class TransportWatch<T extends McpTransport> {
   Future<void> stop() => _subscription.cancel();
 }
 
-/// 通用假 server 应答：`initialize` 握手 + 单页工具表 + 空成功结果。
+/// 通用假 server 应答：握手 + 单页工具 / 资源 / 提示词表 + 空成功结果。
 ///
 /// 返回 `null` 的方法不回应（请求留在待办里），供断连 / 超时用例使用。
 Map<String, Object?>? fakeServerReply(
   String method,
   Map<String, Object?>? params,
-) {
-  if (method == 'initialize') {
-    return <String, Object?>{
-      'protocolVersion': '2024-11-05',
-      'capabilities': <String, Object?>{},
-      'serverInfo': <String, Object?>{'name': 'fake', 'version': '9.9'},
-    };
-  }
-  if (method == 'tools/list') {
-    return <String, Object?>{
-      'tools': <Object?>[
-        <String, Object?>{
-          'name': 'echo',
-          'description': '回显',
-          'inputSchema': <String, Object?>{'type': 'object'},
-        },
-      ],
-    };
-  }
-  if (method == 'tools/call') return <String, Object?>{'content': <Object?>[]};
-  return null;
+) =>
+    _fakeReplies[method]?.call(params);
+
+final Map<String, Map<String, Object?> Function(Map<String, Object?>?)>
+    _fakeReplies =
+    <String, Map<String, Object?> Function(Map<String, Object?>?)>{
+  'initialize': (_) => <String, Object?>{
+        'protocolVersion': '2024-11-05',
+        'capabilities': <String, Object?>{},
+        'serverInfo': <String, Object?>{'name': 'fake', 'version': '9.9'},
+      },
+  'tools/list': (_) => <String, Object?>{
+        'tools': <Object?>[
+          <String, Object?>{
+            'name': 'echo',
+            'description': '回显',
+            'inputSchema': <String, Object?>{'type': 'object'},
+          },
+        ],
+      },
+  'tools/call': (_) => <String, Object?>{'content': <Object?>[]},
+  'resources/list': (_) => <String, Object?>{
+        'resources': <Object?>[
+          <String, Object?>{
+            'uri': 'file:///fake.txt',
+            'name': 'fake.txt',
+            'mimeType': 'text/plain',
+          },
+        ],
+      },
+  'resources/templates/list': (_) => <String, Object?>{
+        'resourceTemplates': <Object?>[
+          <String, Object?>{
+            'uriTemplate': 'file:///{path}',
+            'name': 'file',
+          },
+        ],
+      },
+  'resources/read': (Map<String, Object?>? params) => <String, Object?>{
+        'contents': <Object?>[
+          <String, Object?>{
+            'uri': params?['uri'] ?? 'file:///fake.txt',
+            'mimeType': 'text/plain',
+            'text': '你好',
+          },
+        ],
+      },
+  'prompts/list': (_) => <String, Object?>{
+        'prompts': <Object?>[
+          <String, Object?>{
+            'name': 'review',
+            'description': '审查代码',
+            'arguments': <Object?>[
+              <String, Object?>{'name': 'path', 'required': true},
+            ],
+          },
+        ],
+      },
+  'prompts/get': (Map<String, Object?>? params) => <String, Object?>{
+        'description': '审查代码',
+        'messages': <Object?>[
+          <String, Object?>{
+            'role': 'user',
+            'content': <String, Object?>{
+              'type': 'text',
+              'text': 'Review ${_argumentOf(params, 'path')}',
+            },
+          },
+        ],
+      },
+};
+
+String _argumentOf(Map<String, Object?>? params, String key) {
+  final Object? arguments = params?['arguments'];
+  if (arguments is! Map<String, Object?>) return '';
+  return '${arguments[key] ?? ''}';
 }
 
 /// 按 server 名造假传输，并记录装配时收到的配置。

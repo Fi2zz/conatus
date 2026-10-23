@@ -2,11 +2,14 @@
 library;
 
 import 'dart:async';
+import 'mcp_client_catalog.dart';
 import 'mcp_client_pending.dart';
-import 'mcp_json.dart';
+import 'mcp_client_result.dart';
+import 'mcp_prompt_types.dart';
 import 'mcp_protocol.dart';
 import 'mcp_protocol_content.dart';
 import 'mcp_protocol_tool.dart';
+import 'mcp_resource_types.dart';
 import 'mcp_transport.dart';
 import 'mcp_types.dart';
 
@@ -27,11 +30,9 @@ class McpClient {
   })  : _transport = transport,
         _pending = McpPendingCalls(serverName: serverName, timeout: timeout);
 
-  /// `tools/list` 的翻页上限；防服务端异常导致死循环。
-  static const int _maxPages = 20;
-
   final McpTransport _transport;
   final McpPendingCalls _pending;
+  late final McpClientCatalog _catalog = McpClientCatalog(_request);
   final StreamController<void> _disconnects =
       StreamController<void>.broadcast();
   StreamSubscription<McpMessage>? _subscription;
@@ -70,7 +71,7 @@ class McpClient {
       'capabilities': <String, Object?>{},
       'clientInfo': <String, Object?>{'name': 'conatus', 'version': '0.15.0'},
     });
-    final McpServerInfo info = McpServerInfo.fromJson(_resultOf(response));
+    final McpServerInfo info = McpServerInfo.fromJson(mcpResultOf(response));
     _serverInfo = info;
     _ready = true;
     await _transport.send(
@@ -81,20 +82,34 @@ class McpClient {
 
   /// 列出全部工具：按 `nextCursor` 翻页，直到服务端不再给游标。
   ///
-  /// 超过 [_maxPages] 页抛 [McpException]（`too-many-pages`）。
-  Future<List<McpTool>> listTools() async {
-    final List<McpTool> tools = <McpTool>[];
-    String? cursor;
-    for (int page = 0; page < _maxPages; page++) {
-      final Map<String, Object?> result =
-          _resultOf(await _request('tools/list', _cursorParams(cursor)));
-      tools.addAll(_toolsOf(result));
-      cursor = mcpString(result['nextCursor']);
-      if (cursor == null) return tools;
-    }
-    throw const McpException(
-        'too-many-pages', 'tools/list 翻页超过 $_maxPages 页仍未结束');
-  }
+  /// 超过 20 页抛 [McpException]（`too-many-pages`）；服务端不支持
+  /// `tools/list`（JSON-RPC `-32601`）时返回空表。
+  Future<List<McpTool>> listTools() => _catalog.tools();
+
+  /// 列出全部资源；服务端不支持 `resources/list` 时返回空表。
+  Future<List<McpResource>> listResources() => _catalog.resources();
+
+  /// 列出全部资源模板（RFC 6570 URI 模板，如 `file:///{path}`）。
+  Future<List<McpResourceTemplate>> listResourceTemplates() =>
+      _catalog.resourceTemplates();
+
+  /// 读取一个资源；返回内容块，文本走 `text`、二进制走 `blob`。
+  ///
+  /// 服务端不支持 `resources/read` 时返回空表。
+  Future<List<McpResourceContents>> readResource(String uri) =>
+      _catalog.readResource(uri);
+
+  /// 列出全部提示词模板；服务端不支持 `prompts/list` 时返回空表。
+  Future<List<McpPrompt>> listPrompts() => _catalog.prompts();
+
+  /// 取一个提示词并用 [arguments] 填充模板，返回可直接送进对话的消息。
+  ///
+  /// 非文本内容按 `[mimeType]` 渲染；服务端不支持 `prompts/get` 时返回空表。
+  Future<List<McpPromptMessage>> getPrompt(
+    String name, {
+    Map<String, String> arguments = const <String, String>{},
+  }) =>
+      _catalog.getPrompt(name, arguments: arguments);
 
   /// 调用一个工具；失败结果由 [McpToolResult.failed] 表达，不抛异常。
   Future<McpToolResult> callTool(
@@ -107,7 +122,7 @@ class McpClient {
       'name': name,
       'arguments': arguments,
     });
-    return McpToolResult.fromJson(_resultOf(response));
+    return McpToolResult.fromJson(mcpResultOf(response));
   }
 
   /// 关闭会话：取消订阅、断开传输、把剩余待办判为失败；幂等。
@@ -156,25 +171,3 @@ class McpClient {
     if (!_disconnects.isClosed) _disconnects.add(null);
   }
 }
-
-/// 取出响应的 `result` 对象：失败响应抛 `protocol-error`，形态不对抛
-/// `malformed-result`。
-Map<String, Object?> _resultOf(McpMessage response) {
-  final McpError? error = response.error;
-  if (error != null) {
-    throw McpException('protocol-error', '${error.code}: ${error.message}');
-  }
-  final Map<String, Object?>? result = mcpMap(response.result);
-  if (result == null) {
-    throw const McpException('malformed-result', '响应缺少 result 对象');
-  }
-  return result;
-}
-
-Map<String, Object?>? _cursorParams(String? cursor) =>
-    cursor == null ? null : <String, Object?>{'cursor': cursor};
-
-List<McpTool> _toolsOf(Map<String, Object?> result) => <McpTool>[
-      for (final Object? item in mcpList(result['tools']))
-        if (item is Map<String, Object?>) McpTool.fromJson(item),
-    ];
