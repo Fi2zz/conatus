@@ -1,7 +1,7 @@
 /// 时空可组合性（Spatiotemporal Composability）编程范式的 Dart 实现。
 ///
 /// 本包是 monorepo 的**伞包（umbrella）**：自身不含实现，单入口再导出全部
-/// 24 个模块包（14 个稳定包 + 10 个实验性包），
+/// 26 个模块包（14 个稳定包 + 12 个实验性包），
 /// 使 `import 'package:conatus/conatus.dart';` 即完整公开 API。
 /// 实验性包 API 可能破坏性变更，生产依赖前见各包 README。
 ///
@@ -34,6 +34,7 @@
 /// * [conatus_doc]         — 文档补丁引擎（人机双写故事层数据内核）
 /// * [conatus_harness]      — 可版本化 harness 制品（实验性）
 /// * [conatus_intent]       — 意图路由
+/// * [conatus_memory]       — 记忆写入策略能力（保留判定 + 轮次记录）
 /// * [conatus_observability]— 可观测性导出（trace/span 构建）
 /// * [conatus_ontology]     — 自进化本体层（EvoOntology 适配）
 /// * [conatus_team]         — 多智能体协作
@@ -56,6 +57,7 @@ export 'package:conatus_harness/conatus_harness.dart';
 export 'package:conatus_intent/conatus_intent.dart';
 export 'package:conatus_llm/conatus_llm.dart';
 export 'package:conatus_mcp/conatus_mcp.dart';
+export 'package:conatus_memory/conatus_memory.dart';
 export 'package:conatus_observability/conatus_observability.dart';
 // ontology 的 MemoryStore / Constraint 与 foundation / workflow 同名：
 // 伞包出口以稳定包与先存在的实验性包为准，ontology 侧隐藏（直接依赖

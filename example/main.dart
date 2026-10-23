@@ -107,6 +107,7 @@ Future<void> main() async {
   provideTimePrompt(app); // 日期锚点：模型不必调工具就知道今天
 
   provideMemory(app);
+  provideMemoryRecorder(app); // 记忆写入策略：一轮结束后按规则保留
   provideCompaction(app);
 
   // ── ask_user：把 stdin 每一行投递给最早等待中的提问 ────────────

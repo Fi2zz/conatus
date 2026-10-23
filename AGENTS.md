@@ -29,7 +29,7 @@ Agent 能力。
 ```
 ├── pubspec.yaml            # 伞包；workspace: packages/*（glob，SDK ^3.11.0 起支持）
 ├── lib/conatus.dart        # 伞包入口：只 re-export，不写实现
-├── packages/               # 25 个目录（见下方分类）
+├── packages/               # 27 个目录（见下方分类）
 ├── test/                   # 根包测试：integration/（跨包集成）+ integration_e2e_test.dart
 ├── example/                # 演示：main.dart（交互式 Agent，需 API Key）、
 │                           #        demo.dart（离线脚本化模型）、voice_plan_mode.dart
@@ -40,7 +40,7 @@ Agent 能力。
 └── docs/superpowers/       # superpowers 工作流的 plans/ 与 specs/
 ```
 
-### packages/ 分类（25 个目录）
+### packages/ 分类（27 个目录：14 稳定 + 12 实验性 + 1 子模块）
 
 | 类别 | 包 | 说明 |
 |------|----|------|
@@ -56,7 +56,7 @@ Agent 能力。
 | | `conatus_compaction` | 压缩能力缝：滚动摘要 + `compaction/*` 日志事件 |
 | | `conatus_agent` | Agent Loop 与产品化：plan / sub-agent / reflection / telemetry / eval / approval / skill / recovery |
 | | `conatus_tasks` | 任务中心：运行时任务追踪（任务树 + `list_tasks` / `cancel_task`） |
-| **实验性包 ×10**（进伞包导出，API 可能破坏性变更） | `conatus_alerting` / `conatus_browser_use` / `conatus_computer_use` / `conatus_context` / `conatus_doc` / `conatus_intent` / `conatus_observability` / `conatus_team` / `conatus_workflow` / `conatus_ontology` | 告警 / 浏览器操作 / 桌面操作 / 上下文压缩与 CCR 可逆取回 / 文档补丁引擎（人机双写故事层） / 意图路由 / 可观测性导出 / 多智能体协作 / 流程编排 / 自进化本体层（EvoOntology 适配） |
+| **实验性包 ×12**（进伞包导出，API 可能破坏性变更） | `conatus_alerting` / `conatus_browser_use` / `conatus_computer_use` / `conatus_context` / `conatus_doc` / `conatus_harness` / `conatus_intent` / `conatus_memory` / `conatus_observability` / `conatus_team` / `conatus_workflow` / `conatus_ontology` | 告警 / 浏览器操作 / 桌面操作 / 上下文压缩与 CCR 可逆取回 / 文档补丁引擎（人机双写故事层） / 可版本化 harness 制品 / 意图路由 / 记忆写入策略（保留判定 + 轮次记录） / 可观测性导出 / 多智能体协作 / 流程编排 / 自进化本体层（EvoOntology 适配） |
 | **子模块 ×1** | `conatus_code` | 独立仓库：终端编码智能体 nava（github.com/Fi2zz/conatus_code）；根包仅在 `dev_dependencies` 以 git 源引用，workspace 内解析到本地成员。不开发时无需拉取。原 `cowriter` 产品已并入 nava 并归档 |
 
 依赖方向自上而下无环：`conatus` → `conatus_agent` → `conatus_llm` / `conatus_foundation` /

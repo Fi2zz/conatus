@@ -3,7 +3,7 @@
 /// [provideTaskCenter] 提供 `'tasks'` 服务并注册 `list_tasks` /
 /// `cancel_task` 工具；[provideTaskTracking] 把运行时接入挂好：
 /// `spawn_agent` 中间件注册到工具管线，`agentLoop` 可用时经 `ctx.inject`
-/// 把轮次追踪器挂到 [AgentLoop.turnTracker]（依赖消失自动摘除，与
+/// 把轮次追踪器挂到 [AgentLoop.addTurnTracker]（依赖消失自动摘除，与
 /// `provideGoal` 挂载续行驱动器同款）。
 library;
 
@@ -62,10 +62,7 @@ TaskTracking provideTaskTracking(
   ctx.effect(() => target.use(tracking.spawnAgentMiddleware));
   ctx.inject(<String>['agentLoop'], (Context child) {
     final AgentLoop agent = child.require<AgentLoop>('agentLoop');
-    agent.turnTracker = tracking;
-    child.onDispose(() {
-      if (identical(agent.turnTracker, tracking)) agent.turnTracker = null;
-    });
+    child.effect(() => agent.addTurnTracker(tracking));
   });
   return tracking;
 }

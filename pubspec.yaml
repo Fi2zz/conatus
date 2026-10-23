@@ -37,6 +37,7 @@ dependencies:
   conatus_intent: {path: packages/conatus_intent}
   conatus_llm: {path: packages/conatus_llm}
   conatus_mcp: {path: packages/conatus_mcp}
+  conatus_memory: {path: packages/conatus_memory}
   conatus_observability: {path: packages/conatus_observability}
   conatus_ontology: {path: packages/conatus_ontology}
   conatus_schedule: {path: packages/conatus_schedule}

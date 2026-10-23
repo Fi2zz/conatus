@@ -4,6 +4,17 @@
 
 ## [未发布]
 
+**`conatus_memory`（新增实验性包）**：记忆写入策略能力——`MemoryWritePolicy`
+判定一轮内容是否值得保留（寒暄 / 短回复 / 近重复 / 截断），`MemoryRecorder`
+实现 `AgentTurnTracker` 挂载到 Agent Loop；存储机制仍由 `conatus_foundation`
+的 `MemoryStore` 承担。提供 `provideMemoryRecorder(ctx)` 装配入口。
+
+**`conatus_agent` 变更**：`AgentLoop.turnTracker`（单槽字段）改为
+`addTurnTracker`（多订阅，返回 `Disposer`，按注册顺序调用），单个钩子抛错
+隔离为 `agent.tracker.failed`，不影响其他钩子与当轮结果；删除收口时无条件
+写长记忆的行为——保留策略移到 `conatus_memory`，未装配该能力的宿主不再自动
+记忆（召回不受影响）。
+
 **`conatus_foundation` 增量**：`ToolResult` 新增宿主侧元数据 `meta`
 （成本、缓存键、产物指纹等，模型不可见）与 `withMeta` 合并辅助；缺省为空
 map，既有构造调用与模型可见内容投影不变。

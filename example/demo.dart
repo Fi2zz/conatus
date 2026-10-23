@@ -97,6 +97,7 @@ Future<void> main() async {
   ).section(PromptSection(name: 'persona', text: () => '你是"助手"，需要实时信息时调用工具。'));
   provideTimePrompt(app); // 日期锚点：模型不必调工具就知道今天
   provideMemory(app);
+  provideMemoryRecorder(app);
   provideCompaction(app);
   final AgentLoop agent = provideAgentLoop(app, session: session);
 

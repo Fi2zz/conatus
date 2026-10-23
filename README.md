@@ -7,7 +7,7 @@
 
 本仓库是一个 [pub workspace](https://dart.dev/tools/pub/workspaces) monorepo。
 **根包 `conatus` 是伞包（umbrella）**：自身不含实现，统一再导出 `packages/` 下的
-全部 24 个模块包，因此 `import 'package:conatus/conatus.dart';` 是完整公开 API；也可以
+全部 26 个模块包，因此 `import 'package:conatus/conatus.dart';` 是完整公开 API；也可以
 只依赖某个模块包（如 `conatus_core`、`conatus_agent`），以获得更小的依赖面。
 其中 10 个**实验性包**（API 可能随时变更）同样随伞包导出，生产环境依赖前
 见下方「实验性包」小节与各包 README。
@@ -79,6 +79,7 @@ make clean      # 删除 packages/conatus_code/dist
 | `conatus_doc` | 文档补丁引擎：人机双写故事层数据内核（只追加补丁序列 + supersede + fold + 游标 + 依赖图失锚） | `conatus_core`、`conatus_foundation` | [README](packages/conatus_doc/README.md) |
 | `conatus_harness` | 可版本化 harness 制品：manifest（档位 + 指令段 + 工具边界）JSON 往返、Context 子树装配与回滚、人可读 diff | `conatus_agent`、`conatus_core`、`conatus_foundation` | [README](packages/conatus_harness/README.md) |
 | `conatus_intent` | 意图路由：正则 + 向量本地匹配，命中走确定性动作，未命中落回 Agent Loop | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_intent/README.md) |
+| `conatus_memory` | 记忆写入策略：一轮结束后按规则决定是否保留（寒暄 / 短回复 / 近重复 / 截断），经 `AgentLoop.addTurnTracker` 挂载 | `conatus_agent`、`conatus_core`、`conatus_foundation` | [README](packages/conatus_memory/README.md) |
 | `conatus_observability` | 可观测性导出器：span 语义 + 从 Session Log 派生 trace | `conatus_agent`、`conatus_foundation` | [README](packages/conatus_observability/README.md) |
 | `conatus_team` | 多智能体协作：任务板（DAG + CAS）+ 成员运行时 + 协作模式 | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_team/README.md) |
 | `conatus_workflow` | 编排引擎：声明式流程（数据，非代码）+ 运行状态机 | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_tasks`、`conatus_team` | [README](packages/conatus_workflow/README.md) |
@@ -142,7 +143,7 @@ conatus_ontology ──▶ conatus_agent、conatus_llm、conatus_foundation
 - 🗜️ **分层压缩与缓存度量**：`content-classifier`（内容分类器能力缝）、`layered-compaction`（按类别分层折叠：工具结果压成指针、用户偏好留原文）、`context-cache`（可缓存前缀指纹 + 命中遥测）
 - 🔭 **产品化**：`telemetry`（事件导出 + 埋点）、`evaluation`（用例评估 + 基线对比）、`approval`（高危工具审批）、`skill`（技能沉淀）、`skill-catalog`（技能加载：发现 `SKILL.md` 指令集 + 目录注入 + `skill` 工具）、`recovery`（会话快照恢复）
 - 🕹️ **实验性能力包**（API 可能破坏性变更）：`alerting`（订阅遥测按规则主动告警）、`browser_use` / `computer_use`（经 MCP 驱动浏览器与本地桌面）、`doc`（人机双写文档补丁引擎：只追加补丁序列 + supersede + fold + 游标）、`team`（多智能体协作：任务板 + 成员运行时）、`workflow`（把协作沉淀为声明式流程资产）、`observability`（span 语义 + 从 Session Log 派生 trace）、`ontology`（自进化本体层：Term / Mapping / Constraint / Evidence）
-- ✅ **完整测试覆盖**：24 个模块包 + 根包与集成测试，CI 全量执行
+- ✅ **完整测试覆盖**：26 个模块包 + 根包与集成测试，CI 全量执行
 
 ---
 
@@ -1077,6 +1078,11 @@ final agent = provideAgentLoop(app); // 提供 'contextCache' 时自动包一层
 （正文包含，不区分大小写），均返回删除条数。这些都是**能力**，宿主/用户可直接调用；
 模型侧由 `remember` / `forget` 两个工具调用同一能力（`provideRememberTool` /
 `provideForgetTool` / `provideMemoryTools`）。
+
+自动写入不在这里：Agent Loop 不再替宿主决定「什么值得记」。需要保留策略时装配
+`conatus_memory` 的 `provideMemoryRecorder(app)`——它订阅轮次生命周期，用可替换的
+`MemoryWritePolicy` 判定（默认拒绝空回复 / 寒暄 / 短回复 / 近重复，超长截断），
+存储仍走本节的 `MemoryStore`。
 
 ```dart
 final memory = provideMemory(app); // 或 provideMemory(app, backend: JsonMemoryBackend(file: File('memory.json')))
