@@ -61,7 +61,7 @@ make clean      # 删除 packages/conatus_code/dist
 | [`conatus_schedule`](packages/conatus_schedule) | 会话本地持久提醒：`schedule_create` / `schedule_list` / `schedule_delete` + 到期交付 | `conatus_core`、`conatus_foundation`、`timezone` |
 | [`conatus_cron`](packages/conatus_cron) | 定时任务（dsh-cron 移植，不含 web）：at / every / daily / cron 规则 + `cron_list` / `cron_add` / `cron_update` / `cron_remove` / `cron_history` + 运行历史持久化 | `conatus_core`、`conatus_foundation` |
 | [`conatus_compaction`](packages/conatus_compaction) | 压缩能力缝：滚动摘要契约 + `compaction/*` 日志事件 + 工具配对平衡切点 | `conatus_core`、`conatus_foundation` |
-| [`conatus_agent`](packages/conatus_agent) | Agent Loop 与产品化：plan / sub-agent / reflection / telemetry / eval / approval / skill / recovery | `conatus_compaction`、`conatus_core`、`conatus_foundation`、`conatus_llm` |
+| [`conatus_agent`](packages/conatus_agent) | Agent Loop 与产品化：plan / sub-agent / reflection / telemetry / eval / approval / skill / recovery / 成本口径 / 工具预算 / 档位选择 | `conatus_compaction`、`conatus_core`、`conatus_foundation`、`conatus_llm` |
 | [`conatus_tasks`](packages/conatus_tasks) | 任务中心（Task Center）：Agent Loop / sub-agent / shell / schedule 运行时任务追踪（任务树 + `task/changed` 持久化 + `list_tasks` / `cancel_task` 工具） | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_schedule` |
 
 > 文本 TUI、文件系统工具与编码工具原为 `conatus_tui` / `conatus_fs_tools` /
@@ -633,6 +633,30 @@ final agent = provideAgentLoop(app); // 自动包 llm 并接 onEvent
 
 for (final e in ctx.telemetry.recent) print(e.name); // tool.called / llm.request / agent.round
 ```
+
+### `cost` / `tool-budget` / `execution-profile` — 成本感知（HarnessPro 移植）
+
+三者都**默认不生效**，按需装配：
+
+```dart
+// 1) 成本：注册费率后，telemetry 与 AgentTurn 都带 cost（费率未知时保持 null）
+ctx.provide('modelRate', const ModelRate(
+  inputPerMillion: 3, cachedPerMillion: 0.3, outputPerMillion: 15));
+
+// 2) 工具预算：经济 → 收敛 → 收口；提醒追加在工具结果尾部，不动 system 前缀
+provideToolBudget(app, policy: const ToolBudgetPolicy(
+  economyAfter: 14, strictAfter: 26, finalizeAfter: 44));
+
+// 3) 档位选择：一次 tool-free 小调用读 rubric；失败/超时落回默认
+ctx.provide('executionProfiles', kDefaultExecutionProfiles);
+final selector = provideProfileSelector(app); // 缺 llm 或档位表时为 null
+final profile = await selector?.select(task);
+```
+
+`TokenUsage` 同时认 `prompt_tokens`/`input_tokens` 两种键名；`CostAccumulator`
+提供 `cost`（可空）、`unknownRateCalls` 与 `costOfPass(successes)`。
+`ToolBudgetPolicy` 的 `finalizeAllowed` 默认只放行 `read_file`，收口拒绝返回
+`TOOL_BUDGET_EXHAUSTED` 且计入调用数。
 
 ### `evaluation` — 评估体系
 
@@ -1655,7 +1679,12 @@ root.provide('x', 1);
 | `Telemetry` / `InMemoryTelemetry` / `ConsoleTelemetry` | 端口 / 内存 / 控制台导出器 |
 | `TelemetryEvent(name, {data, time})` | 事件 |
 | `instrumentTools(ctx, {telemetry, tools})` | 工具埋点（`tool.called` / `tool.failed`） |
-| `TelemetryLlmProvider(inner, {telemetry})` | 模型埋点（`llm.request` / `llm.failed`） |
+| `TelemetryLlmProvider(inner, {telemetry, rate})` | 模型埋点（`llm.request` / `llm.failed`），注入 `rate` 时带 `cost` |
+| `TokenUsage` / `ModelRate` / `CostAccumulator` | 用量归一 / 单价 / 累计与 Cost-of-Pass |
+| `provideToolBudget(ctx, {policy, tools, telemetry})` / `ctx.get<ToolBudget>('toolBudget')` | 阶段化工具预算（`tool.budget` 事件） |
+| `ToolBudgetPolicy({economyAfter, strictAfter, finalizeAfter, strictEvery, finalizeAllowed})` | 阶段阈值与收口白名单 |
+| `provideProfileSelector(ctx, {selector, llm, profiles})` | 档位选择装配；缺依赖时返回 `null`（关闭） |
+| `ExecutionProfile` / `LlmProfileSelector` / `kDefaultExecutionProfiles` | 档位 / 选择器 / 默认档位表 |
 | `EvalCase({id, input, expectedTools, expectedOutput, maxRounds})` | 评估用例 |
 | `Evaluator({run, judge})` / `runAll(cases)` / `evaluate(case)` | 评估器 |
 | `EvalResult` / `EvalReport` / `EvalDiff` / `defaultEvalJudge` | 结果 / 报告 / 差异 / 默认判分 |

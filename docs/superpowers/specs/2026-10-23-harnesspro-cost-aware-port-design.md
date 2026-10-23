@@ -1,7 +1,7 @@
 # HarnessPro 移植：成本感知的 harness 自改进
 
 - 日期：2026-10-23
-- 状态：待评审
+- 状态：已实现（S1–S3）
 - 来源：[HarnessPro](https://github.com/pzs19/HarnessPro)（MIT）、
   *HarnessPro: Recursive Harness Self-Improvement with Pareto Optimization for
   Performance-Cost Trade-offs*（arXiv:2610.26770v2，CC BY 4.0）
@@ -230,3 +230,14 @@ HarnessPro 的 harness 是目录：`model_instructions.md` + `policy.json` + `ho
 3. 档位选择是否按对话轮次重选：目前倾向每会话一次；长会话跨任务时需要重新评估。
 4. 三档选型是否需要持久化候选（git 提交 / manifest 存档）后才能接 `Approval`，
    这取决于 4.5 的包是否落地。
+
+## 10. 落地记录
+
+- S1：`conatus_agent/lib/src/cost.dart` + `AgentTurn.cost` / `.tokens` +
+  `llm.request` 的 `cost` 字段；费率经服务键 `'modelRate'` 注入，缺省关闭。
+- S2：`tool_budget_policy.dart` + `tool_budget_hooks.dart`；中间件 tag `toolBudget`，
+  事件 `tool.budget`；未调 `provideToolBudget` 时零影响。
+- S3：`execution_profile.dart` + `execution_profile_rubric.dart`；缺 llm 或档位表时
+  `provideProfileSelector` 返回 `null`（等于关闭）。
+- 偏差：未调整 `tool_result_eviction` 默认阈值（见计划文档「范围修正」）；nava 侧
+  配置开关未接入，后续按需接。
