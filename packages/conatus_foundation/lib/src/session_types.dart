@@ -25,8 +25,9 @@ String normalizeSessionTitle(String title) {
   if (trimmed.isEmpty) {
     throw ArgumentError.value(title, 'title', '会话标题不能为空');
   }
-  if (trimmed.length <= kSessionTitleMaxLength) return trimmed;
-  return trimmed.substring(0, kSessionTitleMaxLength);
+  if (trimmed.runes.length <= kSessionTitleMaxLength) return trimmed;
+  // 按 rune 截断，避免把代理对（emoji 等）切成半个字符。
+  return String.fromCharCodes(trimmed.runes.take(kSessionTitleMaxLength));
 }
 
 /// 从事件日志中取出最后一个标题事件的标题；没有标题事件时返回 `null`。

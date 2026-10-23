@@ -45,6 +45,14 @@ void main() {
       expect(session.title, 'x' * 80);
     });
 
+    test('过长标题按 rune 截断，不切断代理对', () {
+      final Session session = Session(id: 's1');
+      session.rename('😀' * 100);
+
+      expect(session.title!.runes.length, 80);
+      expect(session.title, '😀' * 80);
+    });
+
     test('旧会话无标题事件时返回 null 且不写回', () {
       final Session session = Session(
         id: 'legacy',
