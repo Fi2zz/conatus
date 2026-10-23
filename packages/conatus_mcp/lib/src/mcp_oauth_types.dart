@@ -1,6 +1,9 @@
 /// MCP 远程传输的 OAuth 2.1 配置与授权服务器元数据。
 library;
 
+/// OAuth 发现 / 注册 HTTP 的缺省超时：服务端接受连接却不响应时不得卡死启动。
+const Duration kMcpOAuthTimeout = Duration(seconds: 10);
+
 /// 单台 MCP server 的 OAuth 配置（`config.toml` 的 `oauth` 键/表）。
 ///
 /// 远程 server 缺省启用（[enabled] 为 `true`）；`oauth = false` 显式关闭。
@@ -14,6 +17,7 @@ class McpOAuthConfig {
     this.clientSecret,
     this.scope,
     this.callbackPort,
+    this.timeout = kMcpOAuthTimeout,
   });
 
   /// 是否对该 server 走 OAuth 流程。
@@ -30,6 +34,9 @@ class McpOAuthConfig {
 
   /// 本地回调监听的固定端口；为空时由系统分配。
   final int? callbackPort;
+
+  /// 单次 OAuth HTTP 请求超时（程序化注入；缺省 [kMcpOAuthTimeout]）。
+  final Duration timeout;
 
   /// 是否已有可用的预注册客户端 ID。
   bool get clientConfigured => clientId != null && clientId!.isNotEmpty;

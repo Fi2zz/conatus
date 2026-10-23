@@ -1,10 +1,17 @@
 /// OAuth 授权服务器发现（RFC 9728 / RFC 8414）与动态客户端注册（RFC 7591）。
 ///
-/// 发现顺序：受保护资源元数据 → `authorization_servers[0]` → 授权服务器元数据
-/// （先 `oauth-authorization-server`，再回退 `openid-configuration`）；前者
-/// 失败时再读目标端点 401 响应 `WWW-Authenticate` 中的 `resource_metadata`。
+/// 发现顺序：受保护资源元数据 → `authorization_servers[0]` → 授权服务器元数据。
+/// RFC 8414 的 well-known 插在 issuer 路径**之前**（`/.well-known/
+/// oauth-authorization-server<issuer path>`），失败再回退 OIDC 的路径**后缀**
+/// 形式（`<issuer path>/.well-known/openid-configuration`）。前者失败时还会
+/// 读目标端点 401 响应 `WWW-Authenticate` 中的 `resource_metadata`。
+///
+/// 所有请求带显式超时；超时 / 传输失败 / 非法 URL 统一收敛成
+/// [McpException]（`oauth-discovery` / `oauth-registration`），不把底层
+/// `http.ClientException` 漏给调用方。
 library;
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -12,26 +19,33 @@ import 'package:http/http.dart' as http;
 import 'mcp_oauth_types.dart';
 import 'mcp_types.dart';
 
+part 'mcp_oauth_discovery_http.dart';
+part 'mcp_oauth_discovery_metadata.dart';
+
 const String _protectedResourcePath = '/.well-known/oauth-protected-resource';
-const List<String> _authServerPaths = <String>[
-  '/.well-known/oauth-authorization-server',
-  '/.well-known/openid-configuration',
-];
 
 /// 发现 [serverUrl] 对应的授权服务器元数据。
 ///
-/// 只读公开元数据，不接触令牌。全部失败抛 [McpException]（`oauth-discovery`）。
+/// [serverUrl] 必须是绝对的 http(s) URL；其余情况立即抛
+/// [McpException]（`oauth-discovery`）。只读公开元数据，不接触令牌。
 Future<McpAuthServerMetadata> discoverAuthServer(
   Uri serverUrl, {
   http.Client? client,
+  Duration timeout = kMcpOAuthTimeout,
 }) async {
+  if (!_httpUrl(serverUrl)) {
+    throw McpException(
+      'oauth-discovery',
+      'serverUrl 必须是绝对的 http(s) URL：$serverUrl',
+    );
+  }
   final http.Client httpClient = client ?? http.Client();
   try {
-    final Uri? issuer = await _findIssuer(serverUrl, httpClient);
+    final Uri? issuer = await _findIssuer(serverUrl, httpClient, timeout);
     if (issuer == null) {
       throw const McpException('oauth-discovery', '未找到 OAuth 授权服务器');
     }
-    return await _fetchMetadata(issuer, httpClient);
+    return await _fetchMetadata(issuer, httpClient, timeout);
   } finally {
     if (client == null) httpClient.close();
   }
@@ -39,18 +53,20 @@ Future<McpAuthServerMetadata> discoverAuthServer(
 
 /// 注册（或复用）OAuth 客户端，返回 `client_id`。
 ///
-/// [McpAuthServerMetadata.registrationEndpoint] 非空时走 DCR；否则必须由
-/// [config] 提供预注册的 `client_id`，都没有抛 `oauth-no-client`。
+/// 配置里已有 `client_id` 时直接复用，不再走 DCR；否则
+/// [McpAuthServerMetadata.registrationEndpoint] 非空时注册，为空抛
+/// `oauth-no-client`。DCR 的超时 / 传输失败 / 非 2xx / 缺 `client_id`
+/// 统一抛 `oauth-registration`。
 Future<String> registerOAuthClient(
   McpAuthServerMetadata meta,
   Uri redirectUri, {
   http.Client? client,
   McpOAuthConfig? config,
 }) async {
+  final String? configured = config?.clientId;
+  if (configured != null && configured.isNotEmpty) return configured;
   final Uri? endpoint = meta.registrationEndpoint;
   if (endpoint == null) {
-    final String? configured = config?.clientId;
-    if (configured != null && configured.isNotEmpty) return configured;
     throw const McpException(
       'oauth-no-client',
       '授权服务器不支持动态注册，且未配置 client_id',
@@ -58,28 +74,29 @@ Future<String> registerOAuthClient(
   }
   final http.Client httpClient = client ?? http.Client();
   try {
-    final http.Response response = await httpClient.post(
+    final http.Response response = await _post(
+      httpClient,
       endpoint,
-      headers: const <String, String>{
-        'content-type': 'application/json',
-        'accept': 'application/json',
-      },
-      body: jsonEncode(_registrationBody(redirectUri, config?.scope)),
+      _registrationBody(redirectUri, config?.scope),
+      config?.timeout ?? kMcpOAuthTimeout,
     );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw McpException(
+        'oauth-registration',
+        '注册端点返回 HTTP ${response.statusCode}',
+      );
+    }
     final Object? decoded = _tryDecode(response.body);
     final Object? clientId =
         decoded is Map<String, Object?> ? decoded['client_id'] : null;
     if (clientId is String && clientId.isNotEmpty) return clientId;
-    throw McpException(
-      'oauth-registration',
-      '注册端点未返回 client_id（HTTP ${response.statusCode}）',
-    );
+    throw const McpException('oauth-registration', '注册端点未返回 client_id');
   } finally {
     if (client == null) httpClient.close();
   }
 }
 
-/// DCR 请求体：公共客户端 + 授权码 + 刷新令牌。
+/// DCR 请求体：公共客户端 + 授权码 + 刷新令牌；**绝不携带 client_secret**。
 Map<String, Object?> _registrationBody(Uri redirectUri, String? scope) =>
     <String, Object?>{
       'client_name': 'conatus',
@@ -90,103 +107,61 @@ Map<String, Object?> _registrationBody(Uri redirectUri, String? scope) =>
       if (scope != null && scope.isNotEmpty) 'scope': scope,
     };
 
-Future<Uri?> _findIssuer(Uri serverUrl, http.Client client) async {
+Future<Uri?> _findIssuer(
+  Uri serverUrl,
+  http.Client client,
+  Duration timeout,
+) async {
   final Uri resourceUri =
       Uri.parse('${serverUrl.origin}$_protectedResourcePath');
-  final Uri? direct = _firstAuthServer(await _getJson(client, resourceUri));
+  final Uri? direct =
+      _firstAuthServer(await _getJson(client, resourceUri, timeout));
   if (direct != null) return direct;
-  return _probeUnauthorized(serverUrl, client);
+  return _probeUnauthorized(serverUrl, client, timeout);
 }
 
 /// 读目标端点的 401 `WWW-Authenticate`，跟进其中的 `resource_metadata`。
-Future<Uri?> _probeUnauthorized(Uri serverUrl, http.Client client) async {
-  final http.Response? response = await _get(client, serverUrl);
+///
+/// 只用 GET 探测（带 MCP 的 `Accept`）：Streamable HTTP 的 GET 仅供服务端
+/// 推送，个别实现只接受 POST，会回 405，此时无法从 401 头发现元数据。
+Future<Uri?> _probeUnauthorized(
+  Uri serverUrl,
+  http.Client client,
+  Duration timeout,
+) async {
+  final http.Response? response =
+      await _get(client, serverUrl, timeout, mcpAccept: true);
   if (response == null || response.statusCode != 401) return null;
   final Uri? metadataUri = _resourceMetadataUri(
-    response.headers['www-authenticate'],
+    _header(response.headers, 'www-authenticate'),
     serverUrl,
   );
   if (metadataUri == null) return null;
-  return _firstAuthServer(await _getJson(client, metadataUri));
+  return _firstAuthServer(await _getJson(client, metadataUri, timeout));
 }
 
 Future<McpAuthServerMetadata> _fetchMetadata(
   Uri issuer,
   http.Client client,
+  Duration timeout,
 ) async {
-  for (final String path in _authServerPaths) {
-    final Uri uri = Uri.parse(
-      '${issuer.origin}${_trimSlash(issuer.path)}$path',
-    );
+  for (final Uri uri in _metadataUris(issuer)) {
     final McpAuthServerMetadata? meta =
-        _parseMetadata(await _getJson(client, uri));
+        _parseMetadata(await _getJson(client, uri, timeout));
     if (meta != null) return meta;
   }
   throw const McpException('oauth-discovery', '授权服务器元数据不可用');
 }
 
-McpAuthServerMetadata? _parseMetadata(Map<String, Object?>? json) {
-  if (json == null) return null;
-  final Uri? authorization = _httpUri(json['authorization_endpoint']);
-  final Uri? token = _httpUri(json['token_endpoint']);
-  if (authorization == null || token == null) return null;
-  return McpAuthServerMetadata(
-    authorizationEndpoint: authorization,
-    tokenEndpoint: token,
-    registrationEndpoint: _httpUri(json['registration_endpoint']),
-    scopesSupported: _stringList(json['scopes_supported']),
-  );
-}
-
-Uri? _firstAuthServer(Map<String, Object?>? json) {
-  final Object? raw = json?['authorization_servers'];
-  if (raw is! List) return null;
-  for (final Object? entry in raw) {
-    final Uri? uri = _httpUri(entry);
-    if (uri != null) return uri;
-  }
-  return null;
-}
-
-Uri? _resourceMetadataUri(String? challenge, Uri base) {
-  if (challenge == null) return null;
-  final RegExpMatch? match =
-      RegExp(r'resource_metadata\s*=\s*"([^"]+)"').firstMatch(challenge);
-  if (match == null) return null;
-  return base.resolve(match.group(1)!);
-}
-
-List<String> _stringList(Object? raw) => raw is List
-    ? <String>[
-        for (final Object? e in raw)
-          if (e is String) e
-      ]
-    : const <String>[];
-
-Uri? _httpUri(Object? raw) {
-  final Uri? uri = raw is String && raw.isNotEmpty ? Uri.tryParse(raw) : null;
-  if (uri == null || uri.host.isEmpty) return null;
-  return uri.scheme == 'http' || uri.scheme == 'https' ? uri : null;
-}
-
-String _trimSlash(String path) =>
-    path.endsWith('/') ? path.substring(0, path.length - 1) : path;
-
-Future<Map<String, Object?>?> _getJson(http.Client client, Uri uri) async {
-  final http.Response? response = await _get(client, uri);
+Future<Map<String, Object?>?> _getJson(
+  http.Client client,
+  Uri uri,
+  Duration timeout,
+) async {
+  final http.Response? response = await _get(client, uri, timeout);
   if (response == null || response.statusCode != 200) return null;
   final Object? decoded = _tryDecode(response.body);
   return decoded is Map<String, Object?> ? decoded : null;
-}
-
-Future<http.Response?> _get(http.Client client, Uri uri) async {
-  try {
-    return await client.get(uri, headers: const <String, String>{
-      'accept': 'application/json',
-    });
-  } catch (_) {
-    return null;
-  }
 }
 
 Object? _tryDecode(String body) {
