@@ -28,7 +28,7 @@ NodeExecutor buildNodeExecutor({
 }) {
   return (WorkflowNode node, WorkflowRun run) {
     return switch (node) {
-      ToolNode() => _runTool(tools, node, run),
+      ToolNode() => _runTool(tools, node, run, engineOf),
       AgentNode() => _runAgent(team, node),
       SubWorkflowNode() => _runSubWorkflow(engineOf(), node, run, maxDepth),
     };
@@ -39,6 +39,7 @@ Future<Object?> _runTool(
   ToolRegistry tools,
   ToolNode node,
   WorkflowRun run,
+  WorkflowEngine Function() engineOf,
 ) async {
   if (tools.get(node.tool) == null) {
     throw WorkflowException('unknown-tool', '未注册的工具: ${node.tool}');
@@ -49,6 +50,9 @@ Future<Object?> _runTool(
       arguments: resolveArguments(node.arguments, run),
     ),
   );
+  if (result.meta.isNotEmpty) {
+    await engineOf().recordNodeMeta(run.id, node.id, result.meta);
+  }
   if (result.isError) {
     throw WorkflowException(
       'tool-failed',
