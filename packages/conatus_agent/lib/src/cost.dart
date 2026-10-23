@@ -16,12 +16,11 @@ class TokenUsage {
   /// 从 provider 返回的原始 `usage` 归一；空表或类型不符按 0 计。
   factory TokenUsage.parse(Map<String, dynamic> usage) => TokenUsage(
         prompt: _intOf(usage, 'prompt_tokens') + _intOf(usage, 'input_tokens'),
-        cachedPrompt: _intOf(_tableOf(usage, 'prompt_tokens_details'),
-                'cached_tokens') +
-            _intOf(
-                _tableOf(usage, 'input_tokens_details'), 'cached_tokens'),
-        completion: _intOf(usage, 'completion_tokens') +
-            _intOf(usage, 'output_tokens'),
+        cachedPrompt: _intOf(
+                _tableOf(usage, 'prompt_tokens_details'), 'cached_tokens') +
+            _intOf(_tableOf(usage, 'input_tokens_details'), 'cached_tokens'),
+        completion:
+            _intOf(usage, 'completion_tokens') + _intOf(usage, 'output_tokens'),
       );
 
   /// 零用量。

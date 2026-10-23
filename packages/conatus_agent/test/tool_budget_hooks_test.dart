@@ -22,7 +22,8 @@ void main() {
     addTearDown(ctx.dispose);
     _install(ctx);
 
-    final ToolResult result = await ctx.tools.call(const ToolCall(name: 'noop'));
+    final ToolResult result =
+        await ctx.tools.call(const ToolCall(name: 'noop'));
 
     expect(result.content, startsWith('BASE'));
     expect(result.content, contains('经济阶段'));
@@ -42,7 +43,8 @@ void main() {
     );
 
     await ctx.tools.call(const ToolCall(name: 'noop'));
-    final ToolResult denied = await ctx.tools.call(const ToolCall(name: 'noop'));
+    final ToolResult denied =
+        await ctx.tools.call(const ToolCall(name: 'noop'));
     final ToolResult allowed =
         await ctx.tools.call(const ToolCall(name: 'read_file'));
 
@@ -134,7 +136,8 @@ void main() {
     provideTools(ctx);
     ctx.tools.fn('noop', handler: _ok);
 
-    final ToolResult result = await ctx.tools.call(const ToolCall(name: 'noop'));
+    final ToolResult result =
+        await ctx.tools.call(const ToolCall(name: 'noop'));
 
     expect(result.content, 'BASE');
     expect(ctx.get<ToolBudget>('toolBudget'), isNull);

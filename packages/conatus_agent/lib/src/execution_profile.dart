@@ -33,14 +33,14 @@ const Map<String, ExecutionProfile> kDefaultExecutionProfiles =
   'compact': ExecutionProfile(
     name: 'compact',
     reasoningEffort: 'low',
-    budget: ToolBudgetPolicy(
-        economyAfter: 2, strictAfter: 4, finalizeAfter: 14),
+    budget:
+        ToolBudgetPolicy(economyAfter: 2, strictAfter: 4, finalizeAfter: 14),
   ),
   'lean': ExecutionProfile(
     name: 'lean',
     reasoningEffort: 'low',
-    budget: ToolBudgetPolicy(
-        economyAfter: 6, strictAfter: 10, finalizeAfter: 22),
+    budget:
+        ToolBudgetPolicy(economyAfter: 6, strictAfter: 10, finalizeAfter: 22),
   ),
   'standard': ExecutionProfile(
     name: 'standard',
@@ -50,14 +50,14 @@ const Map<String, ExecutionProfile> kDefaultExecutionProfiles =
   'deep': ExecutionProfile(
     name: 'deep',
     reasoningEffort: 'high',
-    budget: ToolBudgetPolicy(
-        economyAfter: 16, strictAfter: 30, finalizeAfter: 54),
+    budget:
+        ToolBudgetPolicy(economyAfter: 16, strictAfter: 30, finalizeAfter: 54),
   ),
   'research': ExecutionProfile(
     name: 'research',
     reasoningEffort: 'high',
-    budget: ToolBudgetPolicy(
-        economyAfter: 8, strictAfter: 20, finalizeAfter: 46),
+    budget:
+        ToolBudgetPolicy(economyAfter: 8, strictAfter: 20, finalizeAfter: 46),
   ),
 };
 
@@ -94,12 +94,12 @@ class LlmProfileSelector implements ProfileSelector {
     final String clipped =
         task.length > maxTaskChars ? task.substring(0, maxTaskChars) : task;
     try {
-      final LlmResult reply = await llm
-          .chat(<LlmMessage>[
-            const LlmMessage('system', kExecutionProfileRubric),
-            LlmMessage('user', clipped),
-          ], options: <String, dynamic>{'max_output_tokens': 256})
-          .timeout(timeout);
+      final LlmResult reply = await llm.chat(<LlmMessage>[
+        const LlmMessage('system', kExecutionProfileRubric),
+        LlmMessage('user', clipped),
+      ], options: <String, dynamic>{
+        'max_output_tokens': 256
+      }).timeout(timeout);
       return matchProfile(reply.content);
     } catch (_) {
       return null;
@@ -140,8 +140,8 @@ ProfileSelector? _buildSelector(
   Map<String, ExecutionProfile>? profiles,
 ) {
   final LlmProvider? provider = llm ?? ctx.get<LlmProvider>('llm');
-  final Map<String, ExecutionProfile>? table = profiles ??
-      ctx.get<Map<String, ExecutionProfile>>('executionProfiles');
+  final Map<String, ExecutionProfile>? table =
+      profiles ?? ctx.get<Map<String, ExecutionProfile>>('executionProfiles');
   if (provider == null || table == null || table.isEmpty) return null;
   return LlmProfileSelector(provider, table);
 }
