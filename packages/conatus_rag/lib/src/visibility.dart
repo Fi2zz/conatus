@@ -13,6 +13,8 @@ abstract interface class VisibilityPolicy {
 
 /// 基于租户与标签交集的可见性策略。
 class TenantTagPolicy implements VisibilityPolicy {
+  const TenantTagPolicy();
+
   @override
   RagFilter filterFor(RagScope scope) =>
       RagFilter(tenantId: scope.tenantId, anyTags: scope.visibilityTags);
