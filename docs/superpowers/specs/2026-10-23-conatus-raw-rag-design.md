@@ -30,9 +30,10 @@ conatus 已有两套「历史」通路，但都取不出证据：
 1. 从 `SessionLog` 增量摄取原始会话事件，切块 + 嵌入，建立平坦向量索引。
 2. 检索 = 单次查询嵌入 → 余弦取候选 → 可选重排 → top-k 原文块，**带时间戳与会话
    来源**，让 reader 自行恢复时序与状态。
-3. 两条消费路径：每轮自动注入少量证据 + `rag_search` 工具深检索。
+3. 两条消费路径：`rag_search` 工具（开箱即用）+ 宿主接线的每轮自动注入（可选）。
 4. 离线可测、无网络依赖（假 embedder / 假 HTTP）。
 5. 提供删除能力（按会话清除），不设条数上限。
+6. `conatus_agent` 零依赖：rag 是可选能力包，不进入 agent 的依赖闭包。
 
 非目标（明确不做，均有论文实测负收益或超出首版范围）：
 
@@ -56,8 +57,14 @@ Chunker ──► Embedder ──► VectorIndex ──► RagIndexBackend (JSON
                               ▼ top-15
         ┌─────────────────────┴─────────────────────┐
         ▼                                           ▼
-AgentLoop 自动注入（每次 top-5，非缓存消息）      rag_search 工具（模型主动深挖）
+RagService.evidenceBlock(query)                  rag_search 工具
+        │  宿主装配时接线（函数值）                  （模型主动深挖）
+        ▼
+AgentLoop 的 EvidenceSource 钩子（可选；未接线则完全不注入）
 ```
+
+关键：`conatus_rag` 与 `conatus_agent` **互不依赖**。agent 只认识一个函数类型
+`EvidenceSource`，由宿主在装配时把 `rag.evidenceBlock` 传进去。
 
 ## 4. 包结构与文件
 
@@ -174,19 +181,38 @@ abstract interface class RagIndexBackend {
 `tool/result`；跳过 `llm/*`（与消息重复）、`plan/*`、`goal/*`、`compaction/*` 等派生
 事件。文本抽取按类型取 `text` / `content` / `args`，未知类型退回 JSON 字符串并截断。
 
-## 7. Agent 集成（`conatus_agent` 改动点）
+**D9 能力包与 Agent 解耦。** agent 不 import rag，只暴露通用 `EvidenceSource`
+函数钩子；宿主决定接不接。理由：rag 需要网络与外部端点，不能成为 agent 的硬依赖；
+同一个钩子也能接别的证据源。代价是装配多一行，收益是依赖方向干净、可独立卸载。
 
-1. `conatus_agent` 新增对 `conatus_rag` 的 path 依赖（方向 `agent → rag → foundation`，
-   无环）。
-2. `AgentLoop` 增加 `RagService? rag`；注入条数统一取 `RagConfig.injectLimit`，不另设
-   独立开关。`provideAgentLoop` 用 `ctx.get<RagService>('rag')` 自动解析，未装配时行为
-   完全不变。
-3. `_runOnce` 在组装 messages 前 `await rag?.retrieve(userInput)`；结果经
-   `buildSystemText` 新增的可选参数传入，`_systemText` 接收已取回的 hits，避免计划阶段
-   二次检索。
-4. 注入位置：稳定 system 消息之后、历史事件消息之前，插入
-   `LlmMessage('system', evidence, cacheable: false)`；证据为空时不插入。
-5. 证据块格式（按时间升序，冲突去重）：
+## 7. 与 Agent 的关系（`agent` 零依赖，可选接线）
+
+**`conatus_agent` 不依赖 `conatus_rag`、不 import 它的任何类型。** agent 侧只新增一个
+与具体能力无关的通用钩子：
+
+```dart
+/// 单轮证据提供者：给定用户输入，返回可直接注入的原文证据块。
+/// 返回空字符串表示无证据；抛错时 agent 按「无证据」继续，不阻断对话。
+typedef EvidenceSource = Future<String> Function(String userInput);
+```
+
+1. `AgentLoop` 增加可选字段 `EvidenceSource? evidence`；`provideAgentLoop` 增加同名
+   可选参数并透传。**未接线时行为与现在逐字节一致**，agent 的 pubspec 也不变。
+2. `_runOnce` 在组装 messages 前 `await evidence(userInput)`，`try/catch` 后降级为空串；
+   任何证据源（rag、memory、别的检索）都走同一个钩子。
+3. 注入位置：稳定 system 消息之后、历史消息之前，插入
+   `LlmMessage('system', block, cacheable: false)`；空串不插入。
+4. 注入条数由 `RagConfig.injectLimit` 决定，agent 不设独立开关。
+5. 宿主装配是唯一耦合点（3 行，可选）：
+
+```dart
+final RagService rag = provideRag(app, config: RagConfig(embedder: ..., reranker: ...));
+provideAgentLoop(app, evidence: rag.evidenceBlock);   // 不接这行 = 完全没有 RAG
+```
+
+6. `rag_search` 工具由 `provideRag` 自己 `ctx.tools.register`，agent 无感知；不开自动
+   注入也能单独用工具。
+7. 证据块格式（由 rag 生成，agent 原样插入，按时间升序、id 去重）：
 
 ```
 [相关历史证据]
@@ -194,7 +220,7 @@ abstract interface class RagIndexBackend {
 - [2026-10-20 14:03] (session:abc seq:12-18) 用户：… 助手：…
 ```
 
-6. `rag_search` 工具参数：`query`（必填）、`limit`（默认 5，上限 15）、`session_id`、
+8. `rag_search` 工具参数：`query`（必填）、`limit`（默认 5，上限 15）、`session_id`、
    `from` / `to`（ISO 8601）。输出为证据块 + 命中统计，`value` 里给结构化 hits。
    风险级别：只读本地检索，`RiskLevel.low`。
 
@@ -202,7 +228,7 @@ abstract interface class RagIndexBackend {
 
 | 场景 | 行为 |
 |---|---|
-| 查询嵌入失败（网络/鉴权） | 不注入、不阻断对话；记 `rag_embed_failed` 日志；工具返回 `ToolResult.failure` |
+| 查询嵌入失败（网络/鉴权） | `evidenceBlock` 抛错由 agent 钩子捕获 → 不注入、不阻断对话；rag 记 `rag_embed_failed`；`rag_search` 返回 `ToolResult.failure` |
 | 入库嵌入失败 | 游标不推进，下次重试；对数记录失败块数 |
 | 重排失败 | 回退余弦顺序，`stats.rerankFallbacks++` |
 | 维度不一致（换模型后旧索引） | fail closed：抛 `RagException('rag_dimension_mismatch')`，提示 `clear()` 重建 |
@@ -232,9 +258,15 @@ abstract interface class RagIndexBackend {
 - `rag_service_test`：检索/注入块格式/降级/`forgetSession` 穿透。
 - `rag_tool_test`：schema、参数校验、limit 上限、失败返回。
 
+`conatus_agent` 侧（新增，确保零耦合）：
+
+- `evidence_source_test`：未接线时消息序列与现状一致；接线后证据块位于稳定 system
+  之后且 `cacheable == false`；钩子抛错时本轮照常完成且不注入。
+
 集成（`test/integration/rag_test.dart`）：
 
-- `TestHarness` + `PersistenceSessionLog` + 确定性假 embedder + `ScriptedLlm`：
+- `TestHarness` + `PersistenceSessionLog` + 确定性假 embedder + `ScriptedLlm`，宿主以
+  `provideAgentLoop(app, evidence: rag.evidenceBlock)` 接线：
   会话 1 陈述事实 → 会话 2 提问 → 断言注入块与 `rag_search` 都能取回该事实，
   且带正确 `session:seq` 与时间。
 
@@ -250,7 +282,8 @@ abstract interface class RagIndexBackend {
 - 根 `pubspec.yaml` 加 `conatus_rag: {path: packages/conatus_rag}`。
 - `lib/conatus.dart` 增加 export 与包注释；根 `README.md` 包表 + `### rag` 用法节。
 - `AGENTS.md`：包计数按实际清点更新（新增后为 15 个稳定包 + 11 个实验性包，另有
-  `conatus_code` 子模块）；依赖方向补 `agent → rag → foundation`（rag 不依赖 llm）。
+  `conatus_code` 子模块）；依赖关系写明 `rag` 是**可选能力包**，不进入 `agent` 的
+  依赖闭包，接线由宿主完成。
 - 新包 `README.md`（用法、配置、成本与隐私边界）+ `CHANGELOG.md`。
 - 验收：`dart analyze --fatal-infos` + `conatus_rag` / `conatus_agent` / 根测试全绿；
   `dart format .` 后提交推送。
@@ -275,8 +308,9 @@ abstract interface class RagIndexBackend {
 
 ## 14. 验收标准
 
-1. 未装配 `rag` 时，`agent` / 全仓测试与现有行为逐字节一致（无注入消息）。
-2. 装配后：会话 A 陈述的事实，在会话 B 的提问中出现在注入块，且带正确的
+1. `conatus_agent` 的 `pubspec.yaml` 不含 `conatus_rag`，源码不 import 该包；未接线
+   `evidence` 时，`agent` / 全仓测试与现有行为逐字节一致（无注入消息）。
+2. 接线后：会话 A 陈述的事实，在会话 B 的提问中出现在注入块，且带正确的
    `session:seq` 与时间戳；`rag_search` 能取回同样的块。
 3. 重复 `ingestAll()` 不产生重复块；`forgetSession(A)` 后该事实不再被检索到。
 4. 嵌入端点不可达时，对话照常完成（无注入），并在日志出现 `rag_embed_failed`；
