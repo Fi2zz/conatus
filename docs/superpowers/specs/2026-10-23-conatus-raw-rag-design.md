@@ -212,8 +212,8 @@ typedef ScopeResolver = Future<RagScope> Function(String sourceId);
 abstract interface class RagIndexBackend {
   Future<RagSnapshotMeta?> meta();
   Future<void> init(RagSnapshotMeta meta);              // 模型/版本变化时重建
-  Future<List<RagHit>> search(RetrievalRequest request, RagFilter filter,
-      {required int k});
+  Future<List<RagHit>> search(RagFilter filter,
+      {required List<double> queryVector, required int k});
   Future<void> upsert(List<RagChunk> chunks, List<List<double>> vectors);
   Future<int> delete(RagFilter filter);                 // 连带删除匹配来源的游标
   Future<int> count();                                  // 索引块总数（运维/统计）

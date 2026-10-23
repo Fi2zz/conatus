@@ -334,8 +334,8 @@ void main() {
     ]);
     final RagScope scope = RagScope(tenantId: 't1', visibilityTags: {'dept:fin'});
     final List<RagHit> hits = await backend.search(
-      RetrievalRequest(query: 'q', scope: scope), 
-      RagFilter(tenantId: 't1', anyTags: scope.visibilityTags), k: 10);
+      RagFilter(tenantId: 't1', anyTags: scope.visibilityTags),
+      queryVector: <double>[1, 0], k: 10);
     expect(hits.map((RagHit h) => h.chunk.id), <String>['a']);
   });
 
@@ -344,12 +344,12 @@ void main() {
       chunk('a', 't1', <String>{'tenant:t1'}, 0, time: DateTime.utc(2026, 1, 1)),
     ], <List<double>>[<double>[1, 0]]);
     expect(await backend.search(
-      RetrievalRequest(query: 'q', scope: RagScope(tenantId: 't1')),
-      RagFilter(tenantId: 't1', anyTags: const <String>{}), k: 10), isEmpty);
+      RagFilter(tenantId: 't1', anyTags: const <String>{}),
+      queryVector: <double>[1, 0], k: 10), isEmpty);
     expect(await backend.search(
-      RetrievalRequest(query: 'q', scope: RagScope(tenantId: 't1')),
       RagFilter(tenantId: 't1', anyTags: {'tenant:t1'},
-          from: DateTime.utc(2026, 6, 1)), k: 10), isEmpty);
+          from: DateTime.utc(2026, 6, 1)),
+      queryVector: <double>[1, 0], k: 10), isEmpty);
   });
 
   test('meta、游标、delete 连带清游标、count', () async {
@@ -630,7 +630,7 @@ Expected: FAIL。
 
 - [ ] **Step 3: 实现**
 
-- `DenseRetriever.retrieve`：`embedder.embed(query)` → `backend.search(request, filter, k: candidates)` → `reranker?.rerank(...)`（捕获任何异常，回退原序并计数由 service 处理）→ 按 `tokenBudget` 累加截断（至少保留 1 条）→ `take(topK)`。
+- `DenseRetriever.retrieve`：`embedder.embed(query)` → 把 `request.sourceIds/from/to` 合入 `filter` → `backend.search(effectiveFilter, queryVector: vector, k: candidates)` → `reranker?.rerank(...)`（捕获任何异常，回退原序并计数由 service 处理）→ 按 `tokenBudget` 累加截断（至少保留 1 条）→ `take(topK)`。
 - 预算用 `estimateTokens`；超预算的条目跳过，总预算不再增加。
 - `NoopReranker` 原样 `take(topK)`。
 - `HttpReranker`：`POST $baseUrl/rerank`，体 `{model, query, documents: [text...], top_n: topK}`；解析 `results[{index, relevance_score}]`；失败抛 `RagException('rag_rerank_failed')`。
