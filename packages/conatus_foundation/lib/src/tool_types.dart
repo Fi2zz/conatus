@@ -39,13 +39,22 @@ class ToolError {
 }
 
 /// 一次工具调用的结局：成功携带规范值 [value]，失败携带 [error]。
+///
+/// [meta] 是宿主侧元数据（成本、缓存键、产物指纹等）：它不进模型可见的
+/// 内容投影，由中间件、调度器或编排引擎自行解释；缺省为空。
 class ToolResult {
-  ToolResult.success(this.content, {this.value})
-      : isError = false,
+  ToolResult.success(
+    this.content, {
+    this.value,
+    this.meta = const <String, Object?>{},
+  })  : isError = false,
         error = null;
 
-  ToolResult.failure(this.content, {this.error})
-      : isError = true,
+  ToolResult.failure(
+    this.content, {
+    this.error,
+    this.meta = const <String, Object?>{},
+  })  : isError = true,
         value = null;
 
   /// 是否失败。
@@ -59,6 +68,18 @@ class ToolResult {
 
   /// 失败详情；成功时为 null。
   final ToolError? error;
+
+  /// 宿主侧元数据；模型不可见，缺省为空。
+  final Map<String, Object?> meta;
+
+  /// 复制一份并合并 [extra]（同名键以 [extra] 为准）；内容与状态不变。
+  ToolResult withMeta(Map<String, Object?> extra) {
+    final Map<String, Object?> merged = <String, Object?>{...meta, ...extra};
+    if (isError) {
+      return ToolResult.failure(content, error: error, meta: merged);
+    }
+    return ToolResult.success(content, value: value, meta: merged);
+  }
 
   @override
   String toString() =>

@@ -4,6 +4,10 @@
 
 ## [未发布]
 
+**`conatus_foundation` 增量**：`ToolResult` 新增宿主侧元数据 `meta`
+（成本、缓存键、产物指纹等，模型不可见）与 `withMeta` 合并辅助；缺省为空
+map，既有构造调用与模型可见内容投影不变。
+
 **`conatus_agent` 增量**：Agent Loop 轮内注入缝——新增 `SteeringSource`
 typedef 与 `AgentLoop.steering` 后置挂载字段（参照 `goalDriver` 惯例）；
 step 循环组下一次模型请求前取回排队的用户插话，逐条写 `user/message`
