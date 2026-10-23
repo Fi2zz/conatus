@@ -40,6 +40,7 @@ dependencies:
   conatus_memory: {path: packages/conatus_memory}
   conatus_observability: {path: packages/conatus_observability}
   conatus_ontology: {path: packages/conatus_ontology}
+  conatus_rag: {path: packages/conatus_rag}
   conatus_schedule: {path: packages/conatus_schedule}
   conatus_search: {path: packages/conatus_search}
   conatus_skill: {path: packages/conatus_skill}
