@@ -3,6 +3,7 @@ library;
 
 export 'src/chunker.dart';
 export 'src/cosine.dart';
+export 'src/embedder.dart';
 export 'src/json_backend.dart';
 export 'src/rag_backend.dart';
 export 'src/rag_types.dart';
