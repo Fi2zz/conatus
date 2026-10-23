@@ -424,7 +424,7 @@ provideAgentLoop(app, evidence: (String q) => rag.evidenceBlock(q, scope));
 
 - 根 `pubspec.yaml` 加 `conatus_rag: {path: packages/conatus_rag}`。
 - `lib/conatus.dart` 增加 export 与包注释；根 `README.md` 包表 + `### rag` 用法节。
-- `AGENTS.md`：包计数按实际清点更新（新增后为 15 个稳定包 + 11 个实验性包，另有
+- `AGENTS.md`：包计数按实际清点更新（新增后为 15 个稳定包 + 12 个实验性包，另有
   `conatus_code` 子模块）；依赖关系写明 `rag` 是**可选能力包**，不进入 `agent` 的
   依赖闭包，接线由宿主完成。
 - 新包 `README.md`（用法、scope/权限模型、配置、成本、隐私与隔离边界）+ `CHANGELOG.md`。

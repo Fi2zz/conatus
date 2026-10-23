@@ -1135,7 +1135,7 @@ git commit -m "test(rag): 离线 coverage@5 评测对照"
 - [ ] **Step 2: 写根 README / AGENTS**
 
 - 根 README 包表加 `conatus_rag`（稳定包）；新增 `### rag` 节（150 行以内，指向包 README 的细节）。
-- AGENTS.md：包计数改为 15 稳定 + 11 实验性（另有 `conatus_code` 子模块）；依赖方向补一行「rag 是可选能力包，不进入 agent 依赖闭包」。
+- AGENTS.md：包计数改为 15 稳定 + 12 实验性（另有 `conatus_code` 子模块，共 28 个目录）；依赖方向补一行「rag 是可选能力包，不进入 agent 依赖闭包」。
 
 - [ ] **Step 3: 全量校验**
 
