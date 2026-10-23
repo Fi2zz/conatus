@@ -1,8 +1,7 @@
 /// SKILL.md 的解析：frontmatter 字段、布尔文法与正文切分。
 library;
 
-import 'package:yaml/yaml.dart';
-
+import 'frontmatter.dart';
 import 'skill_types.dart';
 
 /// 已废弃的 camelCase 键：出现即整条丢弃（与 dsh 的语义一致）。
@@ -55,23 +54,16 @@ class SkillDocument {
 }
 
 /// 解析一份技能文本。
+///
+/// frontmatter 的切分与 YAML 解析交给 [parseFrontmatter]，这里只做技能字段
+/// 校验；失败时 [SkillDocument.error] 直接透传解析器的文案。
 SkillDocument parseSkillDocument(String text) {
-  final _Frontmatter? split = _splitFrontmatter(text);
-  if (split == null) {
-    return const SkillDocument(error: '缺少 frontmatter：首行必须是 ---');
-  }
-  final _YamlResult yaml = _loadYaml(split.source);
-  if (yaml.error != null) {
-    return SkillDocument(error: 'frontmatter 不是合法 YAML：${yaml.error}');
-  }
-  final Object? parsed = yaml.value;
-  if (parsed is! Map) {
-    return const SkillDocument(error: 'frontmatter 必须是键值映射');
-  }
-  return _documentFrom(Map<Object?, Object?>.from(parsed), split.body);
+  final FrontmatterDocument parsed = parseFrontmatter(text);
+  if (parsed.error != null) return SkillDocument(error: parsed.error);
+  return _documentFrom(parsed.fields, parsed.body);
 }
 
-SkillDocument _documentFrom(Map<Object?, Object?> fields, String body) {
+SkillDocument _documentFrom(Map<String, Object?> fields, String body) {
   final String? rejection = _rejectFields(fields);
   if (rejection != null) return SkillDocument(error: rejection);
   return SkillDocument(
@@ -87,21 +79,21 @@ SkillDocument _documentFrom(Map<Object?, Object?> fields, String body) {
   );
 }
 
-String? _rejectFields(Map<Object?, Object?> fields) {
+String? _rejectFields(Map<String, Object?> fields) {
   final String? legacy = _legacyKeyOf(fields);
   if (legacy != null) return 'frontmatter 用了旧键 "$legacy"，请改用规范键';
   final String? invalid = _invalidIdentity(fields);
   return invalid ?? _invalidBoolean(fields);
 }
 
-String? _legacyKeyOf(Map<Object?, Object?> fields) {
+String? _legacyKeyOf(Map<String, Object?> fields) {
   for (final String legacy in kSkillLegacyFrontmatterKeys) {
     if (fields.containsKey(legacy)) return legacy;
   }
   return null;
 }
 
-String? _invalidIdentity(Map<Object?, Object?> fields) {
+String? _invalidIdentity(Map<String, Object?> fields) {
   final Object? name = fields['name'];
   if (name is! String || !isSkillName(name)) {
     return 'name 缺失或不是 kebab-case 技能名';
@@ -113,7 +105,7 @@ String? _invalidIdentity(Map<Object?, Object?> fields) {
   return null;
 }
 
-String? _invalidBoolean(Map<Object?, Object?> fields) {
+String? _invalidBoolean(Map<String, Object?> fields) {
   try {
     _readBoolean(fields['disable-model-invocation'] ?? false);
     return null;
@@ -146,43 +138,4 @@ String? _optionalText(Object? value) {
 Map<String, Object?>? _optionalMetadata(Object? value) {
   if (value is! Map) return null;
   return Map<String, Object?>.from(value);
-}
-
-class _Frontmatter {
-  const _Frontmatter(this.source, this.body);
-
-  final String source;
-  final String body;
-}
-
-_Frontmatter? _splitFrontmatter(String text) {
-  final List<String> lines = text.split('\n');
-  if (lines.isEmpty || _stripCr(lines.first) != '---') return null;
-  for (int index = 1; index < lines.length; index++) {
-    if (_stripCr(lines[index]) == '---') {
-      return _Frontmatter(
-        lines.sublist(1, index).join('\n'),
-        lines.sublist(index + 1).join('\n').trim(),
-      );
-    }
-  }
-  return null;
-}
-
-String _stripCr(String line) =>
-    line.endsWith('\r') ? line.substring(0, line.length - 1) : line;
-
-class _YamlResult {
-  const _YamlResult(this.value, this.error);
-
-  final Object? value;
-  final String? error;
-}
-
-_YamlResult _loadYaml(String source) {
-  try {
-    return _YamlResult(loadYaml(source), null);
-  } on Object catch (error) {
-    return _YamlResult(null, '$error');
-  }
 }

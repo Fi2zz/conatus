@@ -33,6 +33,7 @@
 /// `SkillLibrary`（`'skill'`，把重复工具序列沉淀成新工具）刻意区分。
 library;
 
+export 'src/frontmatter.dart' show FrontmatterDocument, parseFrontmatter;
 export 'src/skill.dart'
     show
         SkillRegistryContext,
