@@ -59,6 +59,30 @@ void main() {
     }
   });
 
+  test('损坏文件上 clear 可恢复，其余方法仍 fail closed', () async {
+    final Directory dir = await _tempDir();
+    final File file = File('${dir.path}/bad.json')..writeAsStringSync('{oops');
+    final JsonRagBackend backend = JsonRagBackend(file: file);
+    await expectLater(backend.count(), throwsA(isA<RagException>()));
+    await expectLater(
+        backend.upsert(<RagChunk>[
+          chunk('a', 't1', {'tenant:t1'}, 0)
+        ], <List<double>>[
+          <double>[1, 0]
+        ]),
+        throwsA(isA<RagException>()));
+
+    await backend.clear();
+    expect(await backend.count(), 0);
+    await backend.upsert(<RagChunk>[
+      chunk('a', 't1', {'tenant:t1'}, 0)
+    ], <List<double>>[
+      <double>[1, 0]
+    ]);
+    expect(await backend.count(), 1);
+    expect(await JsonRagBackend(file: file).count(), 1);
+  });
+
   test('文件不存在时视为空索引，读取不创建文件', () async {
     final Directory dir = await _tempDir();
     final File file = File('${dir.path}/missing.json');

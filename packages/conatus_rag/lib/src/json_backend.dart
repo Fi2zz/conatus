@@ -8,7 +8,8 @@ import 'rag_snapshot.dart';
 import 'rag_stats.dart';
 
 /// JSON 文件索引后端：首次操作时整体读入内存视图，每次变更后整体原子落盘。
-/// 文件损坏时抛 `rag_backend_broken`，不会静默清空索引。
+/// 文件损坏时其余方法抛 `rag_backend_broken`，不会静默清空索引；
+/// [clear] 是恢复入口，不读取旧文件，可在损坏文件上直接覆盖为空索引。
 class JsonRagBackend implements RagIndexBackend {
   JsonRagBackend({required File file}) : _file = file;
 
@@ -62,8 +63,8 @@ class JsonRagBackend implements RagIndexBackend {
 
   @override
   Future<void> clear() async {
-    await _ensureLoaded();
     await _memory.clear();
+    _loaded = true;
     await _save();
   }
 
