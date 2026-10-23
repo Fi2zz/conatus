@@ -134,6 +134,17 @@ void logSuite(String name, SessionLog Function(Directory dir) build) {
 
       expect(await log.list(), <String>['s1', 's2']);
     });
+
+    test('remove 删除整个会话并返回 true；重复删除返回 false', () async {
+      await seed(log, 's1', 2);
+      await seed(log, 's2', 1);
+
+      expect(await log.remove('s1'), isTrue);
+      expect(await log.read('s1').toList(), isEmpty);
+      expect(await log.list(), <String>['s2']);
+      expect(await log.remove('s1'), isFalse);
+      expect(await log.remove('nope'), isFalse);
+    });
   });
 }
 
@@ -149,6 +160,23 @@ void main() {
     final Database hub = Database(defaultBackend: 'json');
     hub.register('json', JsonDatabaseBackend(dir: dir.path));
     return DatabaseSessionLog(hub);
+  });
+
+  test('PersistenceSessionLog.remove 删除 JSONL 文件（幂等）', () async {
+    final Directory dir =
+        Directory.systemTemp.createTempSync('conatus-session-log-remove-');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final PersistenceSessionLog log = PersistenceSessionLog(
+      JsonlSessionPersistence(dir: dir.path),
+    );
+    addTearDown(log.close);
+    await seed(log, 's1', 1);
+    final File file = File('${dir.path}${Platform.pathSeparator}s1.jsonl');
+    expect(file.existsSync(), isTrue);
+
+    expect(await log.remove('s1'), isTrue);
+    expect(file.existsSync(), isFalse);
+    expect(await log.remove('s1'), isFalse);
   });
 
   group('provideSessionLog', () {

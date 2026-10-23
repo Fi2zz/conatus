@@ -78,5 +78,14 @@ class PersistenceSessionLog implements SessionLog {
   Future<List<String>> list() => persistence.list();
 
   @override
+  Future<bool> remove(String sessionId) async {
+    final bool present = (await persistence.list()).contains(sessionId);
+    if (present) await persistence.remove(sessionId);
+    _seqs.remove(sessionId);
+    _forks.remove(sessionId);
+    return present;
+  }
+
+  @override
   Future<void> close() async {}
 }

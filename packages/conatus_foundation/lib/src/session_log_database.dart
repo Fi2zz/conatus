@@ -102,6 +102,18 @@ class DatabaseSessionLog implements SessionLog {
   }
 
   @override
+  Future<bool> remove(String sessionId) async {
+    final DatabaseUnit handle = await _resolveUnit();
+    final List<String> keys = _keysOf(handle, sessionId);
+    for (final String key in keys) {
+      await handle.delete(key);
+    }
+    _seqs.remove(sessionId);
+    _forks.remove(sessionId);
+    return keys.isNotEmpty;
+  }
+
+  @override
   Future<void> close() async {
     _handle?.close();
     _handle = null;

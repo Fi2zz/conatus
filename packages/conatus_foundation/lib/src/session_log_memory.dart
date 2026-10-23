@@ -70,6 +70,13 @@ class InMemorySessionLog implements SessionLog {
   Future<List<String>> list() async => _sessions.keys.toList()..sort();
 
   @override
+  Future<bool> remove(String sessionId) async {
+    final bool removed = _sessions.remove(sessionId) != null;
+    _forks.remove(sessionId);
+    return removed;
+  }
+
+  @override
   Future<void> close() async {
     _closed = true;
     _sessions.clear();

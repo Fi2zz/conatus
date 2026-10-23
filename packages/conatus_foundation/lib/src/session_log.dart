@@ -51,6 +51,9 @@ abstract class SessionLog {
   /// 列出所有已有会话 id（升序）。
   Future<List<String>> list();
 
+  /// 删除某会话的全部事件（幂等）。返回是否确实删掉了已有数据。
+  Future<bool> remove(String sessionId);
+
   /// 释放后端资源。幂等。
   Future<void> close();
 }
