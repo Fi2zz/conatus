@@ -101,7 +101,8 @@ void main() {
       <LlmMessage>[
         ..._messages,
         const LlmMessage('assistant', '', toolCalls: <LlmToolCall>[
-          LlmToolCall(id: 'toolu_0', name: 'read_file', arguments: '{"path":"b.txt"}'),
+          LlmToolCall(
+              id: 'toolu_0', name: 'read_file', arguments: '{"path":"b.txt"}'),
         ]),
         const LlmMessage('tool', '文件内容', toolCallId: 'toolu_0'),
       ],
@@ -129,16 +130,15 @@ void main() {
     expect((tools.single as Map<String, dynamic>)['input_schema'], isNotNull);
 
     final List<dynamic> messages = body['messages'] as List<dynamic>;
-    expect(messages.length, 3); // user / assistant(tool_use) / user(tool_result)
-    final Map<String, dynamic> assistant =
-        messages[1] as Map<String, dynamic>;
     expect(
-      (assistant['content'] as List<dynamic>)
-          .any((dynamic block) => (block as Map<String, dynamic>)['type'] == 'tool_use'),
+        messages.length, 3); // user / assistant(tool_use) / user(tool_result)
+    final Map<String, dynamic> assistant = messages[1] as Map<String, dynamic>;
+    expect(
+      (assistant['content'] as List<dynamic>).any((dynamic block) =>
+          (block as Map<String, dynamic>)['type'] == 'tool_use'),
       isTrue,
     );
-    final Map<String, dynamic> toolResult =
-        messages[2] as Map<String, dynamic>;
+    final Map<String, dynamic> toolResult = messages[2] as Map<String, dynamic>;
     final Map<String, dynamic> resultBlock =
         (toolResult['content'] as List<dynamic>).single as Map<String, dynamic>;
     expect(resultBlock['type'], 'tool_result');
@@ -261,8 +261,7 @@ void main() {
     final Map<String, dynamic> body =
         jsonDecode(second.requests.single.body) as Map<String, dynamic>;
     final List<dynamic> turns = body['messages'] as List<dynamic>;
-    final Map<String, dynamic> assistant =
-        turns[1] as Map<String, dynamic>;
+    final Map<String, dynamic> assistant = turns[1] as Map<String, dynamic>;
     final List<dynamic> blocks = assistant['content'] as List<dynamic>;
     expect((blocks.first as Map<String, dynamic>)['type'], 'thinking');
     expect((blocks.first as Map<String, dynamic>)['signature'], 'sig123');

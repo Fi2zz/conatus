@@ -83,10 +83,7 @@ class AnthropicProvider implements LlmProvider {
     return <String, String>{
       'Content-Type': 'application/json',
       'anthropic-version': '2023-06-01',
-      if (openCode)
-        'Authorization': 'Bearer $apiKey'
-      else
-        'x-api-key': apiKey,
+      if (openCode) 'Authorization': 'Bearer $apiKey' else 'x-api-key': apiKey,
       'User-Agent': userAgent,
       ...?headersProvider?.call(),
     };
@@ -188,8 +185,7 @@ class AnthropicProvider implements LlmProvider {
             ],
           );
         case 'assistant':
-          final List<Map<String, dynamic>> blocks =
-              <Map<String, dynamic>>[];
+          final List<Map<String, dynamic>> blocks = <Map<String, dynamic>>[];
           blocks.addAll(message.thinkingBlocks);
           if (message.content.isNotEmpty) {
             blocks.add(<String, dynamic>{
@@ -210,8 +206,7 @@ class AnthropicProvider implements LlmProvider {
             _append(turns, 'assistant', blocks);
           }
         default:
-          final List<Map<String, dynamic>> blocks =
-              <Map<String, dynamic>>[];
+          final List<Map<String, dynamic>> blocks = <Map<String, dynamic>>[];
           if (message.content.isNotEmpty) {
             blocks.add(<String, dynamic>{
               'type': 'text',
@@ -252,13 +247,12 @@ class AnthropicProvider implements LlmProvider {
       if (stream) 'stream': true,
       if (tools != null && tools.isNotEmpty)
         'tools': <Map<String, dynamic>>[
-          for (final (int index, Map<String, dynamic> tool)
-              in tools.indexed)
+          for (final (int index, Map<String, dynamic> tool) in tools.indexed)
             <String, dynamic>{
               'name': tool['name'],
               'description': tool['description'] ?? '',
-              'input_schema': tool['parameters'] ??
-                  <String, dynamic>{'type': 'object'},
+              'input_schema':
+                  tool['parameters'] ?? <String, dynamic>{'type': 'object'},
               if (index == tools.length - 1) 'cache_control': _ephemeral,
             },
         ],
