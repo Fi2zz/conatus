@@ -8,9 +8,12 @@ import 'sub_agent_permission.dart';
 
 /// 一次 `spawn_agent` 委托使用的 Agent 配置。
 ///
-/// [tools] 为 `null` 表示沿用宿主默认白名单；非空时与请求的白名单取交集。
-/// [disabledTools] 在交集之后统一减去。权限规则只用于**收紧**：宿主已有的
-/// deny / ask 不会被 profile 的 allow 放宽。
+/// [tools] 为 `null` 表示沿用宿主默认白名单（`spawn_agent` 未显式配置时为
+/// 只读探索集）；非空时与请求的白名单取交集。宿主侧（nava 的
+/// `AgentDefinition`）仅在作为主会话 Agent 时把 `null` 解释为「不额外限制」，
+/// 子 Agent 路径统一以本类的默认白名单语义为准。[disabledTools] 在交集之后
+/// 统一减去。权限规则只用于**收紧**：宿主已有的 deny / ask 不会被 profile 的
+/// allow 放宽。
 class SubAgentProfile {
   /// 创建档案。
   const SubAgentProfile({

@@ -16,6 +16,26 @@ import 'mcp_types.dart';
 
 part 'mcp_transport_auth.dart';
 
+/// 失败响应正文的错误摘要：截断并对 Bearer / token 字段脱敏。
+///
+/// 代理或服务端常把请求上下文回显在 4xx/5xx 正文里（含 Authorization）；
+/// 错误消息会进 TUI、日志与诊断，不能原样透传令牌，也不该刷屏。
+String _safeErrorBody(String body, {int limit = 300}) {
+  String text = body.replaceAll(
+    RegExp(r'bearer\s+[A-Za-z0-9._~+/-]+=*', caseSensitive: false),
+    'Bearer [redacted]',
+  );
+  text = text.replaceAll(
+    RegExp(
+      r'("?(?:access|refresh|id)_token"?\s*[:=]\s*"?)[^"\s,}]+',
+      caseSensitive: false,
+    ),
+    r'$1[redacted]',
+  );
+  text = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+  return text.length <= limit ? text : '${text.substring(0, limit)}…（已截断）';
+}
+
 /// JSON-RPC over HTTP 的公共基类。
 ///
 /// 一个传输实例是**一次性**的：`disconnect` 之后再 `connect` 不会重新建立
@@ -105,7 +125,7 @@ abstract class McpHttpTransport implements McpTransport {
     if (response.statusCode != 200) {
       throw McpException(
         'http-status',
-        'MCP POST ${response.statusCode}：${response.body}',
+        'MCP POST ${response.statusCode}：${_safeErrorBody(response.body)}',
       );
     }
     await deliverPayload(response.body, sse: _eventStream(response));

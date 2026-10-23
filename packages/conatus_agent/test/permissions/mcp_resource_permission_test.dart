@@ -88,6 +88,40 @@ void main() {
     expect(runs, <String>['github']);
   });
 
+  test('旧式 <server>_list_mcp_resources 规则仍生效', () async {
+    final Context ctx = Context.root();
+    addTearDown(ctx.dispose);
+    provideTools(ctx);
+    ctx.tools.fn(
+      'list_mcp_resources',
+      handler: (ToolContext call) async => ToolResult.success('ok'),
+    );
+    ctx.provide(
+      kPermissionScopeService,
+      PermissionScopeSlot(
+        const PermissionScope(
+          rules: <PermissionRule>[
+            PermissionRule(
+              action: 'sentry_list_mcp_resources',
+              resource: '*',
+              effect: PermissionEffect.deny,
+            ),
+          ],
+        ),
+      ),
+    );
+    instrumentPermission(ctx, interactive: false);
+
+    final ToolResult denied = await ctx.tools.call(
+      _call('list_mcp_resources', <String, Object?>{'server': 'sentry'}),
+    );
+    expect(denied.error?.code, 'PERMISSION_DENIED');
+    final ToolResult allowed = await ctx.tools.call(
+      _call('list_mcp_resources', <String, Object?>{'server': 'github'}),
+    );
+    expect(allowed.isError, isFalse);
+  });
+
   test('read 规则 sentry:* 只拦该 server 的资源', () async {
     final Context ctx = Context.root();
     addTearDown(ctx.dispose);

@@ -43,7 +43,7 @@ class PermissionEvaluator {
     final List<String> resources = permissionResourcesFor(call, pathArgs);
     const PermissionEngine engine = PermissionEngine();
     final PermissionScope expanded = _expandRules(scope, workdir);
-    final PermissionVerdict primary = _withResources(
+    PermissionVerdict primary = _withResources(
       engine.evaluate(
         action: action,
         resources: _spellings(action, resources, workdir),
@@ -52,6 +52,21 @@ class PermissionEvaluator {
       ),
       resources,
     );
+    // 旧式 MCP 资源规则（`<server>_list_mcp_resources`）仍生效：别名与现行
+    // 动作同时判定，取更严格者（allow < ask < deny）。
+    final String? alias = mcpResourceAliasAction(call);
+    if (alias != null) {
+      final PermissionVerdict legacy = _withResources(
+        engine.evaluate(
+          action: alias,
+          resources: <String>[...resources, '*'],
+          risk: tool.riskLevel,
+          scope: expanded,
+        ),
+        resources,
+      );
+      if (legacy.effect.index > primary.effect.index) primary = legacy;
+    }
     final List<String> targetPaths = permissionBoundaryPathsFor(call, pathArgs);
     final PermissionVerdict? external = _outsideVerdict(engine, (
       action: action,

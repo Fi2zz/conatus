@@ -128,6 +128,27 @@ void main() {
       expect(watch.failures, isEmpty);
     });
 
+    test('http-status 正文截断并脱敏令牌', () async {
+      final String body = 'upstream said: Bearer secret-token '
+          '{"access_token":"leak-me"} ${'x' * 400}';
+      final TransportWatch<HttpTransport> watch =
+          _boot(_FakeServer(body, status: 500));
+      await watch.transport.connect();
+
+      try {
+        await watch.transport.send(
+          McpMessage.request(id: 1, method: 'tools/list'),
+        );
+        fail('应当抛出 http-status');
+      } on McpException catch (error) {
+        expect(error.code, 'http-status');
+        expect(error.message, isNot(contains('secret-token')));
+        expect(error.message, isNot(contains('leak-me')));
+        expect(error.message, contains('redacted'));
+        expect(error.message.length, lessThan(380));
+      }
+    });
+
     test('disconnect：幂等，且不动调用方传入的 client', () async {
       // `MockClient.close()` 是空操作，没法直接断言「没被关闭」；这里改为钉住
       // 契约：断开可重复调用，且同一个 client 仍能被另一条传输复用

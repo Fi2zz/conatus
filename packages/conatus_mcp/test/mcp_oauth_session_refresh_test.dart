@@ -33,6 +33,26 @@ void main() {
     expect(fake.tokenRequests.last['refresh_token'], 'refresh-1');
   });
 
+  test('AS 不轮换 refresh_token 时保留旧令牌', () async {
+    final FakeAs fake = await startOAuthFake();
+    final McpOAuthSession session = oauthSession();
+    final McpOAuthToken token = await session.authorize(
+      serverUrl: oauthServerUrl(fake),
+      config: oauthConfig(),
+      openUrl: answerCallback,
+    );
+
+    // 只下发 access_token：非轮换授权服务器的典型响应。
+    fake.tokenResponse = <String, Object?>{
+      'access_token': 'access-2',
+      'expires_in': 3600,
+    };
+    final McpOAuthToken refreshed = await session.refresh(token);
+
+    expect(refreshed.accessToken, 'access-2');
+    expect(refreshed.refreshToken, 'refresh-1');
+  });
+
   test('新进程 refresh：显式传 meta 即可工作', () async {
     final FakeAs fake = await startOAuthFake();
     final McpOAuthSession first = oauthSession();

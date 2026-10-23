@@ -136,11 +136,16 @@ class McpOAuthSession {
     if (response.statusCode != 200) {
       throw McpException('needs_auth', '刷新令牌失败（HTTP ${response.statusCode}）');
     }
-    return _parseToken(response, refresh: true).withClient(
-      clientId: _resolved(token.clientId ?? _clientId, config?.clientId),
-      clientSecret:
-          _resolved(token.clientSecret ?? _clientSecret, config?.clientSecret),
-    );
+    final McpOAuthToken next = _parseToken(response, refresh: true);
+    return next
+        .withRefreshToken(next.refreshToken ?? token.refreshToken)
+        .withClient(
+          clientId: _resolved(token.clientId ?? _clientId, config?.clientId),
+          clientSecret: _resolved(
+            token.clientSecret ?? _clientSecret,
+            config?.clientSecret,
+          ),
+        );
   }
 
   Future<McpOAuthToken> _authorizeOn(

@@ -142,6 +142,19 @@ class McpOAuthToken {
         clientSecret: clientSecret ?? this.clientSecret,
       );
 
+  /// 替换刷新令牌；[value] 为 `null` 时保留原值。
+  ///
+  /// 刷新响应里不带 `refresh_token` 表示授权服务器**没有轮换**，旧令牌仍然
+  /// 有效；丢掉它会让下一次刷新（或新进程）直接 `needs_auth`。
+  McpOAuthToken withRefreshToken(String? value) => McpOAuthToken._(
+        accessToken: accessToken,
+        refreshToken: value ?? refreshToken,
+        expiresAt: expiresAt,
+        scope: scope,
+        clientId: clientId,
+        clientSecret: clientSecret,
+      );
+
   /// 距离过期不足 60 秒（或已过期）时为真；没有过期时间时为假。
   bool get needsRefresh {
     final DateTime? expires = expiresAt;

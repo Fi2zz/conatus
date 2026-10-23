@@ -129,6 +129,24 @@ List<String> permissionResourcesFor(
   return <String>[value];
 }
 
+/// MCP 资源工具的旧式动作别名：`<server>_list_mcp_resources` /
+/// `<server>_read_mcp_resource`。
+///
+/// 设计 §6.2 用 server 前缀做动作；现行实现按调用参数把资源细化到 server，
+/// 但存量规则（含文档示例）仍可能写成前缀形式。判定器会同时评估别名，
+/// 取更严格的结果；没有 `server` 参数时不产生别名。
+String? mcpResourceAliasAction(ToolCall call) {
+  final String? server = _stringArgument(call.arguments, 'server')?.trim();
+  if (server == null || server.isEmpty) return null;
+  switch (call.name) {
+    case 'list_mcp_resources':
+      return '${server}_list_mcp_resources';
+    case 'read_mcp_resource':
+      return '${server}_read_mcp_resource';
+  }
+  return null;
+}
+
 /// MCP 资源工具的按调用参数资源。
 ///
 /// 权限动作仍是工具名（`permissionActionFor` 只看得到名字）——这是对设计
