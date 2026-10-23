@@ -720,7 +720,7 @@ Expected: FAIL。
 
 - [ ] **Step 4: 实现**
 
-- `TenantTagPolicy.filterFor`：`RagFilter(tenantId: scope.tenantId, anyTags: scope.visibilityTags)`。`allows`：同租户 && `scope.visibilityTags.isNotEmpty` && 交集非空。
+- `TenantTagPolicy.filterFor`：`RagFilter(tenantId: scope.tenantId, anyTags: scope.visibilityTags)`。`allows`：同一租户；标签比较剔除 `tenant:` 前缀——块没有额外标签（租户级）→ 可见；否则要求与主体额外标签有交集；主体没有额外标签 → 只能看租户级块（fail closed）。
 - `RagIndexer` 暴露 `final RagIndexBackend backend;` 与 `final Embedder embedder;`（测试与 service 都要读）。
 - `RagIndexer._expectedMeta`：`RagSnapshotMeta(embeddingModel: embedder.model, dimension: embedder.dimension, indexVersion: indexVersion)`；首次 `backend.meta() == null` 时 `init`。
 - `ingestSession`：`scopeOf` 抛错 → `RagException('rag_scope_unresolved')`；读游标 `lastSeq`；`log.read(id)` 过滤 `event.seq > lastSeq`；无新事件返回 0；`chunkEvents(source, events, chunking)` → `embedBatch` → `upsert` → `saveCursor(RagCursor(tenantId, id, lastSeq))`；嵌入异常包成 `rag_embed_failed` 且**不写游标**。
