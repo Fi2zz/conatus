@@ -20,12 +20,18 @@ class TenantTagPolicy implements VisibilityPolicy {
   @override
   bool allows(RagChunk chunk, RagScope scope) {
     if (chunk.tenantId != scope.tenantId) return false;
-    
+
     final String tenantTag = 'tenant:${scope.tenantId}';
-    final Set<String> scopeAdditionalTags = scope.visibilityTags.difference(<String>{tenantTag});
-    final Set<String> chunkAdditionalTags = chunk.visibilityTags.difference(<String>{tenantTag});
-    
-    if (scopeAdditionalTags.isEmpty || chunkAdditionalTags.isEmpty) return true;
+    final Set<String> scopeAdditionalTags =
+        scope.visibilityTags.difference(<String>{tenantTag});
+    final Set<String> chunkAdditionalTags =
+        chunk.visibilityTags.difference(<String>{tenantTag});
+
+    // Tenant-wide chunk (no additional tags) → visible to any scope in tenant
+    if (chunkAdditionalTags.isEmpty) return true;
+    // Scope with no additional tags → only sees tenant-wide chunks
+    if (scopeAdditionalTags.isEmpty) return false;
+    // Otherwise → check intersection
     return chunkAdditionalTags.any(scopeAdditionalTags.contains);
   }
 }

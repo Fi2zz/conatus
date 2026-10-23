@@ -11,7 +11,9 @@ class _Embedder implements Embedder {
   Future<List<double>> embed(String text) async => <double>[1, 0];
   @override
   Future<List<List<double>>> embedBatch(List<String> texts) async =>
-      <List<double>>[for (final String _ in texts) <double>[1, 0]];
+      <List<double>>[
+        for (final String _ in texts) <double>[1, 0]
+      ];
   @override
   void dispose() {}
 }
@@ -35,28 +37,39 @@ void main() {
   group('RagIndexer', () {
     test('重复摄取幂等，新事件增量，失败不推进游标', () async {
       final InMemorySessionLog log = InMemorySessionLog();
-      await log.append(SessionEvent.create(sessionId: 's1', seq: 0,
-          type: kUserMessageEvent, data: <String, Object?>{'text': '事实 A'}));
+      await log.append(SessionEvent.create(
+          sessionId: 's1',
+          seq: 0,
+          type: kUserMessageEvent,
+          data: <String, Object?>{'text': '事实 A'}));
       final InMemoryRagBackend backend = InMemoryRagBackend();
       final RagIndexer indexer = RagIndexer(
-        backend: backend, embedder: _Embedder(), log: log,
-        scopeOf: (String id) async => RagScope(tenantId: 't1'),
-        chunking: const ChunkerConfig(
-            chunkChars: 700, overlapChars: 90, maxChunkChars: 1200),
-        indexVersion: 1);
+          backend: backend,
+          embedder: _Embedder(),
+          log: log,
+          scopeOf: (String id) async => RagScope(tenantId: 't1'),
+          chunking: const ChunkerConfig(
+              chunkChars: 700, overlapChars: 90, maxChunkChars: 1200),
+          indexVersion: 1);
       expect(await indexer.ingestSession('s1'), 1);
       expect(await indexer.ingestSession('s1'), 0);
-      await log.append(SessionEvent.create(sessionId: 's1', seq: 1,
-          type: kAssistantMessageEvent, data: <String, Object?>{'text': '收到'}));
+      await log.append(SessionEvent.create(
+          sessionId: 's1',
+          seq: 1,
+          type: kAssistantMessageEvent,
+          data: <String, Object?>{'text': '收到'}));
       expect(await indexer.ingestSession('s1'), greaterThan(0));
 
       final RagIndexer failing = RagIndexer(
-        backend: InMemoryRagBackend(), embedder: _ThrowingEmbedder(), log: log,
-        scopeOf: (String id) async => RagScope(tenantId: 't1'),
-        chunking: const ChunkerConfig(
-            chunkChars: 700, overlapChars: 90, maxChunkChars: 1200),
-        indexVersion: 1);
-      await expectLater(failing.ingestSession('s1'), throwsA(isA<RagException>()));
+          backend: InMemoryRagBackend(),
+          embedder: _ThrowingEmbedder(),
+          log: log,
+          scopeOf: (String id) async => RagScope(tenantId: 't1'),
+          chunking: const ChunkerConfig(
+              chunkChars: 700, overlapChars: 90, maxChunkChars: 1200),
+          indexVersion: 1);
+      await expectLater(
+          failing.ingestSession('s1'), throwsA(isA<RagException>()));
       expect(await failing.backend.cursorOf('s1'), isNull);
     });
   });

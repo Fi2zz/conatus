@@ -73,7 +73,8 @@ class RagIndexer {
     }
   }
 
-  Future<List<SessionEvent>> _readNewEvents(String sourceId, int lastSeq) async {
+  Future<List<SessionEvent>> _readNewEvents(
+      String sourceId, int lastSeq) async {
     final List<SessionEvent> result = <SessionEvent>[];
     await for (final SessionEvent event in _log.read(sourceId)) {
       if (event.seq > lastSeq) result.add(event);
@@ -92,9 +93,10 @@ class RagIndexer {
       scope: scope,
     );
     final List<RagChunk> chunks = chunkEvents(source, events, _chunking);
-    if (chunks.isEmpty) return 0;
-    final List<List<double>> vectors = await _embed(chunks);
-    await _backend.upsert(chunks, vectors);
+    if (chunks.isNotEmpty) {
+      final List<List<double>> vectors = await _embed(chunks);
+      await _backend.upsert(chunks, vectors);
+    }
     await _backend.saveCursor(RagCursor(
       tenantId: scope.tenantId,
       sourceId: sourceId,
@@ -105,8 +107,8 @@ class RagIndexer {
 
   Future<List<List<double>>> _embed(List<RagChunk> chunks) async {
     try {
-      return await _embedder.embedBatch(
-          <String>[for (final RagChunk c in chunks) c.text]);
+      return await _embedder
+          .embedBatch(<String>[for (final RagChunk c in chunks) c.text]);
     } on Object {
       throw const RagException('rag_embed_failed', '嵌入批次失败');
     }

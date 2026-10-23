@@ -56,7 +56,8 @@ class HttpReranker implements Reranker {
     if (candidates.isEmpty) return <RagHit>[];
     final http.Response response = await _post(query, candidates, topK);
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw RagException('rag_rerank_failed', '重排端点返回 HTTP ${response.statusCode}');
+      throw RagException(
+          'rag_rerank_failed', '重排端点返回 HTTP ${response.statusCode}');
     }
     return _parse(response.body, candidates);
   }
@@ -65,7 +66,8 @@ class HttpReranker implements Reranker {
     if (_ownsClient) _client.close();
   }
 
-  Future<http.Response> _post(String query, List<RagHit> candidates, int topK) async {
+  Future<http.Response> _post(
+      String query, List<RagHit> candidates, int topK) async {
     try {
       return await _client.post(
         Uri.parse('$_baseUrl/rerank'),
@@ -76,7 +78,9 @@ class HttpReranker implements Reranker {
         body: jsonEncode(<String, Object?>{
           'model': _model,
           'query': query,
-          'documents': <String>[for (final RagHit hit in candidates) hit.chunk.text],
+          'documents': <String>[
+            for (final RagHit hit in candidates) hit.chunk.text
+          ],
           'top_n': topK,
         }),
       );

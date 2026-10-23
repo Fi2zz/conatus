@@ -12,7 +12,9 @@ class _Embedder implements Embedder {
   Future<List<double>> embed(String text) async => <double>[1, 0];
   @override
   Future<List<List<double>>> embedBatch(List<String> texts) async =>
-      <List<double>>[for (final String _ in texts) <double>[1, 0]];
+      <List<double>>[
+        for (final String _ in texts) <double>[1, 0]
+      ];
   @override
   void dispose() {}
 }
@@ -41,7 +43,10 @@ void main() {
         chunk('a', 't1', <String>{'tenant:t1'}, 0, text: '一' * 100),
         chunk('b', 't1', <String>{'tenant:t1'}, 1, text: '二' * 100),
       ],
-      <List<double>>[<double>[1, 0], <double>[0.9, 0.1]],
+      <List<double>>[
+        <double>[1, 0],
+        <double>[0.9, 0.1]
+      ],
     );
     final RagScope scope = RagScope(tenantId: 't1');
     final RagFilter filter =
@@ -59,7 +64,8 @@ void main() {
     );
     final List<RagHit> hits = await retriever.retrieve(request, filter);
     expect(hits.first.chunk.id, 'b');
-    expect(hits.every((RagHit h) => estimateTokens(h.chunk.text) <= 60), isTrue);
+    expect(
+        hits.every((RagHit h) => estimateTokens(h.chunk.text) <= 60), isTrue);
 
     final DenseRetriever broken = DenseRetriever(
       embedder: _Embedder(),
