@@ -3,7 +3,7 @@ import 'package:conatus_foundation/conatus_foundation.dart';
 import 'rag_backend.dart';
 import 'rag_chunk.dart';
 import 'rag_config.dart';
-import 'rag_evidence.dart';
+import 'rag_evidence.dart' as evidence;
 import 'rag_index.dart';
 import 'rag_query.dart';
 import 'rag_scope.dart';
@@ -18,7 +18,7 @@ class RagService {
     required RagConfig config,
     required ScopeResolver scopeOf,
     SessionLog? log,
-    RetrievalObserver? audit,
+    evidence.RetrievalObserver? audit,
   })  : _backend = backend,
         _config = config,
         _scopeOf = scopeOf,
@@ -42,7 +42,7 @@ class RagService {
   final RagIndexBackend _backend;
   final RagConfig _config;
   final ScopeResolver _scopeOf;
-  final RetrievalObserver? _audit;
+  final evidence.RetrievalObserver? _audit;
   final VisibilityPolicy _visibility;
   final RagIndexer? _indexer;
 
@@ -83,12 +83,12 @@ class RagService {
     return visible;
   }
 
-  RetrievalAudit _buildAudit(
+  evidence.RetrievalAudit _buildAudit(
     RetrievalRequest request,
     List<RagHit> hits,
     int elapsedMs,
   ) =>
-      RetrievalAudit(
+      evidence.RetrievalAudit(
         tenantId: request.scope.tenantId,
         principalId: request.scope.principalId,
         queryLength: request.query.length,
@@ -136,6 +136,9 @@ class RagService {
     ));
     return formatHits(hits);
   }
+
+  /// 把命中列表格式化为证据块（与顶层 [evidence.formatHits] 同格式）。
+  String formatHits(List<RagHit> hits) => evidence.formatHits(hits);
 
   /// 删除单个会话的切片；租户不匹配抛异常。返回删除块数。
   Future<int> forgetSession(String sourceId, {required RagScope scope}) async {

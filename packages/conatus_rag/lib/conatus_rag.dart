@@ -11,6 +11,7 @@ export 'src/rag_evidence.dart';
 export 'src/rag_index.dart';
 export 'src/rag_provider.dart';
 export 'src/rag_service.dart';
+export 'src/rag_tool.dart';
 export 'src/rag_types.dart';
 export 'src/reranker.dart';
 export 'src/retriever.dart';
