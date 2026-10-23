@@ -490,6 +490,10 @@ await provideMcp(app, <McpServerConfig>[
   占位符原样保留，且**解析结果不得写进日志**（要排查就用键名）；
 - `McpToolAlias` 给已注册工具加短名；连接登记为可逆效应，`ctx.dispose()` 断开全部
   连接并注销工具，某个 server 崩溃只注销它自己的工具，其余 server 不受影响。
+- 远程 OAuth：`McpOAuthSession` 跑授权码 + PKCE + loopback 回调，`McpOAuthStore`
+  把令牌原子写入 `~/.nava/oauth/<server>.json`（0600，目录 0700）并随令牌持久化
+  DCR `client_id`；`HttpTransport(authHeaders: …, refreshAuth: …)` 每次请求带
+  Bearer，过期前 60 秒主动刷新，401 再刷新一次，失败收敛为 `needs_auth`。
 
 ### `search` — 搜索能力缝 + web 工具
 

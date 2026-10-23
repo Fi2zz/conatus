@@ -1,6 +1,7 @@
 /// `HttpTransport` 的 OAuth 鉴权：每次请求带 Bearer，401 刷新一次并重试。
 library;
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:conatus_mcp/conatus_mcp.dart';
@@ -150,5 +151,41 @@ void main() {
       transport.send(McpMessage.request(id: 1, method: 'tools/list')),
       _failure('http-status'),
     );
+  });
+
+  test('SSE 401：刷新一次并重试，GET 不带 Content-Type', () async {
+    final List<http.BaseRequest> requests = <http.BaseRequest>[];
+    final MockClient client = MockClient.streaming((
+      http.BaseRequest request,
+      http.ByteStream body,
+    ) async {
+      requests.add(request);
+      if (requests.length == 1) {
+        return http.StreamedResponse(
+          Stream<List<int>>.value(utf8.encode('unauthorized')),
+          401,
+        );
+      }
+      return http.StreamedResponse(
+        const Stream<List<int>>.empty(),
+        200,
+        headers: sseHeaders,
+      );
+    });
+    final SseTransport transport = SseTransport(
+      url: _endpoint,
+      client: client,
+      authHeaders: () async => <String, String>{'Authorization': 'Bearer old'},
+      refreshAuth: () async => <String, String>{'Authorization': 'Bearer new'},
+    );
+    addTearDown(transport.disconnect);
+
+    await transport.connect();
+
+    expect(requests, hasLength(2));
+    expect(requests.first.headers['Authorization'], 'Bearer old');
+    expect(requests.last.headers['Authorization'], 'Bearer new');
+    expect(requests.last.headers['Content-Type'], isNull);
+    expect(requests.last.headers['Accept'], 'text/event-stream');
   });
 }

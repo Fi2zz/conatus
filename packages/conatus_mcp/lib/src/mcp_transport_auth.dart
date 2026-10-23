@@ -30,8 +30,10 @@ class _AuthedHttp {
 
   Future<http.StreamedResponse> stream(Uri target) async {
     http.StreamedResponse response = await _stream(target);
-    final Map<String, String>? refreshed =
-        response.statusCode == 401 ? await _refresh() : null;
+    if (response.statusCode != 401) return response;
+    // 丢弃旧 401 正文再重试，避免连接/字节流悬着。
+    await response.stream.drain<void>();
+    final Map<String, String>? refreshed = await _refresh();
     if (refreshed != null) {
       response = await _stream(target, override: refreshed);
     }
@@ -55,6 +57,7 @@ class _AuthedHttp {
     Map<String, String>? override,
   }) async {
     final Map<String, String> headers = await _headers(override);
+    headers.remove('Content-Type');
     headers['Accept'] = 'text/event-stream';
     return client.send(http.Request('GET', target)..headers.addAll(headers));
   }

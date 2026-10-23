@@ -28,7 +28,7 @@ void main() {
         refreshToken: 'r',
         expiresAt: expires,
         scope: 'mcp',
-      ),
+      ).withClient(clientId: 'cid', clientSecret: 'csecret'),
     );
 
     final McpOAuthToken token = (await store.load('docs'))!;
@@ -37,7 +37,19 @@ void main() {
     expect(token.refreshToken, 'r');
     expect(token.expiresAt, expires);
     expect(token.scope, 'mcp');
+    expect(token.clientId, 'cid');
+    expect(token.clientSecret, 'csecret');
     expect(fileOf('docs').statSync().mode & 0x1FF, 0x180);
+    expect(dir.statSync().mode & 0x1FF, 0x1C0);
+  });
+
+  test('a/b 与 a_b 使用不同令牌文件，互不覆盖', () async {
+    await store.save('a/b', const McpOAuthToken(accessToken: 'slash'));
+    await store.save('a_b', const McpOAuthToken(accessToken: 'underscore'));
+
+    expect((await store.load('a/b'))!.accessToken, 'slash');
+    expect((await store.load('a_b'))!.accessToken, 'underscore');
+    expect(dir.listSync(), hasLength(2));
   });
 
   test('重复保存覆盖旧文件，且不留临时文件', () async {

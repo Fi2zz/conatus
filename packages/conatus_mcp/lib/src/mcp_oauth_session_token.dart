@@ -6,6 +6,7 @@ typedef _CodeGrant = ({
   Uri redirect,
   String code,
   String verifier,
+  Uri resource,
 });
 
 /// POST 令牌端点并把响应解析成 [McpOAuthToken]。
@@ -68,14 +69,17 @@ McpOAuthToken _parseToken(http.Response response, {required bool refresh}) {
 }
 
 /// 令牌端点给的是相对秒数；落盘前换算成绝对时刻。
+///
+/// `expires_in` 规范是数字，但个别 AS 返回字符串，两种都接受。
 Map<String, Object?> _withExpiry(Map<String, Object?> json) {
-  final Object? expiresIn = json['expires_in'];
-  if (expiresIn is! num) return json;
+  final Object? raw = json['expires_in'];
+  final int? seconds =
+      raw is num ? raw.toInt() : (raw is String ? int.tryParse(raw) : null);
+  if (seconds == null) return json;
   return <String, Object?>{
     ...json,
-    'expires_at': DateTime.now()
-        .add(Duration(seconds: expiresIn.toInt()))
-        .toIso8601String(),
+    'expires_at':
+        DateTime.now().add(Duration(seconds: seconds)).toIso8601String(),
   };
 }
 
@@ -87,6 +91,7 @@ Map<String, String> _codeBody(McpOAuthConfig config, _CodeGrant grant) {
     'redirect_uri': '${grant.redirect}',
     'client_id': grant.clientId,
     'code_verifier': grant.verifier,
+    'resource': '${grant.resource}',
     if (secret != null) 'client_secret': secret,
   };
 }
@@ -105,6 +110,7 @@ Uri _authorizeUrl(
         'code_challenge': request.pkce.challenge,
         'code_challenge_method': 'S256',
         'state': request.state,
+        'resource': '${request.resource}',
         if (scope != null && scope.isNotEmpty) 'scope': scope,
       },
     );

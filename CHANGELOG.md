@@ -4,6 +4,12 @@
 
 ## [未发布]
 
+**`conatus_mcp` OAuth 运行时**：`McpOAuthSession` 走授权码 + PKCE + loopback
+回调（登录等待与 HTTP 超时分离，授权地址始终输出到日志），`McpOAuthStore`
+原子写入 `~/.nava/oauth/<server>.json`（0600、目录 0700）并持久化 DCR
+`client_id`/`client_secret`；HTTP/SSE 传输支持 `authHeaders` 与 401 单次刷新
+重试，刷新失败收敛为 `needs_auth`，令牌与响应正文不进错误消息。
+
 **`conatus_agent` 增量**：Agent Loop 轮内注入缝——新增 `SteeringSource`
 typedef 与 `AgentLoop.steering` 后置挂载字段（参照 `goalDriver` 惯例）；
 step 循环组下一次模型请求前取回排队的用户插话，逐条写 `user/message`

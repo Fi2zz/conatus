@@ -25,6 +25,19 @@ McpOAuthConfig oauthConfig({
 
 Uri oauthServerUrl(FakeAs fake) => Uri.parse('${fake.origin}/mcp');
 
+/// 建一个默认静默日志、自动清理的会话。
+McpOAuthSession oauthSession({
+  Duration callbackTimeout = kMcpOAuthCallbackTimeout,
+  void Function(String)? log,
+}) {
+  final McpOAuthSession session = McpOAuthSession(
+    callbackTimeout: callbackTimeout,
+    log: log ?? (String _) {},
+  );
+  addTearDown(session.close);
+  return session;
+}
+
 /// 模拟浏览器回调：带上授权 URL 里的 state，向 loopback 发 code。
 void answerCallback(
   Uri authorizeUrl, {

@@ -8,15 +8,23 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
+
 import 'mcp_oauth_types.dart';
 
 /// 单台 server 的令牌文件路径（`<dir>/<安全化 server>.json`）。
+///
+/// 名字被替换过字符时附加名字哈希：`a/b` 与 `a_b` 不能映射到同一份令牌。
 String oauthTokenFileName(String server) {
   final String safe = server.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
-  if (safe.isEmpty) return '_';
-  if (safe == '.' || safe == '..') return '_';
+  if (safe.isEmpty) return '_${_shortHash(server)}';
+  if (safe == '.' || safe == '..') return '_${_shortHash(server)}';
+  if (safe != server) return '${safe}_${_shortHash(server)}';
   return safe;
 }
+
+String _shortHash(String value) =>
+    sha256.convert(utf8.encode(value)).toString().substring(0, 8);
 
 /// 按 server 名读写 OAuth 令牌。
 class McpOAuthStore {
@@ -53,13 +61,16 @@ class McpOAuthStore {
   /// 中途失败不会留下半写文件；临时文件在 [dir] 内，rename 才是原子的。
   Future<void> save(String server, McpOAuthToken token) async {
     await Directory(dir).create(recursive: true);
+    await _restrictDir(Directory(dir));
     final File target = File(pathOf(server));
     final File temp = File(
       '${target.path}.$pid.${DateTime.now().microsecondsSinceEpoch}.tmp',
     );
     try {
-      await temp.writeAsString(jsonEncode(token.toJson()), flush: true);
+      // 先建空文件并收权限，再写敏感内容：任何时刻都不能出现 0644 的令牌。
+      await temp.create();
       await _restrict(temp);
+      await temp.writeAsString(jsonEncode(token.toJson()), flush: true);
       if (Platform.isWindows && await target.exists()) await target.delete();
       await temp.rename(target.path);
     } finally {
@@ -85,5 +96,15 @@ Future<void> _restrict(File file) async {
       await Process.run('chmod', <String>['600', file.path]);
   if (result.exitCode != 0) {
     throw FileSystemException('无法设置令牌文件权限 0600', file.path);
+  }
+}
+
+/// 令牌目录收成 0700：即使目录父级可读，其他用户也进不来。
+Future<void> _restrictDir(Directory directory) async {
+  if (Platform.isWindows) return;
+  final ProcessResult result =
+      await Process.run('chmod', <String>['700', directory.path]);
+  if (result.exitCode != 0) {
+    throw FileSystemException('无法设置令牌目录权限 0700', directory.path);
   }
 }
