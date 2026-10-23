@@ -5,7 +5,9 @@ import 'dart:async';
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'mcp_client.dart';
+import 'mcp_prompt_types.dart';
 import 'mcp_protocol_tool.dart';
+import 'mcp_resource_types.dart';
 import 'mcp_tool.dart';
 
 /// 已装配的 MCP server 集合，服务键 `'mcp'`（见 `ctx.mcp`）。
@@ -53,6 +55,55 @@ class McpRegistry {
     }
   }
 
+  /// 列出资源；[server] 为空时汇总全部 server。
+  ///
+  /// 单台 server 请求失败按空表处理，不打断其他 server——MCP 是外部进程，
+  /// 一台坏掉不该让整张清单消失。
+  Future<List<McpResource>> listResources({String? server}) =>
+      _collect(server, (McpClient client) => client.listResources());
+
+  /// 读取一个资源；server 未知或读取失败返回空表。
+  Future<List<McpResourceContents>> readResource({
+    required String server,
+    required String uri,
+  }) =>
+      _collect(server, (McpClient client) => client.readResource(uri));
+
+  /// 列出提示词模板；[server] 为空时汇总全部 server。
+  Future<List<McpPrompt>> listPrompts({String? server}) =>
+      _collect(server, (McpClient client) => client.listPrompts());
+
+  /// 取一条提示词并填参；server 未知或取值失败返回空表。
+  Future<List<McpPromptMessage>> getPrompt({
+    required String server,
+    required String name,
+    Map<String, String> arguments = const <String, String>{},
+  }) =>
+      _collect(
+        server,
+        (McpClient client) => client.getPrompt(name, arguments: arguments),
+      );
+
+  Future<List<T>> _collect<T>(
+    String? server,
+    Future<List<T>> Function(McpClient client) fetch,
+  ) async {
+    final List<_McpBinding> targets = _targets(server);
+    final List<List<T>> pages = await Future.wait(<Future<List<T>>>[
+      for (final _McpBinding binding in targets)
+        _quiet(() => fetch(binding.client)),
+    ]);
+    return <T>[
+      for (final List<T> page in pages) ...page,
+    ];
+  }
+
+  List<_McpBinding> _targets(String? server) {
+    if (server == null) return _bindings.values.toList(growable: false);
+    final _McpBinding? binding = _bindings[server];
+    return binding == null ? <_McpBinding>[] : <_McpBinding>[binding];
+  }
+
   /// 给已注册的全名工具登记一个短别名（如 `read_file` → `fs__read_file`）。
   ///
   /// 目标工具不存在抛 [StateError]；短名与已有工具撞车由
@@ -84,6 +135,15 @@ class McpRegistry {
 
   void _drop(String serverName) {
     _bindings.remove(serverName);
+  }
+}
+
+/// 单台 server 的请求失败按空表收敛（不打断汇总）。
+Future<List<T>> _quiet<T>(Future<List<T>> Function() fetch) async {
+  try {
+    return await fetch();
+  } on Object {
+    return <T>[];
   }
 }
 

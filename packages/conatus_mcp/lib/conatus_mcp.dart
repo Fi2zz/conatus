@@ -32,6 +32,12 @@ export 'src/mcp_protocol_content.dart'
     show describeMcpContent, McpContent, McpToolResult;
 export 'src/mcp_protocol_tool.dart' show McpTool;
 export 'src/mcp_registry.dart' show McpRegistry;
+export 'src/mcp_resource_tools.dart'
+    show
+        kMcpResourceContentLimit,
+        ListMcpResourcesTool,
+        provideMcpResourceTools,
+        ReadMcpResourceTool;
 export 'src/mcp_resource_types.dart'
     show McpResource, McpResourceContents, McpResourceTemplate;
 export 'src/mcp_sse.dart' show parseSseEvents, SseEvent;
