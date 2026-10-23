@@ -56,6 +56,7 @@ class RagIndexer {
 
   /// 摄取单个会话；返回新增切片数。
   Future<int> ingestSession(String sourceId) async {
+    if (await _backend.sourceForgotten(sourceId)) return 0;
     final RagScope scope = await _resolveScope(sourceId);
     await _ensureMeta();
     final RagCursor? cursor = await _backend.cursorOf(sourceId);

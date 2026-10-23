@@ -81,6 +81,12 @@ class JsonRagBackend implements RagIndexBackend {
     await _save();
   }
 
+  @override
+  Future<bool> sourceForgotten(String sourceId) async {
+    await _ensureLoaded();
+    return _memory.sourceForgotten(sourceId);
+  }
+
   Future<void> _ensureLoaded() async {
     if (_loaded) {
       return;
@@ -112,6 +118,7 @@ class JsonRagBackend implements RagIndexBackend {
     for (final RagCursor cursor in snapshot.cursors) {
       await _memory.saveCursor(cursor);
     }
+    _memory.restoreForgotten(snapshot.forgotten);
   }
 
   Future<void> _save() async {

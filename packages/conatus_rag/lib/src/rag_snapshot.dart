@@ -63,7 +63,7 @@ class RagSnapshotMeta {
   }
 }
 
-/// 索引的完整快照：切片、与之一一对应的向量、以及各来源游标。
+/// 索引的完整快照：切片、与之一一对应的向量、各来源游标，以及被遗忘的来源 id。
 /// `meta` 为空表示尚未 init；此时切片仍可能已写入（与内存实现一致）。
 class RagSnapshot {
   const RagSnapshot({
@@ -71,12 +71,16 @@ class RagSnapshot {
     required this.chunks,
     required this.vectors,
     required this.cursors,
+    this.forgotten = const <String>{},
   });
 
   final RagSnapshotMeta? meta;
   final List<RagChunk> chunks;
   final List<List<double>> vectors;
   final List<RagCursor> cursors;
+
+  /// 被遗忘的来源 id：forget 后不再被懒补齐重新摄入。
+  final Set<String> forgotten;
 
   Map<String, Object?> toJson() => <String, Object?>{
         'meta': meta?.toJson(),
@@ -87,6 +91,7 @@ class RagSnapshot {
         'cursors': <Object?>[
           for (final RagCursor cursor in cursors) cursor.toJson(),
         ],
+        'forgotten': forgotten.toList(),
       };
 
   factory RagSnapshot.fromJson(Map<String, Object?> json) {
@@ -110,6 +115,11 @@ class RagSnapshot {
         for (final Object? item in json['cursors']! as List<Object?>)
           RagCursor.fromJson(item! as Map<String, Object?>),
       ],
+      forgotten: <String>{
+        for (final Object? item
+            in json['forgotten'] as List<Object?>? ?? const <Object?>[])
+          item! as String,
+      },
     );
   }
 }

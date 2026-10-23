@@ -23,17 +23,21 @@ abstract interface class RagIndexBackend {
   /// 向量维度必须与索引内已有向量一致，否则抛 [ArgumentError]。
   Future<void> upsert(List<RagChunk> chunks, List<List<double>> vectors);
 
-  /// 删除匹配切片，并清掉匹配来源的游标。
+  /// 删除匹配切片，清掉匹配来源的游标，并把其来源记入遗忘集合，
+  /// 避免懒补齐重新摄入（rebuild/clear 会清空遗忘集合）。
   Future<int> delete(RagFilter filter);
 
   Future<int> count();
 
-  /// 清空切片、向量、游标与 meta。
+  /// 清空切片、向量、游标、遗忘集合与 meta。
   Future<void> clear();
 
   Future<RagCursor?> cursorOf(String sourceId);
 
   Future<void> saveCursor(RagCursor cursor);
+
+  /// 该来源是否已被遗忘。
+  Future<bool> sourceForgotten(String sourceId);
 }
 
 /// 切片是否对过滤条件可见：租户相等、标签交集、来源白名单、时间窗相交。
@@ -88,6 +92,7 @@ class InMemoryRagBackend implements RagIndexBackend {
   final Map<String, RagChunk> _chunks = <String, RagChunk>{};
   final Map<String, List<double>> _vectors = <String, List<double>>{};
   final Map<String, RagCursor> _cursors = <String, RagCursor>{};
+  final Set<String> _forgotten = <String>{};
 
   @override
   Future<RagSnapshotMeta?> meta() async => _meta;
@@ -152,12 +157,22 @@ class InMemoryRagBackend implements RagIndexBackend {
       for (final RagChunk chunk in _chunks.values)
         if (chunkMatches(chunk, filter)) chunk.id,
     ];
+    final Set<String> forgotten = <String>{
+      for (final String id in ids) _chunks[id]!.sourceId,
+    };
     for (final String id in ids) {
       _chunks.remove(id);
       _vectors.remove(id);
     }
-    _cursors.removeWhere(
-        (String _, RagCursor cursor) => _cursorMatches(cursor, filter));
+    final List<String> cursorSources = <String>[
+      for (final MapEntry<String, RagCursor> entry in _cursors.entries)
+        if (_cursorMatches(entry.value, filter)) entry.key,
+    ];
+    for (final String sourceId in cursorSources) {
+      _cursors.remove(sourceId);
+    }
+    forgotten.addAll(cursorSources);
+    _forgotten.addAll(forgotten);
     return ids.length;
   }
 
@@ -169,6 +184,7 @@ class InMemoryRagBackend implements RagIndexBackend {
     _chunks.clear();
     _vectors.clear();
     _cursors.clear();
+    _forgotten.clear();
     _meta = null;
   }
 
@@ -179,6 +195,7 @@ class InMemoryRagBackend implements RagIndexBackend {
           for (final RagChunk chunk in _chunks.values) _vectors[chunk.id]!,
         ],
         cursors: _cursors.values.toList(),
+        forgotten: Set<String>.from(_forgotten),
       );
 
   @override
@@ -187,5 +204,14 @@ class InMemoryRagBackend implements RagIndexBackend {
   @override
   Future<void> saveCursor(RagCursor cursor) async {
     _cursors[cursor.sourceId] = cursor;
+  }
+
+  @override
+  Future<bool> sourceForgotten(String sourceId) async =>
+      _forgotten.contains(sourceId);
+
+  /// 反序列化时恢复遗忘集合（仅 [JsonRagBackend] 调用）。
+  void restoreForgotten(Iterable<String> forgotten) {
+    _forgotten.addAll(forgotten);
   }
 }
