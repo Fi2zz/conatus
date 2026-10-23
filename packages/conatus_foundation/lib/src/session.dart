@@ -65,6 +65,22 @@ class Session {
   /// 最后一条事件的 id；空日志为 `null`。
   String? get lastEventId => _events.isEmpty ? null : _events.last.id;
 
+  /// 会话标题：最后一个 [kSessionTitleEvent] 事件的 `title`；没有则为 `null`。
+  ///
+  /// 只读派生，旧会话（无标题事件）不会被写回。
+  String? get title => lastSessionTitle(_events);
+
+  /// 重命名会话：追加一条标题事件。
+  ///
+  /// 标题先修剪空白并截断到 80 字符；空标题抛 [ArgumentError]。日志保持
+  /// append-only，多次改名以最后一条为准。
+  void rename(String title) {
+    append(
+      kSessionTitleEvent,
+      data: <String, Object?>{'title': normalizeSessionTitle(title)},
+    );
+  }
+
   /// 追加一条事件并返回它。会话关闭后抛 [StateError]。
   SessionEvent append(
     String type, {

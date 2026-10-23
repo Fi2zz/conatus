@@ -73,6 +73,7 @@ export 'src/session_types.dart'
     show
         SessionEvent,
         kAssistantMessageEvent,
+        kSessionTitleEvent,
         kToolResultEvent,
         kUserMessageEvent,
         nextSessionEventId;

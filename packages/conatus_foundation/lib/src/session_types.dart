@@ -12,6 +12,37 @@ const String kAssistantMessageEvent = 'assistant/message';
 /// 工具结果事件类型。
 const String kToolResultEvent = 'tool/result';
 
+/// 会话标题事件类型（append-only，取最后一条为准）。
+const String kSessionTitleEvent = 'session/title';
+
+/// 标题最大字符数。
+const int kSessionTitleMaxLength = 80;
+
+/// 规范化标题：修剪空白并截断到 [kSessionTitleMaxLength]；空标题抛
+/// [ArgumentError]。
+String normalizeSessionTitle(String title) {
+  final String trimmed = title.trim();
+  if (trimmed.isEmpty) {
+    throw ArgumentError.value(title, 'title', '会话标题不能为空');
+  }
+  if (trimmed.length <= kSessionTitleMaxLength) return trimmed;
+  return trimmed.substring(0, kSessionTitleMaxLength);
+}
+
+/// 从事件日志中取出最后一个标题事件的标题；没有标题事件时返回 `null`。
+String? lastSessionTitle(List<SessionEvent> events) {
+  for (int i = events.length - 1; i >= 0; i--) {
+    final SessionEvent event = events[i];
+    if (event.type != kSessionTitleEvent) continue;
+    final Object? data = event.data;
+    if (data is Map) {
+      final Object? title = data['title'];
+      if (title is String) return title;
+    }
+  }
+  return null;
+}
+
 /// 生成事件唯一 id（进程内单调，跨会话唯一）。
 String nextSessionEventId() =>
     'evt-${DateTime.now().microsecondsSinceEpoch}-${_eventSeq++}';
