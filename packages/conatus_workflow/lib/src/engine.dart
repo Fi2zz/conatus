@@ -53,6 +53,16 @@ abstract class WorkflowEngine {
   /// 重跑指定节点。级联重置下游节点。
   Future<WorkflowRun> rerun(String runId, String nodeId);
 
+  /// 记录节点运行期元数据（如成本、缓存键、产物指纹）。
+  ///
+  /// 缺省实现为空操作，自定义引擎可覆盖以持久化；不改变节点状态，
+  /// 对未知运行 / 节点静默忽略。
+  Future<void> recordNodeMeta(
+    String runId,
+    String nodeId,
+    Map<String, Object?> meta,
+  ) async {}
+
   /// 取消运行。
   Future<void> cancel(String runId);
 

@@ -108,6 +108,25 @@ class WorkflowEngineImpl implements WorkflowEngine {
   List<WorkflowRun> get runs => _runs.values.toList(growable: false);
 
   @override
+  Future<void> recordNodeMeta(
+    String runId,
+    String nodeId,
+    Map<String, Object?> meta,
+  ) async {
+    final run = _runs[runId];
+    final node = run?.nodes[nodeId];
+    if (run == null || node == null || meta.isEmpty) return;
+    final updated = run.copyWith(
+      nodes: <String, RunNode>{
+        ...run.nodes,
+        nodeId: node.copyWith(meta: <String, Object?>{...node.meta, ...meta}),
+      },
+    );
+    _runs[runId] = updated;
+    await _store.saveRun(updated);
+  }
+
+  @override
   Future<void> pause(String runId) async {
     final current = _runs[runId];
     if (current == null || current.status != RunStatus.running) return;

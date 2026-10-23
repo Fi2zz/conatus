@@ -48,6 +48,14 @@ final WorkflowRun run = await engine.start('code-review', inputs: {...});
   （`evaluateCondition`，基于可序列化状态求值——**确定性 guard**，不能依赖随机数 /
   时间戳等不确定因素）。
 
+### 节点展示与运行期元数据
+
+- `WorkflowNode.label` / `metadata`：节点展示标签与宿主元数据（分组、UI 提示、
+  成本上限提示等）。引擎不解释内容，只随定义序列化；不填时不写入 JSON。
+- `RunNode.meta`：运行期元数据（成本、缓存键、产物指纹）。工具节点执行时，
+  `ToolResult.meta` 会被引擎合并进对应 `RunNode.meta` 并随运行图持久化；
+  也可用 `WorkflowEngine.recordNodeMeta(runId, nodeId, meta)` 主动补充。
+
 ## 运行与状态机
 
 - `WorkflowRun` / `RunNode`：每次 `start` 产生一次独立运行记录，运行图可序列化，

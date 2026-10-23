@@ -8,6 +8,11 @@
 （成本、缓存键、产物指纹等，模型不可见）与 `withMeta` 合并辅助；缺省为空
 map，既有构造调用与模型可见内容投影不变。
 
+**`conatus_workflow` 增量**：`WorkflowNode` 新增展示标签 `label` 与节点级
+`metadata`（引擎不解释内容，未填时不写入 JSON）；`RunNode` 新增运行期
+`meta`，工具节点执行时自动合并 `ToolResult.meta`，并新增
+`WorkflowEngine.recordNodeMeta` 供执行器主动补充。
+
 **`conatus_agent` 增量**：Agent Loop 轮内注入缝——新增 `SteeringSource`
 typedef 与 `AgentLoop.steering` 后置挂载字段（参照 `goalDriver` 惯例）；
 step 循环组下一次模型请求前取回排队的用户插话，逐条写 `user/message`
