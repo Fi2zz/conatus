@@ -1,4 +1,3 @@
-import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 
 import 'rag_backend.dart';
@@ -105,6 +104,25 @@ class RagService {
     _lastIngestAt = DateTime.now();
   }
 
+  /// 懒补齐（幂等）；未配置 [SessionLog] 时为空操作。
+  Future<void> ensureIngested() => _ensureIngested();
+
+  /// 摄取单个会话；未配置 [SessionLog] 时不可用。
+  Future<int> ingestSession(String sourceId) async {
+    if (_indexer == null) {
+      throw const RagException('rag_ingest_unavailable', '未配置 SessionLog');
+    }
+    return _indexer.ingestSession(sourceId);
+  }
+
+  /// 摄取全部会话；未配置 [SessionLog] 时不可用。
+  Future<int> ingestAll() async {
+    if (_indexer == null) {
+      throw const RagException('rag_ingest_unavailable', '未配置 SessionLog');
+    }
+    return _indexer.ingestAll();
+  }
+
   /// 生成证据块：检索 → 格式化（不触发审计）。
   Future<String> evidenceBlock(
     String query,
@@ -119,28 +137,31 @@ class RagService {
     return formatHits(hits);
   }
 
-  /// 删除单个会话的切片；租户不匹配抛异常。
-  Future<void> forgetSession(String sourceId, {required RagScope scope}) async {
+  /// 删除单个会话的切片；租户不匹配抛异常。返回删除块数。
+  Future<int> forgetSession(String sourceId, {required RagScope scope}) async {
     final RagScope resolved = await _scopeOf(sourceId);
     if (resolved.tenantId != scope.tenantId) {
       throw const RagException('rag_scope_denied', '来源归属与请求租户不一致');
     }
-    await _backend.delete(RagFilter(
+    return _backend.delete(RagFilter(
       tenantId: scope.tenantId,
       sourceIds: <String>{sourceId},
     ));
   }
 
-  /// 删除作用域的切片；principal 不支持，显式拒绝。
-  Future<void> forgetScope(RagScope scope) async {
+  /// 删除作用域的切片；principal 不支持，显式拒绝。返回删除块数。
+  Future<int> forgetScope(RagScope scope) async {
     if (scope.principalId != null) {
       throw const RagException(
         'rag_principal_delete_unsupported',
         '暂不支持按用户身份删除',
       );
     }
-    await _backend.delete(RagFilter(tenantId: scope.tenantId));
+    return _backend.delete(RagFilter(tenantId: scope.tenantId));
   }
+
+  /// 清空全部索引与游标（运维动作，需宿主鉴权）。
+  Future<void> clear() => _backend.clear();
 
   /// 重建索引；委托给内部索引器。
   Future<void> rebuild() async {
@@ -160,27 +181,4 @@ class RagService {
       lastIngestAt: _lastIngestAt,
     );
   }
-}
-
-/// 把 [RagService] 作为 `'rag'` 服务提供到上下文。
-///
-/// [log] 缺省取上下文里的 `'sessionLog'`；[backend] 缺省 [InMemoryRagBackend]。
-/// 工具注册在后续任务完成，本函数不注册。
-RagService provideRag(
-  Context ctx, {
-  required RagConfig config,
-  required ScopeResolver scopeOf,
-  RagIndexBackend? backend,
-  SessionLog? log,
-  RetrievalObserver? audit,
-}) {
-  final RagService service = RagService(
-    backend: backend ?? InMemoryRagBackend(),
-    config: config,
-    scopeOf: scopeOf,
-    log: log ?? ctx.require<SessionLog>('sessionLog'),
-    audit: audit,
-  );
-  ctx.provide('rag', service);
-  return service;
 }

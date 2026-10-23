@@ -24,15 +24,18 @@ typedef RetrievalObserver = void Function(RetrievalAudit audit);
 
 /// 把命中列表格式化为证据块；空列表返回空串。
 ///
-/// 命中按 `startTime` 升序输出；时间格式 `yyyy-MM-dd HH:mm`，手写补零，不引 intl。
+/// 命中按 `startTime` 升序输出、按 `chunk.id` 去重（保留排序后的首条）；
+/// 时间格式 `yyyy-MM-dd HH:mm`，手写补零，不引 intl。
 String formatHits(List<RagHit> hits) {
   if (hits.isEmpty) return '';
   final List<RagHit> sorted = List<RagHit>.from(hits)
     ..sort(
         (RagHit a, RagHit b) => a.chunk.startTime.compareTo(b.chunk.startTime));
+  final Set<String> seen = <String>{};
   final StringBuffer buf = StringBuffer('[相关历史证据]\n');
   buf.writeln('以下片段来自会话历史原文，按时间升序。据此推导答案；缺失的信息不要臆测。');
   for (final RagHit hit in sorted) {
+    if (!seen.add(hit.chunk.id)) continue;
     buf.writeln('- ${_formatCitation(hit)}');
   }
   return buf.toString().trimRight();
