@@ -13,6 +13,8 @@ import 'package:conatus_foundation/conatus_foundation.dart';
 import 'mcp_registry.dart';
 import 'mcp_resource_types.dart';
 
+part 'mcp_resource_render.dart';
+
 /// 单条资源内容的最大输出字节数（64 KiB）。
 const int kMcpResourceContentLimit = 64 * 1024;
 
@@ -62,9 +64,19 @@ class ListMcpResourcesTool extends Tool {
       }
     }
     if (rows.isEmpty) {
-      return ToolResult.success('没有可用的 MCP 资源', value: const <Object?>[]);
+      return ToolResult.success(
+        '没有可用的 MCP 资源${_errorDetail()}',
+        value: const <Object?>[],
+      );
     }
     return ToolResult.success(text.toString(), value: rows);
+  }
+
+  /// 列空时附上各 server 的最近失败原因（没有失败则为空串）。
+  String _errorDetail() {
+    final Map<String, String> errors = registry.lastErrors;
+    if (errors.isEmpty) return '';
+    return '\n${errors.entries.map((MapEntry<String, String> e) => '- ${e.key}: ${e.value}').join('\n')}';
   }
 }
 
@@ -93,17 +105,17 @@ class ReadMcpResourceTool extends Tool {
     final String server = ctx.str('server').trim();
     final String uri = ctx.str('uri').trim();
     if (!registry.servers.contains(server)) {
-      return ToolResult.failure(
-        '未知 MCP server "$server"',
-        error: ToolError('MCP_SERVER_UNKNOWN', 'unknown server "$server"'),
-      );
+      return _unknownServer(server);
     }
     final List<McpResourceContents> contents =
         await registry.readResource(server: server, uri: uri);
     if (contents.isEmpty) {
+      final String? error = registry.lastErrorFor(server);
       return ToolResult.failure(
-        '读取 MCP 资源失败或内容为空：$server $uri',
-        error: const ToolError('MCP_RESOURCE_EMPTY', 'resource unavailable'),
+        error == null
+            ? '读取 MCP 资源失败或内容为空：$server $uri'
+            : '读取 MCP 资源失败：$server $uri（$error）',
+        error: ToolError('MCP_RESOURCE_EMPTY', error ?? 'resource unavailable'),
       );
     }
     return ToolResult.success(
@@ -112,7 +124,7 @@ class ReadMcpResourceTool extends Tool {
       value: <String, Object?>{
         'server': server,
         'uri': uri,
-        'count': contents.length
+        'count': contents.length,
       },
     );
   }
@@ -121,10 +133,7 @@ class ReadMcpResourceTool extends Tool {
 /// 把资源工具注册到 `ctx.tools`，返回已注册的工具。
 ///
 /// [registry] 缺省取上下文的 `'mcp'` 服务（见 `provideMcp`）。
-List<Tool> provideMcpResourceTools(
-  Context ctx, {
-  McpRegistry? registry,
-}) {
+List<Tool> provideMcpResourceTools(Context ctx, {McpRegistry? registry}) {
   final McpRegistry resolved = registry ?? ctx.require<McpRegistry>('mcp');
   final List<Tool> registered = <Tool>[
     ListMcpResourcesTool(registry: resolved),
@@ -134,42 +143,4 @@ List<Tool> provideMcpResourceTools(
     ctx.effect(() => ctx.tools.register(tool));
   }
   return registered;
-}
-
-ToolResult _unknownServer(String server) => ToolResult.failure(
-      '未知 MCP server "$server"',
-      error: ToolError('MCP_SERVER_UNKNOWN', 'unknown server "$server"'),
-    );
-
-String _render(McpResourceContents content) {
-  final String? text = content.text;
-  if (text != null) return _capText(text);
-  final String? blob = content.blob;
-  if (blob == null) return '（空内容）';
-  return '[binary ${_blobLength(blob)} bytes]';
-}
-
-/// 二进制正文按解码后的字节数报大小（不需要把内容载入上下文）。
-int _blobLength(String blob) {
-  try {
-    return base64.decode(blob).length;
-  } on FormatException {
-    return blob.length;
-  }
-}
-
-/// 按 UTF-8 字节上限截断，避免切断多字节字符产生非法文本。
-String _capText(String text) {
-  final List<int> bytes = utf8.encode(text);
-  if (bytes.length <= kMcpResourceContentLimit) return text;
-  final String head = utf8.decode(
-    bytes.sublist(0, kMcpResourceContentLimit),
-    allowMalformed: true,
-  );
-  return '$head…（已截断）';
-}
-
-String? _blankToNull(String? value) {
-  final String? trimmed = value?.trim();
-  return trimmed == null || trimmed.isEmpty ? null : trimmed;
 }

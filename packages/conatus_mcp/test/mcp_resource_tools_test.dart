@@ -94,6 +94,20 @@ void main() {
       lessThan(kMcpResourceContentLimit + 64),
     );
 
+    // 多字节字符跨截断点：必须退到字符边界，不能产出 U+FFFD。
+    final ToolResult multi = await tools.call(
+      const ToolCall(name: 'read_mcp_resource', arguments: <String, Object?>{
+        'server': 'alpha',
+        'uri': 'file:///multi',
+      }),
+    );
+    expect(multi.content, endsWith('（已截断）'));
+    expect(multi.content, isNot(contains('\uFFFD')));
+    expect(
+      utf8.encode(multi.content).length,
+      lessThan(kMcpResourceContentLimit + 64),
+    );
+
     final ToolResult missing = await tools.call(
       const ToolCall(name: 'read_mcp_resource', arguments: <String, Object?>{
         'server': 'missing',
@@ -101,5 +115,31 @@ void main() {
       }),
     );
     expect(missing.isError, isTrue);
+  });
+
+  test('空注册表返回成功提示', () async {
+    await provideMcp(ctx, const <McpServerConfig>[]);
+    provideMcpResourceTools(ctx);
+    final ToolResult result = await tools.call(
+      const ToolCall(name: 'list_mcp_resources'),
+    );
+    expect(result.isError, isFalse);
+    expect(result.content, contains('没有可用的 MCP 资源'));
+  });
+
+  test('读失败时带上 registry 记录的原因', () async {
+    await bootToolRegistry(
+      ctx,
+      failingServer: 'beta',
+      failingMethods: <String>{'resources/read'},
+    );
+    final ToolResult result = await tools.call(
+      const ToolCall(name: 'read_mcp_resource', arguments: <String, Object?>{
+        'server': 'beta',
+        'uri': 'file:///b',
+      }),
+    );
+    expect(result.isError, isTrue);
+    expect(result.content, contains('boom'));
   });
 }

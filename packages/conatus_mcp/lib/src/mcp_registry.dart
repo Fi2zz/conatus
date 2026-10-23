@@ -10,6 +10,8 @@ import 'mcp_protocol_tool.dart';
 import 'mcp_resource_types.dart';
 import 'mcp_tool.dart';
 
+part 'mcp_registry_binding.dart';
+
 /// 已装配的 MCP server 集合，服务键 `'mcp'`（见 `ctx.mcp`）。
 ///
 /// 一台 server 的运行时绑定 = 客户端 + 已注册适配器 + 撤销句柄。断连（服务端
@@ -17,9 +19,18 @@ import 'mcp_tool.dart';
 /// 是外部进程，随时可能消失，不能让它拖垮整张工具表。
 class McpRegistry {
   final Map<String, _McpBinding> _bindings = <String, _McpBinding>{};
+  final Map<String, String> _errors = <String, String>{};
 
   /// 已装配且连接仍活着的 server 名（按装配顺序）。
   List<String> get servers => _bindings.keys.toList(growable: false);
+
+  /// 按 server 记录最近一次目录请求失败原因（成功一次即清除），供工具层在
+  /// 聚合结果为空时给出可诊断提示。
+  Map<String, String> get lastErrors =>
+      Map<String, String>.unmodifiable(_errors);
+
+  /// 某 server 最近一次失败原因；没有失败返回 `null`。
+  String? lastErrorFor(String server) => _errors[server];
 
   /// 某 server 的客户端；未装配（或已断连注销）返回 `null`。
   McpClient? clientOf(String serverName) => _bindings[serverName]?.client;
@@ -32,8 +43,8 @@ class McpRegistry {
 
   /// 装配一台 server：握手、发现工具、注册进 `ctx.tools`，并订阅其断连。
   ///
-  /// 握手或发现失败时先断开该客户端再抛出（不留悬空子进程），且不上账，
-  /// 因此 `servers` 里不会留下半死条目。同名 server 重复装配抛 [StateError]。
+  /// 失败时先断开该客户端再抛出（不留悬空子进程），且不上账；同名重复装配抛
+  /// [StateError]。
   Future<void> attach(Context ctx, McpClient client) async {
     final String name = client.serverName;
     if (_bindings.containsKey(name)) {
@@ -57,23 +68,33 @@ class McpRegistry {
 
   /// 列出资源；[server] 为空时汇总全部 server。
   ///
-  /// 单台 server 请求失败按空表处理，不打断其他 server——MCP 是外部进程，
-  /// 一台坏掉不该让整张清单消失。
-  Future<List<McpResource>> listResources({String? server}) =>
-      _collect(server, (McpClient client) => client.listResources());
+  /// 只查询握手时声明了 `resources` 能力的 server；单台请求失败按空表处理
+  /// （原因进 [lastErrors]），不打断其他 server。
+  Future<List<McpResource>> listResources({String? server}) => _collect(
+        server,
+        (McpClient client) => client.listResources(),
+        supported: _supportsResources,
+      );
 
-  /// 读取一个资源；server 未知或读取失败返回空表。
+  /// 读取一个资源；server 未知、未声明资源能力或读取失败返回空表。
   Future<List<McpResourceContents>> readResource({
     required String server,
     required String uri,
   }) =>
-      _collect(server, (McpClient client) => client.readResource(uri));
+      _collect(
+        server,
+        (McpClient client) => client.readResource(uri),
+        supported: _supportsResources,
+      );
 
   /// 列出提示词模板；[server] 为空时汇总全部 server。
-  Future<List<McpPrompt>> listPrompts({String? server}) =>
-      _collect(server, (McpClient client) => client.listPrompts());
+  Future<List<McpPrompt>> listPrompts({String? server}) => _collect(
+        server,
+        (McpClient client) => client.listPrompts(),
+        supported: _supportsPrompts,
+      );
 
-  /// 取一条提示词并填参；server 未知或取值失败返回空表。
+  /// 取一条提示词并填参；server 未知、未声明能力或取值失败返回空表。
   Future<List<McpPromptMessage>> getPrompt({
     required String server,
     required String name,
@@ -82,20 +103,27 @@ class McpRegistry {
       _collect(
         server,
         (McpClient client) => client.getPrompt(name, arguments: arguments),
+        supported: _supportsPrompts,
       );
 
+  /// 逐台取目录；单台失败只记原因并跳过，成功一次即清除该 server 的旧错误。
   Future<List<T>> _collect<T>(
     String? server,
-    Future<List<T>> Function(McpClient client) fetch,
-  ) async {
-    final List<_McpBinding> targets = _targets(server);
-    final List<List<T>> pages = await Future.wait(<Future<List<T>>>[
-      for (final _McpBinding binding in targets)
-        _quiet(() => fetch(binding.client)),
-    ]);
-    return <T>[
-      for (final List<T> page in pages) ...page,
-    ];
+    Future<List<T>> Function(McpClient client) fetch, {
+    bool Function(McpClient client)? supported,
+  }) async {
+    final List<T> items = <T>[];
+    for (final _McpBinding binding in _targets(server)) {
+      final McpClient client = binding.client;
+      if (supported != null && !supported(client)) continue;
+      try {
+        items.addAll(await fetch(client));
+        _errors.remove(client.serverName);
+      } on Object catch (error) {
+        _errors[client.serverName] = '$error';
+      }
+    }
+    return items;
   }
 
   List<_McpBinding> _targets(String? server) {
@@ -121,6 +149,7 @@ class McpRegistry {
   Future<void> close() async {
     final List<_McpBinding> bindings = _bindings.values.toList(growable: false);
     _bindings.clear();
+    _errors.clear();
     for (final _McpBinding binding in bindings) {
       await binding.close();
     }
@@ -135,66 +164,12 @@ class McpRegistry {
 
   void _drop(String serverName) {
     _bindings.remove(serverName);
+    _errors.remove(serverName);
   }
 }
 
-/// 单台 server 的请求失败按空表收敛（不打断汇总）。
-Future<List<T>> _quiet<T>(Future<List<T>> Function() fetch) async {
-  try {
-    return await fetch();
-  } on Object {
-    return <T>[];
-  }
-}
+bool _supportsResources(McpClient client) =>
+    client.serverInfo?.capabilities.resources ?? false;
 
-/// 一台 server 的运行时绑定：客户端、已注册工具与撤销句柄。
-class _McpBinding {
-  _McpBinding(this.client);
-
-  final McpClient client;
-  final List<McpToolAdapter> tools = <McpToolAdapter>[];
-  final List<Disposer> _disposers = <Disposer>[];
-  StreamSubscription<void>? _disconnects;
-
-  /// 注册一个工具（含别名）并记住撤销句柄；`ctx` 释放时也会撤销（幂等）。
-  void add(Context ctx, Tool tool) {
-    final Disposer off = ctx.tools.register(tool);
-    _disposers.add(off);
-    ctx.onDispose(off);
-    if (tool is McpToolAdapter) tools.add(tool);
-  }
-
-  /// 该绑定是否持有全名为 [fullName] 的适配器。
-  bool holds(String fullName) =>
-      tools.any((McpToolAdapter tool) => tool.name == fullName);
-
-  /// 按全名取适配器；不存在抛 [StateError]。
-  McpToolAdapter require(String fullName) =>
-      tools.firstWhere((McpToolAdapter tool) => tool.name == fullName);
-
-  /// 订阅客户端断连：注销本 server 的工具后回调 [onGone]。
-  void watchDisconnect(Context ctx, void Function() onGone) {
-    _disconnects = client.disconnects.listen((_) {
-      detachTools();
-      onGone();
-    });
-    ctx.onDispose(() => unawaited(_disconnects?.cancel()));
-  }
-
-  /// 注销本 server 注册的全部工具。
-  void detachTools() {
-    for (final Disposer off in _disposers) {
-      off();
-    }
-    _disposers.clear();
-    tools.clear();
-  }
-
-  /// 断开客户端并注销工具。
-  Future<void> close() async {
-    await _disconnects?.cancel();
-    _disconnects = null;
-    detachTools();
-    await client.close();
-  }
-}
+bool _supportsPrompts(McpClient client) =>
+    client.serverInfo?.capabilities.prompts ?? false;

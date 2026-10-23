@@ -95,12 +95,16 @@ List<String> permissionPathsFor(ToolCall call, List<String> pathArgs) {
 /// - shell / web / subagent：命令 / URL / 查询词 / agent id（`subagent` 取
 ///   `spawn_agent` 的 `agent` 参数，缺省 `default`；因此按
 ///   `subagent/default` 写的旧规则不再命中带 `agent` 的调用）；
-/// - 其余（含 MCP、question）：`*`。空值同样落回 `*`。
+/// - `list_mcp_resources`：`server`（缺省 `*`）；
+/// - `read_mcp_resource`：`<server>:<uri>`（缺 uri 时只给 server）；
+/// - 其余（含其他 MCP 工具、question）：`*`。空值同样落回 `*`。
 List<String> permissionResourcesFor(
   ToolCall call,
   List<String> pathArgs,
 ) {
   final String action = permissionActionFor(call.name);
+  final List<String>? mcp = _mcpResource(call);
+  if (mcp != null) return mcp;
   if (action == 'glob' || action == 'grep') {
     return <String>[_stringArgument(call.arguments, 'pattern') ?? '*'];
   }
@@ -125,8 +129,26 @@ List<String> permissionResourcesFor(
   return <String>[value];
 }
 
-/// 参与 `external_directory` 判定的路径。
+/// MCP 资源工具的按调用参数资源。
 ///
+/// 权限动作仍是工具名（`permissionActionFor` 只看得到名字）——这是对设计
+/// §6.2「`<server>_list_mcp_resources`」的偏差：动作层拿不到参数，不能按
+/// server 派生动作。资源细化到 server / `<server>:<uri>` 后，规则
+/// `action="list_mcp_resources", resource="sentry"` 与
+/// `action="read_mcp_resource", resource="sentry:*"` 仍可只放行 / 拒绝单台。
+List<String>? _mcpResource(ToolCall call) {
+  switch (call.name) {
+    case 'list_mcp_resources':
+      return <String>[_stringArgument(call.arguments, 'server') ?? '*'];
+    case 'read_mcp_resource':
+      final String server = _stringArgument(call.arguments, 'server') ?? '*';
+      final String? uri = _stringArgument(call.arguments, 'uri');
+      return <String>[uri == null ? server : '$server:$uri'];
+  }
+  return null;
+}
+
+/// 参与 `external_directory` 判定的路径。///
 /// 与 [permissionPathsFor] 的区别：`grep`（`rg`）的搜索根 `path` 不在
 /// `Tool.pathParams` 里，但 `rg(path: "/")` 同样是越界读取。这里把它并进来做
 /// **边界判定**，不并进权限资源——否则每次 rg 都会多出一条「路径信任」询问。
