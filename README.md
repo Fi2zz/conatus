@@ -658,6 +658,18 @@ final profile = await selector?.select(task);
 `ToolBudgetPolicy` 的 `finalizeAllowed` 默认只放行 `read_file`，收口拒绝返回
 `TOOL_BUDGET_EXHAUSTED` 且计入调用数。
 
+三档选型是纯函数：`paretoFrontier` 剔除被支配者，`selectRepresentatives` 按
+lite `(1,2)` / medium `(1,1)` / heavy `(2,1)` 的归一化加权平方距离各取一个代表；
+极值相等时该维度偏差记 0（不产生 NaN），平手取输入序第一个。
+
+```dart
+final picked = selectRepresentatives(<SelectionCandidate>[
+  SelectionCandidate(id: 'a', passRate: 0.80, meanCost: 0.5),
+  SelectionCandidate(id: 'b', passRate: 0.95, meanCost: 0.9),
+]);
+print(picked[SelectionMode.lite]!.id);   // 成本优先
+```
+
 ### `evaluation` — 评估体系
 
 用固定用例衡量 Agent 表现：`Evaluator` 注入 `EvalRunner`（跑一轮 `AgentLoop.run`
@@ -1685,6 +1697,7 @@ root.provide('x', 1);
 | `ToolBudgetPolicy({economyAfter, strictAfter, finalizeAfter, strictEvery, finalizeAllowed})` | 阶段阈值与收口白名单 |
 | `provideProfileSelector(ctx, {selector, llm, profiles})` | 档位选择装配；缺依赖时返回 `null`（关闭） |
 | `ExecutionProfile` / `LlmProfileSelector` / `kDefaultExecutionProfiles` | 档位 / 选择器 / 默认档位表 |
+| `SelectionCandidate` / `SelectionMode` / `paretoFrontier` / `selectRepresentatives` | 三档选型（lite / medium / heavy） |
 | `EvalCase({id, input, expectedTools, expectedOutput, maxRounds})` | 评估用例 |
 | `Evaluator({run, judge})` / `runAll(cases)` / `evaluate(case)` | 评估器 |
 | `EvalResult` / `EvalReport` / `EvalDiff` / `defaultEvalJudge` | 结果 / 报告 / 差异 / 默认判分 |

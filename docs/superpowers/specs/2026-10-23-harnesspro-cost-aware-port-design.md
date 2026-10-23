@@ -239,5 +239,7 @@ HarnessPro 的 harness 是目录：`model_instructions.md` + `policy.json` + `ho
   事件 `tool.budget`；未调 `provideToolBudget` 时零影响。
 - S3：`execution_profile.dart` + `execution_profile_rubric.dart`；缺 llm 或档位表时
   `provideProfileSelector` 返回 `null`（等于关闭）。
+- S4（4.4 的纯函数部分）：`pareto.dart`——帕累托过滤 + 归一化加权平方距离三档选型；
+  退化（极值相等、空集、全部相同）都有测试覆盖。
 - 偏差：未调整 `tool_result_eviction` 默认阈值（见计划文档「范围修正」）；nava 侧
   配置开关未接入，后续按需接。

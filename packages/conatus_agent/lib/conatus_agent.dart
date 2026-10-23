@@ -126,6 +126,13 @@ export 'src/layered_compaction.dart'
     show LayeredCompactor, provideLayeredCompaction;
 export 'src/model_visible_invariant.dart'
     show assertModelVisibleInvariant, checkModelVisibleInvariant, sameJson;
+export 'src/pareto.dart'
+    show
+        SelectionCandidate,
+        SelectionMode,
+        paretoFrontier,
+        selectRepresentative,
+        selectRepresentatives;
 export 'src/permissions/permission_action.dart'
     show
         permissionActionFor,
