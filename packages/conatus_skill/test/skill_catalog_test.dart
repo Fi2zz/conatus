@@ -10,11 +10,37 @@ SkillSummary _summary(String name, String description) => SkillSummary(
       provider: kSkillRuntimeProvider,
     );
 
+class _QuietProvider implements SkillProvider {
+  @override
+  String get name => 'quiet';
+
+  @override
+  Future<List<SkillCandidate>> list() async => <SkillCandidate>[
+        SkillCandidate(
+          summary: SkillSummary(
+            name: 'quiet',
+            description: '不自动暴露的技能。',
+            source: kSkillSourceCustom,
+            provider: name,
+            modelInvocable: false,
+          ),
+        ),
+      ];
+
+  @override
+  Future<SkillDefinition?> load(SkillSummary summary) async =>
+      SkillDefinition(summary: summary, content: 'quiet body');
+}
+
 /// 手工装配的 SystemPrompt + SkillRegistry 现场，覆盖 `provideSkillCatalog`
 /// 的等价行为而不牵涉 Context。
 class _Rig {
-  _Rig() {
-    section = SkillCatalogSection(registry: registry, prompt: prompt);
+  _Rig({bool includeAll = false}) {
+    section = SkillCatalogSection(
+      registry: registry,
+      prompt: prompt,
+      includeAll: includeAll,
+    );
     detach = section.attach();
   }
 
@@ -167,6 +193,24 @@ void main() {
       await rig.registry.refresh();
 
       expect(rig.prompt.sections, isEmpty);
+    });
+
+    test('includeAll 时 disable-model-invocation 技能也进目录', () async {
+      final _Rig rig = _Rig(includeAll: true);
+      addTearDown(rig.dispose);
+      rig.registry.registerProvider(_QuietProvider());
+      await rig.registry.refresh();
+
+      expect(rig.render(), contains('- `quiet`: 不自动暴露的技能。'));
+    });
+
+    test('缺省不把 disable-model-invocation 技能放进目录', () async {
+      final _Rig rig = _Rig();
+      addTearDown(rig.dispose);
+      rig.registry.registerProvider(_QuietProvider());
+      await rig.registry.refresh();
+
+      expect(rig.render(), isEmpty);
     });
   });
 }

@@ -24,6 +24,7 @@ class SkillCatalogSection {
     required this.prompt,
     this.order = kSkillCatalogSectionOrder,
     this.descriptionMaxLength = kSkillCatalogDescriptionMaxLength,
+    this.includeAll = false,
   });
 
   /// 技能来源。
@@ -37,6 +38,12 @@ class SkillCatalogSection {
 
   /// 目录里单条描述的长度上限。
   final int descriptionMaxLength;
+
+  /// 是否把 `disable-model-invocation` 的技能也放进目录（配置开关）。
+  final bool includeAll;
+
+  List<SkillSummary> get _skills =>
+      includeAll ? registry.available : registry.modelInvocable;
 
   Disposer? _section;
   String _name = kSkillCatalogSectionName;
@@ -57,7 +64,7 @@ class SkillCatalogSection {
 
   /// 按当前快照挂上或摘掉目录段。
   void sync() {
-    if (registry.modelInvocable.isEmpty) {
+    if (_skills.isEmpty) {
       _detachSection();
       return;
     }
@@ -69,7 +76,7 @@ class SkillCatalogSection {
   }
 
   String _renderCurrent() {
-    final List<SkillSummary> skills = registry.modelInvocable;
+    final List<SkillSummary> skills = _skills;
     if (skills.isEmpty) return '';
     return renderSkillCatalog(skills,
         descriptionMaxLength: descriptionMaxLength);

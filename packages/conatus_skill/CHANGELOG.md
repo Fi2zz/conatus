@@ -4,6 +4,11 @@
 
 ## [未发布]
 
+- **`includeAll` 可选开关**：`SkillCatalogSection` / `SkillLoadTool` /
+  `provideSkillCatalog` / `provideSkillTool` 支持 `includeAll: true`，把
+  `disable-model-invocation` 的技能也放进模型目录并允许 `skill` 工具加载；
+  缺省 `false`，行为不变。
+
 - **OpenCode / Claude 兼容发现根**：`defaultSkillRoots` 新增项目
   `.opencode/skills`（rank 150）、`.claude/skills`（275），以及用户
   `~/.config/opencode/skills`（450）、`~/.claude/skills`（550）。nava 原生

@@ -38,15 +38,42 @@ SkillRegistry _runtimeRegistry({String content = '第一步\n第二步'}) {
   return registry;
 }
 
+class _QuietProvider implements SkillProvider {
+  @override
+  String get name => 'quiet';
+
+  @override
+  Future<List<SkillCandidate>> list() async => <SkillCandidate>[
+        const SkillCandidate(
+          summary: SkillSummary(
+            name: 'quiet',
+            description: 'quiet',
+            source: kSkillSourceCustom,
+            provider: 'quiet',
+            modelInvocable: false,
+          ),
+        ),
+      ];
+
+  @override
+  Future<SkillDefinition?> load(SkillSummary summary) async =>
+      SkillDefinition(summary: summary, content: 'quiet body');
+}
+
 /// 用 `ctx.tools` 真实调用一次 `skill`，与 `provideSkillTool` 的装配一致。
 Future<ToolResult> _call(
   SkillRegistry registry,
-  Map<String, Object?> arguments,
-) async {
+  Map<String, Object?> arguments, {
+  bool includeAll = false,
+}) async {
   final Context ctx = Context.root();
   addTearDown(ctx.dispose);
   provideTools(ctx);
-  ctx.effect(() => ctx.tools.register(SkillLoadTool(registry: registry)));
+  ctx.effect(
+    () => ctx.tools.register(
+      SkillLoadTool(registry: registry, includeAll: includeAll),
+    ),
+  );
   return ctx.tools.call(ToolCall(name: 'skill', arguments: arguments));
 }
 
@@ -191,6 +218,22 @@ void main() {
         result.error!.message,
         'skill "quiet" is not available for model invocation',
       );
+    });
+
+    test('includeAll 允许加载 disable-model-invocation 技能', () async {
+      final SkillRegistry registry = SkillRegistry();
+      addTearDown(registry.dispose);
+      registry.registerProvider(_QuietProvider());
+      await registry.refresh();
+
+      final ToolResult result = await _call(
+        registry,
+        const <String, Object?>{'name': 'quiet'},
+        includeAll: true,
+      );
+
+      expect(result.isError, isFalse);
+      expect(result.content, contains('quiet body'));
     });
   });
 

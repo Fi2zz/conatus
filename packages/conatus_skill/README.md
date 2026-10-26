@@ -70,6 +70,10 @@ provideSkillTool(ctx);               // 注册 skill 工具
 await provideSkillFilesystem(ctx);   // 发现 .conatus/skills 等目录并监听变更
 ```
 
+`provideSkillCatalog` / `provideSkillTool` 都接受 `includeAll: true`：把
+`disable-model-invocation` 的技能也放进目录并允许加载。缺省 `false`，宿主可用
+自己的配置开关打开（nava 的 `merge_all_available_skills`）。
+
 也可以完全不走磁盘，直接传一段提示词当技能：
 
 ```dart

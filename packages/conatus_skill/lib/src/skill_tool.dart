@@ -18,10 +18,17 @@ const String kSkillToolName = 'skill';
 /// `tool/result` 事件，因此「模型可见即已记录」无需额外机制。
 class SkillLoadTool extends Tool {
   /// 构造工具；[name] 是注册到工具表的名字，同一张表上挂多个作用域时需换名。
-  const SkillLoadTool({required this.registry, this.name = kSkillToolName});
+  const SkillLoadTool({
+    required this.registry,
+    this.name = kSkillToolName,
+    this.includeAll = false,
+  });
 
   /// 技能来源。
   final SkillRegistry registry;
+
+  /// 是否允许加载 `disable-model-invocation` 的技能（配置开关）。
+  final bool includeAll;
 
   @override
   final String name;
@@ -68,6 +75,7 @@ class SkillLoadTool extends Tool {
     }
     final SkillSummary? summary = _summaryOf(requested);
     if (summary == null) return null;
+    if (includeAll) return null;
     return summary.modelInvocable
         ? null
         : 'skill "$requested" is not available for model invocation';

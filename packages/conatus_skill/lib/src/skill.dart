@@ -92,12 +92,14 @@ SkillCatalogSection provideSkillCatalog(
   Context ctx, {
   int order = kSkillCatalogSectionOrder,
   int descriptionMaxLength = kSkillCatalogDescriptionMaxLength,
+  bool includeAll = false,
 }) {
   final SkillCatalogSection section = SkillCatalogSection(
     registry: ctx.require<SkillRegistry>('skillRegistry'),
     prompt: ctx.require<SystemPrompt>('systemPrompt'),
     order: order,
     descriptionMaxLength: descriptionMaxLength,
+    includeAll: includeAll,
   );
   ctx.effect(section.attach);
   return section;
@@ -111,10 +113,12 @@ SkillLoadTool provideSkillTool(
   Context ctx, {
   ToolRegistry? tools,
   String name = kSkillToolName,
+  bool includeAll = false,
 }) {
   final SkillLoadTool tool = SkillLoadTool(
     registry: ctx.require<SkillRegistry>('skillRegistry'),
     name: name,
+    includeAll: includeAll,
   );
   final ToolRegistry registry = tools ?? ctx.tools;
   ctx.effect(() => registry.register(tool));
