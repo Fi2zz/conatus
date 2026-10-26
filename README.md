@@ -1512,6 +1512,7 @@ root.provide('x', 1);
 | `ToolContext`（`str` / `integer` / `number` / `boolean` / `array` / `object` / `require<T>`） | 类型安全取参 |
 | `register(Tool) → Disposer` | 注册工具（同名重复抛 `StateError`） |
 | `call(ToolCall, {timeout}) → Future<ToolResult>` | 校验 → 守卫 → 中间件 → 执行体（收敛失败；超时按 调用参数 > `Tool.timeout` > `defaultTimeout` 取用） |
+| `ToolResult` | `content` / `value` / `meta` / `images` / `files`；图片与文件附件进入下一轮模型消息 |
 | `describe()` / `describeOne(name)` | 当前可见工具的模型 schema |
 | `fn(name, {...}) → Disposer`（`ctx.tools.fn`） | 一行注册简单工具 |
 | `group(name, [tools]) → Disposer`（`ctx.tools.group`） | 按领域分组；`groups` / `groupOf` / `namesIn` / `describeGroup` |
@@ -1585,6 +1586,7 @@ root.provide('x', 1);
 | `resolve(path, {cwd}) → Future<FsTarget>` | 解析为稳定目标身份 |
 | `stat(target)` / `lstat(path)` | 元数据（后者不跟随链接） |
 | `readText(target)` / `listDir(target)` | 读取文本 / 稳定排序列举 |
+| `readBytes(target)` | 读取原始字节（图片 / PDF；缺省实现抛 `UnsupportedError`） |
 | `writeText(target, content, {expected})` | 原子写入（可选 `FsCreateIfAbsent` / `FsReplaceIfVersion` 守卫） |
 | `editText(target, edit, {expectedVersion})` | 原子字面替换（多处匹配 → `FS_AMBIGUOUS_EDIT`） |
 | `contains(parent, child)` / `fileUrl(target)` / `processPath(target)` | 身份与坐标 |

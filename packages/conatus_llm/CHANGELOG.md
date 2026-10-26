@@ -4,6 +4,10 @@
 
 ## [未发布]
 
+- **工具结果多模态附件**：OpenAI chat 把 tool 消息里的图片拆成后续 user
+  图片消息；Responses 在 `function_call_output` 后追加 user 图片 / `input_file`
+  项；Anthropic 直接把图片放进 `tool_result` 的 image / document 块。
+
 - 新增**退避重试**（`llm_retry.dart`）：`RetryingLlm` 装饰器 + `RetryPolicy` +
   `LlmErrorKind`。此前一次网络抖动 / 一次 429 / 一次 502 就让整轮失败，这是编码
   agent 最常见的失败模式。

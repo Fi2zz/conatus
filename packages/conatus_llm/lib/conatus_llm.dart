@@ -2,6 +2,7 @@ export 'src/llm.dart'
     show
         LlmApiStyle,
         LlmException,
+        LlmFile,
         LlmImage,
         LlmMessage,
         LlmProvider,

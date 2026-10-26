@@ -65,6 +65,27 @@ class LlmImage {
   String get dataUrl => 'data:$mimeType;base64,$base64Data';
 }
 
+/// 聊天消息携带的文件（如 PDF）。
+class LlmFile {
+  const LlmFile({
+    required this.mimeType,
+    required this.base64Data,
+    this.filename,
+  });
+
+  /// 文件 MIME 类型，如 `application/pdf`。
+  final String mimeType;
+
+  /// 文件字节的 base64 编码。
+  final String base64Data;
+
+  /// 文件名（可选）。
+  final String? filename;
+
+  /// data URL 形式。
+  String get dataUrl => 'data:$mimeType;base64,$base64Data';
+}
+
 /// 聊天消息。
 ///
 /// * 普通消息：`LlmMessage('user', '你好')`；
@@ -79,6 +100,7 @@ class LlmMessage {
     this.toolCallId,
     this.cacheable = false,
     this.images = const <LlmImage>[],
+    this.files = const <LlmFile>[],
     this.thinkingBlocks = const <Map<String, dynamic>>[],
   });
 
@@ -100,6 +122,9 @@ class LlmMessage {
 
   /// 消息携带的图片；为空时消息退化为纯文本。
   final List<LlmImage> images;
+
+  /// 消息携带的文件（PDF 等）；由具体协议适配器决定是否支持。
+  final List<LlmFile> files;
 
   /// Anthropic 的 thinking 原始块（含 signature）；用于多轮回传。
   ///

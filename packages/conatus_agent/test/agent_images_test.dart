@@ -39,6 +39,52 @@ const LlmImage _image = LlmImage(
   base64Data: 'aGVsbG8=',
 );
 
+class _ImageTool extends Tool {
+  @override
+  String get name => 'read_file';
+
+  @override
+  String get description => '读取图片';
+
+  @override
+  Future<ToolResult> call(ToolContext ctx) async => ToolResult.success(
+        '图像已读取',
+        images: const <ToolImage>[
+          ToolImage(mimeType: 'image/png', base64Data: 'aGVsbG8='),
+        ],
+      );
+}
+
+class _FileTool extends Tool {
+  @override
+  String get name => 'read_file';
+
+  @override
+  String get description => '读取 PDF';
+
+  @override
+  Future<ToolResult> call(ToolContext ctx) async => ToolResult.success(
+        'PDF 已读取',
+        files: const <ToolFile>[
+          ToolFile(
+            mimeType: 'application/pdf',
+            base64Data: 'JVBERg==',
+            filename: 'a.pdf',
+          ),
+        ],
+      );
+}
+
+LlmResult _call(String id, String name) => LlmResult(
+      content: '',
+      provider: 'scripted',
+      model: 'm',
+      toolCalls: <LlmToolCall>[LlmToolCall(id: id, name: name)],
+    );
+
+LlmResult _text(String content) =>
+    LlmResult(content: content, provider: 'scripted', model: 'm');
+
 void main() {
   group('imagesToJson / imagesFromJson', () {
     test('序列化后可完整还原', () {
@@ -102,6 +148,39 @@ void main() {
       final Object? data = event.data;
       final Map<Object?, Object?> payload = data as Map<Object?, Object?>;
       expect(imagesFromJson(payload['images']), hasLength(1));
+    });
+
+    test('工具结果图片进入下一轮 tool 消息', () async {
+      final _ScriptedProvider provider = _ScriptedProvider(<LlmResult>[
+        _call('call_1', 'read_file'),
+        _text('收到图片'),
+      ]);
+      final ToolRegistry tools = ToolRegistry()..register(_ImageTool());
+      final AgentLoop loop = AgentLoop(llm: provider, tools: tools);
+
+      await loop.run('读图');
+
+      final LlmMessage toolMessage =
+          provider.calls[1].singleWhere((m) => m.role == 'tool');
+      expect(toolMessage.content, '图像已读取');
+      expect(toolMessage.images.single.mimeType, 'image/png');
+      expect(toolMessage.images.single.base64Data, 'aGVsbG8=');
+    });
+    test('工具结果 PDF 进入下一轮 tool 消息', () async {
+      final _ScriptedProvider provider = _ScriptedProvider(<LlmResult>[
+        _call('call_2', 'read_file'),
+        _text('收到 PDF'),
+      ]);
+      final ToolRegistry tools = ToolRegistry()..register(_FileTool());
+      final AgentLoop loop = AgentLoop(llm: provider, tools: tools);
+
+      await loop.run('读 PDF');
+
+      final LlmMessage toolMessage =
+          provider.calls[1].singleWhere((m) => m.role == 'tool');
+      expect(toolMessage.files.single.mimeType, 'application/pdf');
+      expect(toolMessage.files.single.filename, 'a.pdf');
+      expect(toolMessage.files.single.base64Data, 'JVBERg==');
     });
   });
 }

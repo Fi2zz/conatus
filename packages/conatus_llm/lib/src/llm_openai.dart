@@ -114,9 +114,7 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
         'input': _responsesInput(messages),
         'store': false,
       } else
-        'messages': <Map<String, dynamic>>[
-          for (final LlmMessage message in messages) message.toJson(),
-        ],
+        'messages': _chatMessages(messages),
       if (stream) 'stream': true,
       if (stream && !_responses)
         'stream_options': <String, bool>{'include_usage': true},
@@ -153,6 +151,40 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
       ];
 
   /// Responses input 项：普通消息、助手工具调用、工具结果各自映射。
+  /// Chat Completions 的 tool 消息不能带 content 数组：图片拆成后续 user
+  /// 消息，文本仍留在 tool 消息里。
+  List<Map<String, dynamic>> _chatMessages(List<LlmMessage> messages) {
+    final List<Map<String, dynamic>> result = <Map<String, dynamic>>[];
+    for (final LlmMessage message in messages) {
+      if (message.role == 'tool' &&
+          (message.images.isNotEmpty || message.files.isNotEmpty)) {
+        result.add(<String, dynamic>{
+          'role': 'tool',
+          'content': message.content,
+          if (message.toolCallId != null) 'tool_call_id': message.toolCallId,
+        });
+        if (message.images.isNotEmpty) {
+          result.add(
+            LlmMessage('user', '工具结果附带的图像：', images: message.images)
+                .toJson(),
+          );
+        }
+        if (message.files.isNotEmpty) {
+          result.add(
+            LlmMessage(
+              'user',
+              '工具结果包含文件（${message.files.map((f) => f.filename ?? f.mimeType).join(', ')}），'
+              '当前 chat 协议不支持内联文件。',
+            ).toJson(),
+          );
+        }
+        continue;
+      }
+      result.add(message.toJson());
+    }
+    return result;
+  }
+
   List<Map<String, dynamic>> _responsesInput(List<LlmMessage> messages) {
     final List<Map<String, dynamic>> items = <Map<String, dynamic>>[];
     for (final LlmMessage message in messages) {
@@ -162,6 +194,16 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
           'call_id': message.toolCallId ?? '',
           'output': message.content,
         });
+        if (message.images.isNotEmpty || message.files.isNotEmpty) {
+          items.add(_responsesItem(
+            LlmMessage(
+              'user',
+              '工具结果附带的附件：',
+              images: message.images,
+              files: message.files,
+            ),
+          ));
+        }
         continue;
       }
       if (message.toolCalls.isNotEmpty) {
@@ -198,6 +240,12 @@ abstract class _OpenAiCompatibleProvider implements LlmProvider {
           <String, String>{
             'type': 'input_image',
             'image_url': image.dataUrl,
+          },
+        for (final LlmFile file in message.files)
+          <String, String>{
+            'type': 'input_file',
+            'filename': file.filename ?? 'attachment',
+            'file_data': file.base64Data,
           },
       ],
     };

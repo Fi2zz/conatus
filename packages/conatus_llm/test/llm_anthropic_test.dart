@@ -151,6 +151,92 @@ void main() {
     expect(result.usage['output_tokens'], 7);
   });
 
+  test('工具结果图片：tool_result content 数组带 image 块', () async {
+    final _Recorder recorder = _Recorder();
+    final AnthropicProvider provider = AnthropicProvider(
+      name: 'anthropic',
+      baseUrl: 'https://api.anthropic.com/v1',
+      model: 'claude-haiku-5-5',
+      apiKey: 'sk-ant',
+      client: recorder.client(_textAndToolSse),
+    );
+
+    await provider.chat(
+      <LlmMessage>[
+        const LlmMessage('user', '读图'),
+        const LlmMessage('assistant', '', toolCalls: <LlmToolCall>[
+          LlmToolCall(id: 'toolu_0', name: 'read_file'),
+        ]),
+        const LlmMessage(
+          'tool',
+          '图像已读取',
+          toolCallId: 'toolu_0',
+          images: <LlmImage>[
+            LlmImage(mimeType: 'image/png', base64Data: 'aGVsbG8='),
+          ],
+        ),
+      ],
+    );
+
+    final Map<String, dynamic> body =
+        jsonDecode(recorder.requests.single.body) as Map<String, dynamic>;
+    final List<dynamic> messages = body['messages'] as List<dynamic>;
+    final Map<String, dynamic> toolResult =
+        messages.last as Map<String, dynamic>;
+    final Map<String, dynamic> resultBlock =
+        (toolResult['content'] as List<dynamic>).single as Map<String, dynamic>;
+    final List<dynamic> content = resultBlock['content'] as List<dynamic>;
+    expect(resultBlock['type'], 'tool_result');
+    expect(content.first['type'], 'text');
+    expect(content.last['type'], 'image');
+    expect(content.last['source']['media_type'], 'image/png');
+    expect(content.last['source']['data'], 'aGVsbG8=');
+  });
+
+  test('工具结果 PDF：tool_result content 带 document 块', () async {
+    final _Recorder recorder = _Recorder();
+    final AnthropicProvider provider = AnthropicProvider(
+      name: 'anthropic',
+      baseUrl: 'https://api.anthropic.com/v1',
+      model: 'claude-haiku-5-5',
+      apiKey: 'sk-ant',
+      client: recorder.client(_textAndToolSse),
+    );
+
+    await provider.chat(
+      <LlmMessage>[
+        const LlmMessage('user', '读 PDF'),
+        const LlmMessage('assistant', '', toolCalls: <LlmToolCall>[
+          LlmToolCall(id: 'toolu_0', name: 'read_file'),
+        ]),
+        const LlmMessage(
+          'tool',
+          'PDF 已读取',
+          toolCallId: 'toolu_0',
+          files: <LlmFile>[
+            LlmFile(
+              mimeType: 'application/pdf',
+              base64Data: 'JVBERg==',
+              filename: 'a.pdf',
+            ),
+          ],
+        ),
+      ],
+    );
+
+    final Map<String, dynamic> body =
+        jsonDecode(recorder.requests.single.body) as Map<String, dynamic>;
+    final List<dynamic> messages = body['messages'] as List<dynamic>;
+    final Map<String, dynamic> toolResult =
+        messages.last as Map<String, dynamic>;
+    final Map<String, dynamic> resultBlock =
+        (toolResult['content'] as List<dynamic>).single as Map<String, dynamic>;
+    final List<dynamic> content = resultBlock['content'] as List<dynamic>;
+    expect(content.last['type'], 'document');
+    expect(content.last['source']['media_type'], 'application/pdf');
+    expect(content.last['source']['data'], 'JVBERg==');
+  });
+
   test('OpenCode 主机用 Bearer，并合并动态会话头', () async {
     final _Recorder recorder = _Recorder();
     final AnthropicProvider provider = AnthropicProvider(

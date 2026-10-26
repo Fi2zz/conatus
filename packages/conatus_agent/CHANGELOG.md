@@ -4,6 +4,10 @@
 
 ## [未发布]
 
+- **工具结果多模态附件**：Agent Loop 把 `ToolResult.images` / `files` 转成
+  下一轮 `LlmMessage` 的 `images` / `files`，工具（如 `read_file`）返回的
+  图片与 PDF 可直接进入模型上下文。
+
 - **子 Agent 可被打断**：新增 `SpawnAgentTool.interrupt()` 取消所有在途子 Agent。
   子 Agent 跑在自己的 `Session`、不参与主轮次的取消竞速，此前主轮次 Esc 只丢结果、
   子循环仍在后台烧 token；TUI 的 `Esc` 现在一并收掉，收敛为 `status=failed`。

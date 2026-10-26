@@ -4,6 +4,11 @@
 
 ## [未发布]
 
+- **工具结果多模态附件**：`ToolResult` 新增 `images`（`ToolImage`）与
+  `files`（`ToolFile`），供工具把图片 / PDF 随结果交给模型；
+  `FileSystem.readBytes` 提供二进制读取的默认契约（本地后端实现，其它后端
+  可覆盖或抛 `UnsupportedError`）。
+
 - **进程树终结（E-15）**：新增 `killProcessTree`（`process_kill.dart`）——用
   `pgrep -P` 递归收后代、先后代后根，修复「`bash -c "a & b"` 杀掉 bash 后孙
   进程孤儿化继续跑」；`LocalShellExecutor` 的后台 `kill`、前台超时、取消信号

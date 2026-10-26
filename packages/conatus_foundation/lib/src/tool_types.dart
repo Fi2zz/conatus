@@ -38,6 +38,35 @@ class ToolError {
   String toString() => '$code: $message';
 }
 
+/// 工具结果携带的图片（多模态工具输出）。
+class ToolImage {
+  const ToolImage({required this.mimeType, required this.base64Data});
+
+  /// 图片 MIME 类型，如 `image/png`。
+  final String mimeType;
+
+  /// 图片字节的 base64 编码（不含 data URL 前缀）。
+  final String base64Data;
+}
+
+/// 工具结果携带的文件（如 PDF）。
+class ToolFile {
+  const ToolFile({
+    required this.mimeType,
+    required this.base64Data,
+    this.filename,
+  });
+
+  /// 文件 MIME 类型，如 `application/pdf`。
+  final String mimeType;
+
+  /// 文件字节的 base64 编码。
+  final String base64Data;
+
+  /// 文件名（可选）。
+  final String? filename;
+}
+
 /// 一次工具调用的结局：成功携带规范值 [value]，失败携带 [error]。
 ///
 /// [meta] 是宿主侧元数据（成本、缓存键、产物指纹等）：它不进模型可见的
@@ -47,6 +76,8 @@ class ToolResult {
     this.content, {
     this.value,
     this.meta = const <String, Object?>{},
+    this.images = const <ToolImage>[],
+    this.files = const <ToolFile>[],
   })  : isError = false,
         error = null;
 
@@ -54,6 +85,8 @@ class ToolResult {
     this.content, {
     this.error,
     this.meta = const <String, Object?>{},
+    this.images = const <ToolImage>[],
+    this.files = const <ToolFile>[],
   })  : isError = true,
         value = null;
 
@@ -72,13 +105,31 @@ class ToolResult {
   /// 宿主侧元数据；模型不可见，缺省为空。
   final Map<String, Object?> meta;
 
+  /// 随工具结果返回给模型的图片；缺省为空。
+  final List<ToolImage> images;
+
+  /// 随工具结果返回给模型的文件（PDF 等）；缺省为空。
+  final List<ToolFile> files;
+
   /// 复制一份并合并 [extra]（同名键以 [extra] 为准）；内容与状态不变。
   ToolResult withMeta(Map<String, Object?> extra) {
     final Map<String, Object?> merged = <String, Object?>{...meta, ...extra};
     if (isError) {
-      return ToolResult.failure(content, error: error, meta: merged);
+      return ToolResult.failure(
+        content,
+        error: error,
+        meta: merged,
+        images: images,
+        files: files,
+      );
     }
-    return ToolResult.success(content, value: value, meta: merged);
+    return ToolResult.success(
+      content,
+      value: value,
+      meta: merged,
+      images: images,
+      files: files,
+    );
   }
 
   @override

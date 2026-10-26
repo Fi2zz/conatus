@@ -96,4 +96,127 @@ void main() {
       expect(content[1]['image_url'], _image.dataUrl);
     });
   });
+
+  group('工具结果图片', () {
+    const List<LlmMessage> toolMessages = <LlmMessage>[
+      LlmMessage('user', '读图'),
+      LlmMessage(
+        'assistant',
+        '',
+        toolCalls: <LlmToolCall>[
+          LlmToolCall(id: 'call_1', name: 'read_file'),
+        ],
+      ),
+      LlmMessage(
+        'tool',
+        '图像已读取',
+        toolCallId: 'call_1',
+        images: <LlmImage>[_image],
+      ),
+    ];
+
+    test('chat 形态：tool 文本后追加 user 图片消息', () async {
+      final List<Map<String, dynamic>> bodies = <Map<String, dynamic>>[];
+      final provider = doubaoProviderForTest(
+        apiKey: 'test-key',
+        client: _captureClient(bodies),
+      );
+      await provider.chat(toolMessages);
+
+      final List<dynamic> messages = bodies.single['messages'] as List<dynamic>;
+      final Map<String, dynamic> tool = messages[2] as Map<String, dynamic>;
+      expect(tool['role'], 'tool');
+      expect(tool['content'], '图像已读取');
+      expect(tool['tool_call_id'], 'call_1');
+      final Map<String, dynamic> user = messages[3] as Map<String, dynamic>;
+      expect(user['role'], 'user');
+      final List<dynamic> parts = user['content'] as List<dynamic>;
+      expect(parts.last['type'], 'image_url');
+      expect(parts.last['image_url']['url'], _image.dataUrl);
+    });
+
+    test('responses 形态：function_call_output 后追加 user 图片消息', () async {
+      final List<Map<String, dynamic>> bodies = <Map<String, dynamic>>[];
+      final provider = doubaoProviderForTest(
+        apiKey: 'test-key',
+        apiStyle: LlmApiStyle.responses,
+        client: _captureClient(bodies),
+      );
+      await provider.chat(toolMessages);
+
+      final List<dynamic> input = bodies.single['input'] as List<dynamic>;
+      final List<String> types = <String>[
+        for (final dynamic item in input) (item as Map<String, dynamic>)['type'] as String,
+      ];
+      expect(types, containsAllInOrder(<String>[
+        'function_call_output',
+        'message',
+      ]));
+      final Map<String, dynamic> user =
+          input.last as Map<String, dynamic>;
+      final List<dynamic> content = user['content'] as List<dynamic>;
+      expect(content.last['type'], 'input_image');
+    });
+
+    test('responses 形态：PDF 用 input_file', () async {
+      final List<Map<String, dynamic>> bodies = <Map<String, dynamic>>[];
+      final provider = doubaoProviderForTest(
+        apiKey: 'test-key',
+        apiStyle: LlmApiStyle.responses,
+        client: _captureClient(bodies),
+      );
+      await provider.chat(<LlmMessage>[
+        const LlmMessage('user', '读 PDF'),
+        const LlmMessage(
+          'tool',
+          'PDF 已读取',
+          toolCallId: 'call_1',
+          files: <LlmFile>[
+            LlmFile(
+              mimeType: 'application/pdf',
+              base64Data: 'JVBERg==',
+              filename: 'a.pdf',
+            ),
+          ],
+        ),
+      ]);
+
+      final List<dynamic> input = bodies.single['input'] as List<dynamic>;
+      final Map<String, dynamic> user = input.last as Map<String, dynamic>;
+      final List<dynamic> content = user['content'] as List<dynamic>;
+      final Map<String, dynamic> file = content.last as Map<String, dynamic>;
+      expect(file['type'], 'input_file');
+      expect(file['filename'], 'a.pdf');
+      expect(file['file_data'], 'JVBERg==');
+    });
+
+    test('chat 形态：PDF 降级为文本提示', () async {
+      final List<Map<String, dynamic>> bodies = <Map<String, dynamic>>[];
+      final provider = doubaoProviderForTest(
+        apiKey: 'test-key',
+        client: _captureClient(bodies),
+      );
+      await provider.chat(<LlmMessage>[
+        const LlmMessage('user', '读 PDF'),
+        const LlmMessage(
+          'tool',
+          'PDF 已读取',
+          toolCallId: 'call_1',
+          files: <LlmFile>[
+            LlmFile(
+              mimeType: 'application/pdf',
+              base64Data: 'JVBERg==',
+              filename: 'a.pdf',
+            ),
+          ],
+        ),
+      ]);
+
+      final List<dynamic> messages = bodies.single['messages'] as List<dynamic>;
+      final Map<String, dynamic> last =
+          messages.last as Map<String, dynamic>;
+      expect(last['role'], 'user');
+      expect(last['content'], contains('不支持内联文件'));
+    });
+  });
 }

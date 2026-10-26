@@ -6,6 +6,8 @@
 /// 观察策略等留在消费方与策略插件。
 library;
 
+import 'dart:typed_data';
+
 import 'package:conatus_core/conatus_core.dart';
 import 'fs_types.dart';
 
@@ -39,6 +41,14 @@ abstract class FileSystem {
 
   /// 读取整个普通文本文件为解码后的字符串。
   Future<String> readText(FsTarget target);
+
+  /// 读取整个普通文件的原始字节。
+  ///
+  /// 缺省实现不支持二进制后端（远程/内存 fs 可按需覆盖）；调用方应把
+  /// [UnsupportedError] 转成可读的工具错误。
+  Future<Uint8List> readBytes(FsTarget target) async {
+    throw UnsupportedError('this filesystem does not support binary reads');
+  }
 
   /// 按名字稳定排序返回目录的直接子项；只含元数据，不读文件内容。
   Future<List<FsDirEntry>> listDir(FsTarget target);

@@ -327,7 +327,7 @@ class AgentLoop {
             onReplan: () => _needsReplan = true,
           );
         }
-        messages.add(LlmMessage('tool', outcome.content, toolCallId: call.id));
+        messages.add(_toolMessage(outcome, call));
         session?.append(kToolResultEvent, data: <String, Object?>{
           'callId': call.id,
           'name': call.name,
@@ -398,7 +398,7 @@ class AgentLoop {
     });
     for (final LlmToolCall call in calls) {
       final ToolResult outcome = await invoke(call);
-      messages.add(LlmMessage('tool', outcome.content, toolCallId: call.id));
+      messages.add(_toolMessage(outcome, call));
       session?.append(kToolResultEvent, data: <String, Object?>{
         'callId': call.id,
         'name': call.name,
@@ -459,3 +459,21 @@ class AgentLoop {
         memoryLimit: memoryLimit,
       );
 }
+
+LlmMessage _toolMessage(ToolResult outcome, LlmToolCall call) => LlmMessage(
+      'tool',
+      outcome.content,
+      toolCallId: call.id,
+      images: <LlmImage>[
+        for (final ToolImage image in outcome.images)
+          LlmImage(mimeType: image.mimeType, base64Data: image.base64Data),
+      ],
+      files: <LlmFile>[
+        for (final ToolFile file in outcome.files)
+          LlmFile(
+            mimeType: file.mimeType,
+            base64Data: file.base64Data,
+            filename: file.filename,
+          ),
+      ],
+    );

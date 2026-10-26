@@ -7,6 +7,7 @@ library;
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:conatus_core/conatus_core.dart';
 import 'fs.dart';
 
@@ -65,6 +66,9 @@ class LocalFileSystem implements FileSystem {
 
   @override
   Future<void> remove(FsTarget target) => _removeTarget(target);
+
+  @override
+  Future<Uint8List> readBytes(FsTarget target) => File(target.targetKey).readAsBytes();
 }
 
 /// 提供本地文件系统为 `'fs'` 服务；[fs] 用于注入自定义实现。

@@ -180,7 +180,7 @@ class AnthropicProvider implements LlmProvider {
               <String, dynamic>{
                 'type': 'tool_result',
                 'tool_use_id': message.toolCallId ?? '',
-                'content': message.content,
+                'content': _toolResultContent(message),
               },
             ],
           );
@@ -222,6 +222,9 @@ class AnthropicProvider implements LlmProvider {
                 'data': image.base64Data,
               },
             });
+          }
+          for (final LlmFile file in message.files) {
+            blocks.add(_fileBlock(file));
           }
           if (blocks.isNotEmpty) {
             if (index == lastCacheable) _markCache(blocks);
@@ -279,6 +282,43 @@ class AnthropicProvider implements LlmProvider {
   void _markCache(List<Map<String, dynamic>> blocks) {
     if (blocks.isEmpty) return;
     blocks.last['cache_control'] = _ephemeral;
+  }
+
+  Object _toolResultContent(LlmMessage message) {
+    if (message.images.isEmpty && message.files.isEmpty) {
+      return message.content;
+    }
+    return <Map<String, dynamic>>[
+      if (message.content.isNotEmpty)
+        <String, dynamic>{'type': 'text', 'text': message.content},
+      for (final LlmImage image in message.images)
+        <String, dynamic>{
+          'type': 'image',
+          'source': <String, String>{
+            'type': 'base64',
+            'media_type': image.mimeType,
+            'data': image.base64Data,
+          },
+        },
+      for (final LlmFile file in message.files) _fileBlock(file),
+    ];
+  }
+
+  Map<String, dynamic> _fileBlock(LlmFile file) {
+    if (file.mimeType == 'application/pdf') {
+      return <String, dynamic>{
+        'type': 'document',
+        'source': <String, String>{
+          'type': 'base64',
+          'media_type': 'application/pdf',
+          'data': file.base64Data,
+        },
+      };
+    }
+    return <String, dynamic>{
+      'type': 'text',
+      'text': '（附件 ${file.filename ?? file.mimeType} 暂不支持内联）',
+    };
   }
 
   int _maxTokens(Map<String, dynamic>? options) {
