@@ -4,6 +4,9 @@
 
 ## [未发布]
 
+- **空回复标记**：`AgentTurn.emptyReply`；模型没有工具调用却返回空正文时
+  为 `true`，宿主可提示重试/换模型，不再把空回复当成正常收口。
+
 - **工具结果多模态附件**：Agent Loop 把 `ToolResult.images` / `files` 转成
   下一轮 `LlmMessage` 的 `images` / `files`，工具（如 `read_file`）返回的
   图片与 PDF 可直接进入模型上下文。

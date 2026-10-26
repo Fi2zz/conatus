@@ -81,6 +81,18 @@ void main() {
       expect(provider.lastTools!.single['name'], 'get_time');
     });
 
+    test('空正文无工具调用：标记 emptyReply', () async {
+      final _ScriptedProvider provider = _ScriptedProvider(<LlmResult>[
+        const LlmResult(content: '', provider: 'scripted', model: 'm'),
+      ]);
+      final AgentLoop loop = AgentLoop(llm: provider, tools: _timeTools());
+
+      final AgentTurn turn = await loop.run('在吗');
+
+      expect(turn.reply, isEmpty);
+      expect(turn.emptyReply, isTrue);
+    });
+
     test('工具调用闭环：执行工具并回填后收口', () async {
       final _ScriptedProvider provider = _ScriptedProvider(<LlmResult>[
         _call('c1', 'get_time'),

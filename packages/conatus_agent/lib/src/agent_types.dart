@@ -54,6 +54,7 @@ class AgentTurn {
     this.usage = const <Map<String, dynamic>>[],
     this.cost,
     this.tokens = TokenUsage.zero,
+    this.emptyReply = false,
   });
 
   /// 最终文本回复。
@@ -75,4 +76,7 @@ class AgentTurn {
 
   /// 本轮归一后的累计用量。
   final TokenUsage tokens;
+
+  /// 模型在没有工具调用的情况下返回了空正文（输出可能被截断）。
+  final bool emptyReply;
 }

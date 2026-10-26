@@ -295,7 +295,15 @@ class AgentLoop {
         'contentLength': result.content.length,
       });
       if (result.toolCalls.isEmpty) {
-        return _finish(session, messages, steps, usages, result.content.trim());
+        final String reply = result.content.trim();
+        return _finish(
+          session,
+          messages,
+          steps,
+          usages,
+          reply,
+          emptyReply: reply.isEmpty,
+        );
       }
       messages.add(
         LlmMessage(
@@ -414,8 +422,9 @@ class AgentLoop {
     List<LlmMessage> messages,
     List<AgentStep> steps,
     List<Map<String, dynamic>> usage,
-    String reply,
-  ) async {
+    String reply, {
+    bool emptyReply = false,
+  }) async {
     final double? cost = _meter.cost;
     onEvent?.call('agent.finished', <String, Object?>{
       'replyLength': reply.length,
@@ -432,6 +441,7 @@ class AgentLoop {
       usage: usage,
       cost: cost,
       tokens: _meter.tokens,
+      emptyReply: emptyReply,
     );
   }
 
