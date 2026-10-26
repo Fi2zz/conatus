@@ -13,6 +13,7 @@ import 'package:conatus_foundation/conatus_foundation.dart';
 
 import 'skill_catalog.dart';
 import 'skill_catalog_section.dart';
+import 'skill_default_roots.dart';
 import 'skill_filesystem_provider.dart';
 import 'skill_filesystem_watch.dart';
 import 'skill_provider.dart';

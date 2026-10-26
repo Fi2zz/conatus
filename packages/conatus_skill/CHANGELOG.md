@@ -4,6 +4,11 @@
 
 ## [未发布]
 
+- **OpenCode / Claude 兼容发现根**：`defaultSkillRoots` 新增项目
+  `.opencode/skills`（rank 150）、`.claude/skills`（275），以及用户
+  `~/.config/opencode/skills`（450）、`~/.claude/skills`（550）。nava 原生
+  `.conatus/skills`（100）仍优先；`.agents/skills` 保持 200/500。
+
 - 用户级发现根（`$CONATUS_HOME/skills`、`$CONATUS_AGENTS_HOME/skills`）的用户目录
   解析复用 `conatus_foundation` 的 `resolveHomeDir`：无 `HOME` / `USERPROFILE`
   时抛 `StateError`，不再静默回退当前工作目录。

@@ -3,8 +3,6 @@ library;
 
 import 'dart:io';
 
-import 'package:conatus_foundation/conatus_foundation.dart';
-
 import 'skill_markdown.dart';
 import 'skill_provider.dart';
 import 'skill_types.dart';
@@ -29,52 +27,6 @@ class SkillRoot {
 
   @override
   String toString() => '$source($rank): $path';
-}
-
-/// 默认发现根：项目根下的 `.conatus/skills`、`.agents/skills`，以及用户目录下
-/// `$CONATUS_HOME/skills`、`$CONATUS_AGENTS_HOME/skills`。
-List<SkillRoot> defaultSkillRoots({
-  String? projectRoot,
-  bool includeUserRoots = true,
-}) {
-  final String root = projectRoot ?? findProjectRoot();
-  final List<SkillRoot> roots = <SkillRoot>[
-    SkillRoot(
-      path: _under(root, '.conatus/skills'),
-      source: kSkillSourceProjectConatus,
-      rank: 100,
-    ),
-    SkillRoot(
-      path: _under(root, '.agents/skills'),
-      source: kSkillSourceProjectAgents,
-      rank: 200,
-    ),
-  ];
-  if (includeUserRoots) {
-    roots.add(SkillRoot(
-      path: _under(_home('CONATUS_HOME', '.conatus'), 'skills'),
-      source: kSkillSourceUserConatus,
-      rank: 400,
-    ));
-    roots.add(SkillRoot(
-      path: _under(_home('CONATUS_AGENTS_HOME', '.agents'), 'skills'),
-      source: kSkillSourceUserAgents,
-      rank: 500,
-    ));
-  }
-  return roots;
-}
-
-/// 最近的含 `.git` 的祖先目录；找不到时返回 [from]（缺省当前工作目录）。
-String findProjectRoot({String? from}) {
-  final String fallback = from ?? Directory.current.path;
-  String current = fallback;
-  while (true) {
-    if (Directory(_under(current, '.git')).existsSync()) return current;
-    final String parent = Directory(current).parent.path;
-    if (parent == current) return fallback;
-    current = parent;
-  }
 }
 
 /// 从发现根读取技能的 provider。
@@ -180,9 +132,3 @@ File? _skillFileOf(FileSystemEntity entry) {
 
 String _under(String base, String relative) =>
     '$base${Platform.pathSeparator}${relative.replaceAll('/', Platform.pathSeparator)}';
-
-String _home(String envKey, String fallbackDir) {
-  final String? fromEnv = Platform.environment[envKey]?.trim();
-  if (fromEnv != null && fromEnv.isNotEmpty) return fromEnv;
-  return _under(resolveHomeDir(), fallbackDir);
-}

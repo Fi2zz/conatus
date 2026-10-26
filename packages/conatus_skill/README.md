@@ -1,8 +1,9 @@
 # conatus_skill
 
-conatus 的技能加载：从 `.conatus/skills` 与 `.agents/skills` 发现 `SKILL.md`
-形式的指令集，把可调用技能目录注入 system prompt，并由 `skill` 工具按需把正文
-加载进对话。只依赖 `conatus_core`、`conatus_foundation` 与 YAML 解析库 `yaml`。
+conatus 的技能加载：从 `.conatus/skills`、`.opencode/skills`、`.agents/skills`
+与 `.claude/skills` 发现 `SKILL.md` 形式的指令集，把可调用技能目录注入
+system prompt，并由 `skill` 工具按需把正文加载进对话。只依赖 `conatus_core`、
+`conatus_foundation` 与 YAML 解析库 `yaml`。
 
 技能 = 一段 Markdown 指令 + 一份 frontmatter。模型先看到目录（名字 + 一行
 描述），需要时调用 `skill` 工具取回正文；正文进了对话历史，就等于进了
@@ -19,10 +20,14 @@ conatus 的技能加载：从 `.conatus/skills` 与 `.agents/skills` 发现 `SKI
 | rank | 来源 | 路径 |
 |---|---|---|
 | 100 | `project-conatus` | `<项目根>/.conatus/skills` |
+| 150 | `project-opencode` | `<项目根>/.opencode/skills` |
 | 200 | `project-agents` | `<项目根>/.agents/skills` |
+| 275 | `project-claude` | `<项目根>/.claude/skills` |
 | 300 | `custom` | 调用方传入的 `SkillRoot` |
 | 400 | `user-conatus` | `$CONATUS_HOME/skills`（缺省 `~/.conatus/skills`） |
+| 450 | `user-opencode` | `~/.config/opencode/skills` |
 | 500 | `user-agents` | `$CONATUS_AGENTS_HOME/skills`（缺省 `~/.agents/skills`） |
+| 550 | `user-claude` | `~/.claude/skills` |
 
 项目根是最近的含 `.git` 的祖先目录，找不到时用当前工作目录。每个根只扫**一层**：
 目录束 `<root>/<name>/SKILL.md`，或平铺文件 `<root>/<name>.md`；其它条目跳过。

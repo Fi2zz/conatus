@@ -7,14 +7,26 @@ const String kSkillSourceProjectConatus = 'project-conatus';
 /// 来源 `project-agents`：项目根下的 `.agents/skills`。
 const String kSkillSourceProjectAgents = 'project-agents';
 
+/// 来源 `project-opencode`：项目根下的 `.opencode/skills`。
+const String kSkillSourceProjectOpenCode = 'project-opencode';
+
+/// 来源 `project-claude`：项目根下的 `.claude/skills`。
+const String kSkillSourceProjectClaude = 'project-claude';
+
 /// 来源 `custom`：调用方显式给出的目录。
 const String kSkillSourceCustom = 'custom';
 
 /// 来源 `user-conatus`：`$CONATUS_HOME/skills`（缺省 `~/.conatus/skills`）。
 const String kSkillSourceUserConatus = 'user-conatus';
 
+/// 来源 `user-opencode`：`~/.config/opencode/skills`。
+const String kSkillSourceUserOpenCode = 'user-opencode';
+
 /// 来源 `user-agents`：`$CONATUS_AGENTS_HOME/skills`（缺省 `~/.agents/skills`）。
 const String kSkillSourceUserAgents = 'user-agents';
+
+/// 来源 `user-claude`：`~/.claude/skills`。
+const String kSkillSourceUserClaude = 'user-claude';
 
 /// 来源 `runtime`：由宿主代码用 [SkillRegistration] 直接注册的技能。
 const String kSkillSourceRuntime = 'runtime';

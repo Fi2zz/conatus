@@ -57,8 +57,9 @@ export 'src/skill_catalog_section.dart'
 export 'src/skill_collect.dart' show collectSkillSummaries;
 export 'src/skill_content.dart'
     show escapeSkillAttribute, renderSkillContent, renderSkillResourceHint;
+export 'src/skill_default_roots.dart' show defaultSkillRoots, findProjectRoot;
 export 'src/skill_filesystem_provider.dart'
-    show SkillFilesystemProvider, SkillRoot, defaultSkillRoots, findProjectRoot;
+    show SkillFilesystemProvider, SkillRoot;
 export 'src/skill_filesystem_watch.dart' show SkillRootWatcher;
 export 'src/skill_markdown.dart'
     show
@@ -88,7 +89,11 @@ export 'src/skill_types.dart'
         kSkillRuntimeRank,
         kSkillSourceCustom,
         kSkillSourceProjectAgents,
+        kSkillSourceProjectClaude,
         kSkillSourceProjectConatus,
+        kSkillSourceProjectOpenCode,
         kSkillSourceRuntime,
         kSkillSourceUserAgents,
-        kSkillSourceUserConatus;
+        kSkillSourceUserClaude,
+        kSkillSourceUserConatus,
+        kSkillSourceUserOpenCode;

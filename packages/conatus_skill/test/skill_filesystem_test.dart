@@ -189,18 +189,23 @@ void main() {
   });
 
   group('defaultSkillRoots', () {
-    test('不含用户根时只给出两个项目根', () {
+    test('不含用户根时给出四个项目根（含 OpenCode / Claude 兼容根）', () {
       final Directory project = _createTemp('conatus-skill-project-');
       final List<SkillRoot> roots = defaultSkillRoots(
         projectRoot: project.path,
         includeUserRoots: false,
       );
 
-      expect(roots, hasLength(2));
-      expect(roots.map((SkillRoot r) => r.rank), <int>[100, 200]);
+      expect(roots, hasLength(4));
+      expect(roots.map((SkillRoot r) => r.rank), <int>[100, 150, 200, 275]);
       expect(
         roots.map((SkillRoot r) => r.source),
-        <String>[kSkillSourceProjectConatus, kSkillSourceProjectAgents],
+        <String>[
+          kSkillSourceProjectConatus,
+          kSkillSourceProjectOpenCode,
+          kSkillSourceProjectAgents,
+          kSkillSourceProjectClaude,
+        ],
       );
       expect(
         roots.every((SkillRoot r) => r.path.startsWith(project.path)),
@@ -208,18 +213,26 @@ void main() {
       );
       expect(
           roots[0].path, endsWith('.conatus${Platform.pathSeparator}skills'));
-      expect(roots[1].path, endsWith('.agents${Platform.pathSeparator}skills'));
+      expect(
+          roots[1].path, endsWith('.opencode${Platform.pathSeparator}skills'));
+      expect(roots[2].path, endsWith('.agents${Platform.pathSeparator}skills'));
+      expect(roots[3].path, endsWith('.claude${Platform.pathSeparator}skills'));
     });
 
-    test('含用户根时追加两条 rank 400/500 的根', () {
+    test('含用户根时追加四条 rank 400/450/500/550 的根', () {
       final Directory project = _createTemp('conatus-skill-project-');
       final List<SkillRoot> roots =
           defaultSkillRoots(projectRoot: project.path);
 
-      expect(roots, hasLength(4));
-      expect(roots.map((SkillRoot r) => r.rank), <int>[100, 200, 400, 500]);
-      expect(roots[2].source, kSkillSourceUserConatus);
-      expect(roots[3].source, kSkillSourceUserAgents);
+      expect(roots, hasLength(8));
+      expect(
+        roots.map((SkillRoot r) => r.rank),
+        <int>[100, 150, 200, 275, 400, 450, 500, 550],
+      );
+      expect(roots[4].source, kSkillSourceUserConatus);
+      expect(roots[5].source, kSkillSourceUserOpenCode);
+      expect(roots[6].source, kSkillSourceUserAgents);
+      expect(roots[7].source, kSkillSourceUserClaude);
       expect(
         roots.every((SkillRoot r) => r.path.endsWith('skills')),
         isTrue,
@@ -234,6 +247,15 @@ void main() {
         ..createSync(recursive: true);
 
       expect(findProjectRoot(from: nested.path), nested.path);
+    });
+
+    test('工作树 / 子模块的 .git 文件也算项目根', () {
+      final Directory root = _createTemp('conatus-skill-root-');
+      File(_path(root, '.git')).writeAsStringSync('gitdir: /tmp/worktree\n');
+      final Directory nested = Directory(_path(root, 'a/b'))
+        ..createSync(recursive: true);
+
+      expect(findProjectRoot(from: nested.path), root.path);
     });
   });
 

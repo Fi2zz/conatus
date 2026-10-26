@@ -750,8 +750,10 @@ await skills.restore(tools: app.tools);                        // 跨会话恢�
 同一件事：这里加载的是磁盘上的 Markdown 指令集，那边沉淀出的是可执行的新工具。
 
 技能放在 `<项目根>/.conatus/skills/<name>/SKILL.md`（或 `<name>.md`），
-`<项目根>/.agents/skills`、`~/.conatus/skills`（`$CONATUS_HOME`）、
-`~/.agents/skills`（`$CONATUS_AGENTS_HOME`）按同一优先级规则依次生效。
+`<项目根>/.opencode/skills`、`<项目根>/.agents/skills`、
+`<项目根>/.claude/skills`、`~/.conatus/skills`（`$CONATUS_HOME`）、
+`~/.config/opencode/skills`、`~/.agents/skills`（`$CONATUS_AGENTS_HOME`）、
+`~/.claude/skills` 按同一优先级规则依次生效。
 frontmatter 需要 `name`（kebab-case）与 `description`，可选 `whenToUse` /
 `metadata` / `disable-model-invocation`；`name` 与描述会被拼成一段 system prompt
 （`skills` 段——没有技能时该段不存在），模型据此调用 `skill` 工具取回正文。
