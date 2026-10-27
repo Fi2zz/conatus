@@ -34,6 +34,7 @@ OpenCode v2 的做法是把项目元数据收进 SQLite，项目 ID 由 git remo
 - 不把会话、消息、检查点内容迁移进 SQLite。
 - 不迁移旧的 `~/.nava/projects/` 数据。
 - 不实现跨设备同步、项目归档、项目列表 UI 或远程项目拉取。
+- 不创建、删除、切换 git worktree；`worktree` 表只登记已有 checkout。
 - 不改变 `.opencode` 只读约束。
 - 第一阶段不保证 Windows 上系统 SQLite 的可用性；nava 的 Windows 命令执行本来就禁用，后续可补 `sqlite3.dll` 分发。
 
@@ -88,6 +89,22 @@ OpenCode v2 的做法是把项目元数据收进 SQLite，项目 ID 由 git remo
 3. 非 git：`sha1("directory:" + canonicalPath)`。
 
 同一 remote 的多个 clone/worktree 因此共享 `project_id`；非 git 目录按路径区分。
+
+### 与 OpenCode Worktree 的边界
+
+OpenCode v2 的 `Worktree` 服务会真正执行 `git worktree add`，在
+`~/.local/share/opencode/worktree/<project-id 前 6 位>/` 下创建可切换的 checkout，并支持
+create / remove / list / refresh；其 `worktree` 表带 `strategy` 字段。
+
+本设计不包含这部分管理能力。nava 的 `worktree` 表只登记：
+
+- 用户已有的主 checkout；
+- 用户通过 git 自行创建的 linked worktree；
+- 不创建目录、不执行 `git worktree add/remove`、不提供 worktree 切换命令。
+
+这样仍能实现「同仓库共享项目、不同 checkout 数据隔离」，但不会把 nava 变成 git
+worktree 管理器。未来若要补齐，可在现有表上加 `strategy` 字段并增加命令，不影响当前
+项目/目录模型。
 
 ### worktree_id
 
