@@ -174,7 +174,8 @@ CREATE INDEX worktree_project_idx ON worktree(project_id);
 - `project.name` 允许重名；显示名不是身份。
 - `worktree.path` 唯一，保证同一路径只登记一次。
 - `worktree.dir_name` 唯一，避免目录冲突。
-- 数据库文件创建后收紧为 `0600`；`workspaces/` 创建为 `0700`（POSIX；Windows 忽略 chmod）。
+- 数据库文件及其 `-wal` / `-shm` 创建后收紧为 `0600`；`workspaces/` 创建为 `0700`（POSIX；Windows 忽略 chmod）。
+- 注册表与工作区路径命中 `.opencode` 只读面时拒绝启动；不在受保护目录创建 DB 或工作区。
 - 数据库缺失时自动创建；文件存在但不是合法 SQLite、`user_version` 不认识、或 schema 损坏时，启动失败并打印 DB 路径，不静默重建或丢项目。
 
 ## resolve 流程
