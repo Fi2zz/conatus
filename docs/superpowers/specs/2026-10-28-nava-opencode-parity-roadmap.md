@@ -20,6 +20,7 @@
 |---|---|---|---|
 | P0 | LSP 核心闭环 | 编码质量：真实类型错误、诊断进 Agent Loop | 中高 |
 | P1 | LSP 导航能力 | hover / definition / references | 中 |
+| P1.5 | Web 工具对齐 | fetch markdown/format、搜索 provider 选择 | 低中 |
 | P2 | git worktree 管理 | 创建/删除/切换隔离工作树 | 中 |
 | P3 | 项目 UX 收尾 | 图标、最近项目、归档/清理 | 低 |
 | P4 | 插件系统 | 通用 JS/脚本插件运行时 | 很高 |
@@ -135,6 +136,36 @@
 
 ---
 
+## P1.5：Web 工具对齐
+
+nava 已有 `web_search` / `fetch_url`，本阶段只补 OpenCode 的高价值差距，不重写工具层。
+
+### 范围
+
+1. `fetch_url` 增加 `format = text | markdown | html`，默认 markdown。
+   - text：现有剥标签行为。
+   - markdown：HTML → Markdown。
+   - html：保留 HTML。
+   - 增加响应体硬上限与重定向次数上限。
+2. `web_search` 增加 `provider` 参数。
+   - 显式 provider 失败时不回退；未指定时沿用现有回退链。
+   - provider 失败记录 cooldown，短时间内不再优先尝试。
+3. `/search` 或 `/web` 状态命令，展示 provider 可用性与最近错误。
+4. `fetch_url` 的 URL/域名权限单独做安全设计，不在本阶段直接放开。
+
+### 非目标
+
+- 不引入 OpenCode 的 Effect/TypeScript 运行时。
+- 不照搬 provider 实现；优先复用 nava 已有 `SearchProvider` / `WebFetcher` 缝。
+- 不默认允许任意 URL 抓取；安全策略另立 spec。
+
+### 验收
+
+- 模型可请求 `fetch_url(url, format=markdown)` 并拿到 Markdown。
+- `web_search(query, provider="tavily")` 只走指定 provider。
+- provider 失败后 cooldown，状态命令可见原因。
+- 现有无 Key 源跳过、全源失败提示保持不变。
+
 ## P2：git worktree 管理
 
 在现有项目注册表上增加真实 worktree 操作：
@@ -194,6 +225,8 @@ P0 LSP 核心
   ↓
 P1 LSP 导航
   ↓
+P1.5 Web 工具对齐
+  ↓
 P2 worktree 管理
   ↓
 P3 项目 UX
@@ -203,4 +236,4 @@ P5 跨平台（可与 P2/P3 并行）
 P4 插件系统（长期）
 ```
 
-每个阶段独立写 spec / plan / 测试；不把多个阶段混在一个提交里。
+每个阶段独立写 spec / plan / 测试；不把多个阶段混在一个提交里。每个阶段开始前先清上一阶段 review 留下的 Deferred minors。
