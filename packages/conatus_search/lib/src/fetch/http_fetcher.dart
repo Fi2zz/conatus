@@ -17,12 +17,38 @@ class HttpFetcher implements WebFetcher {
   HttpFetcher({
     http.Client? client,
     this.timeout = const Duration(seconds: 30),
+    this.maxBytes = 5 * 1024 * 1024,
   }) : _client = client ?? http.Client();
 
   final http.Client _client;
 
   /// 单次请求超时。
   final Duration timeout;
+
+  /// 响应体硬上限（字节）；超过即失败，避免把超大文件读进内存。
+  final int maxBytes;
+
+  Future<http.Response> _getFollowingRedirects(Uri start) async {
+    Uri current = start;
+    for (int redirects = 0; redirects <= 10; redirects++) {
+      final http.Request request = http.Request('GET', current)
+        ..followRedirects = false;
+      final http.StreamedResponse streamed =
+          await _client.send(request).timeout(timeout);
+      final http.Response response = await http.Response.fromStream(streamed);
+      final int status = response.statusCode;
+      if (status < 300 || status >= 400) return response;
+      final String? location = response.headers['location'];
+      if (location == null || location.isEmpty) return response;
+      if (redirects == 10) throw const FetchException('重定向次数超过 10');
+      final Uri next = current.resolve(location);
+      if (next.scheme != 'http' && next.scheme != 'https') {
+        throw FetchException('重定向到不支持的协议：${next.scheme}');
+      }
+      current = next;
+    }
+    throw const FetchException('重定向次数超过 10');
+  }
 
   @override
   Future<FetchedPage> fetch(
@@ -38,7 +64,7 @@ class HttpFetcher implements WebFetcher {
     }
     final http.Response response;
     try {
-      response = await _client.get(uri).timeout(timeout);
+      response = await _getFollowingRedirects(uri);
     } on TimeoutException {
       throw FetchException('请求超时（${timeout.inSeconds}s）');
     } on http.ClientException catch (error) {
@@ -48,6 +74,9 @@ class HttpFetcher implements WebFetcher {
     }
     if (response.statusCode != 200) {
       throw FetchException('HTTP ${response.statusCode}');
+    }
+    if (response.bodyBytes.length > maxBytes) {
+      throw FetchException('响应体超过 $maxBytes 字节上限');
     }
     final String contentType = response.headers['content-type'] ?? '';
     final bool htmlPage = contentType.contains('html') ||

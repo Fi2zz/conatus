@@ -65,6 +65,45 @@ void main() {
     expect(page.content, 'abcde');
   });
 
+  test('超过 maxBytes 抛 FetchException', () async {
+    final HttpFetcher fetcher = HttpFetcher(
+      maxBytes: 3,
+      client: MockClient((http.Request request) async =>
+          http.Response('abcdef', 200)),
+    );
+
+    await expectLater(
+      fetcher.fetch('https://e.com'),
+      throwsA(isA<FetchException>().having(
+        (FetchException e) => e.message,
+        'message',
+        contains('响应体超过'),
+      )),
+    );
+  });
+
+  test('重定向超过 10 次抛 FetchException', () async {
+    int calls = 0;
+    final HttpFetcher fetcher = HttpFetcher(
+      client: MockClient((http.Request request) async {
+        calls++;
+        return http.Response('', 302, headers: <String, String>{
+          'location': '/next',
+        });
+      }),
+    );
+
+    await expectLater(
+      fetcher.fetch('https://e.com/start'),
+      throwsA(isA<FetchException>().having(
+        (FetchException e) => e.message,
+        'message',
+        contains('重定向次数'),
+      )),
+    );
+    expect(calls, 11);
+  });
+
   test('非 200 抛 FetchException', () async {
     final HttpFetcher fetcher = HttpFetcher(
       client:
