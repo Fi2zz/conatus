@@ -41,7 +41,7 @@
    enabled = true
 
    [lsp.servers.dart]
-   command = ["dart", "language-server", "--lsp"]
+   command = ["dart", "language-server"]
    extensions = [".dart"]
 
    [lsp.servers.custom]
