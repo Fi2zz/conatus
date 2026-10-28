@@ -132,6 +132,26 @@ class ToolResult {
     );
   }
 
+  /// 复制一份并替换模型可见文本；状态、value、error 与附件不变。
+  ToolResult withContent(String content) {
+    if (isError) {
+      return ToolResult.failure(
+        content,
+        error: error,
+        meta: meta,
+        images: images,
+        files: files,
+      );
+    }
+    return ToolResult.success(
+      content,
+      value: value,
+      meta: meta,
+      images: images,
+      files: files,
+    );
+  }
+
   @override
   String toString() =>
       isError ? 'ToolResult.failure(${error?.code})' : 'ToolResult.success';
