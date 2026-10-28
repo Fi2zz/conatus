@@ -2,6 +2,7 @@ export 'src/fetch/fetcher.dart'
     show FetchedFormat, FetchedPage, FetchException, WebFetcher;
 export 'src/fetch/firecrawl_fetcher.dart'
     show FirecrawlFetcher, kFirecrawlCredentialKey;
+export 'src/fetch/html_markdown.dart' show htmlToMarkdown;
 export 'src/fetch/http_fetcher.dart' show HttpFetcher, stripHtml;
 export 'src/search.dart' show SearchContext, SearchService, provideSearch;
 export 'src/search_brave.dart' show BraveSearchProvider, kBraveCredentialKey;

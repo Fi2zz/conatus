@@ -19,10 +19,13 @@ export 'search_types.dart';
 class SearchService {
   SearchService({
     List<SearchSourceStatus> statuses = const <SearchSourceStatus>[],
+    this.cooldown = const Duration(seconds: 60),
   }) : _statuses = List<SearchSourceStatus>.unmodifiable(statuses);
 
   final List<SearchProvider> _providers = <SearchProvider>[];
   final List<SearchSourceStatus> _statuses;
+  final Duration cooldown;
+  final Map<String, DateTime> _cooling = <String, DateTime>{};
 
   /// 已注册的 provider（按注册顺序）。
   List<SearchProvider> get providers =>
@@ -55,15 +58,29 @@ class SearchService {
     int limit = 5,
     String? provider,
   }) async {
-    final List<SearchProvider> candidates = provider == null
-        ? List<SearchProvider>.of(_providers)
-        : <SearchProvider>[];
+    final List<SearchProvider> candidates;
     if (provider != null) {
       final SearchProvider? found = get(provider);
       if (found == null) {
         throw SearchException('未注册的搜索 provider "$provider"');
       }
-      candidates.add(found);
+      candidates = <SearchProvider>[found];
+    } else {
+      final DateTime now = DateTime.now();
+      final List<SearchProvider> warm = <SearchProvider>[];
+      final List<SearchProvider> cooling = <SearchProvider>[];
+      for (final SearchProvider item in _providers) {
+        final DateTime? until = _cooling[item.name];
+        if (until != null && until.isAfter(now)) {
+          cooling.add(item);
+        } else {
+          warm.add(item);
+        }
+      }
+      candidates = <SearchProvider>[...warm, ...cooling];
+    }
+    if (candidates.isEmpty) {
+      throw const SearchException('没有可用的搜索 provider');
     }
     if (candidates.isEmpty) {
       throw const SearchException('没有可用的搜索 provider');
@@ -71,12 +88,36 @@ class SearchService {
     final List<String> errors = <String>[];
     for (final SearchProvider candidate in candidates) {
       try {
-        return await candidate.search(query, limit: limit);
+        final List<SearchResult> results =
+            await candidate.search(query, limit: limit);
+        _cooling.remove(candidate.name);
+        return results;
       } catch (error) {
+        _cooling[candidate.name] = DateTime.now().add(cooldown);
         errors.add('${candidate.name}: $error');
       }
     }
     throw SearchException('所有搜索 provider 都失败：${errors.join('；')}');
+  }
+
+  /// 当前 provider 的运行状态（含冷却）。
+  List<SearchSourceStatus> runtimeStatuses() => <SearchSourceStatus>[
+        for (final SearchProvider provider in _providers)
+          SearchSourceStatus(
+            name: provider.name,
+            available: !_isCooling(provider.name),
+            reason: _isCooling(provider.name) ? '冷却中' : '',
+          ),
+      ];
+
+  bool _isCooling(String name) {
+    final DateTime? until = _cooling[name];
+    if (until == null) return false;
+    if (!until.isAfter(DateTime.now())) {
+      _cooling.remove(name);
+      return false;
+    }
+    return true;
   }
 }
 

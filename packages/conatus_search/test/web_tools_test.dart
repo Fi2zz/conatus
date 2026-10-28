@@ -34,12 +34,20 @@ class _StubFetcher implements WebFetcher {
   final FetchedPage page;
 
   @override
-  Future<FetchedPage> fetch(String url, {int maxChars = 20000}) async => page;
+  Future<FetchedPage> fetch(
+    String url, {
+    int maxChars = 20000,
+    FetchedFormat format = FetchedFormat.text,
+  }) async => page;
 }
 
 class _FailingFetcher implements WebFetcher {
   @override
-  Future<FetchedPage> fetch(String url, {int maxChars = 20000}) async =>
+  Future<FetchedPage> fetch(
+    String url, {
+    int maxChars = 20000,
+    FetchedFormat format = FetchedFormat.text,
+  }) async =>
       throw const FetchException('boom');
 }
 
@@ -78,6 +86,22 @@ void main() {
           await tool.call(_context(<String, Object?>{'query': 'x'}));
 
       expect(result.content, contains('未找到'));
+    });
+
+    test('provider 参数只走指定源', () async {
+      final SearchService service = SearchService()
+        ..register(_StubProvider(<SearchResult>[
+          const SearchResult(title: 'A', url: 'https://a.com'),
+        ]))
+        ..register(_FailingProvider());
+      final WebSearchTool tool = WebSearchTool(search: service);
+
+      final ToolResult result = await tool.call(
+        _context(<String, Object?>{'query': 'x', 'provider': 'stub'}),
+      );
+
+      expect(result.content, contains('A'));
+      expect(result.isError, isFalse);
     });
 
     test('全部 provider 失败 → SEARCH_UNAVAILABLE 且列出未配置的源', () async {
@@ -127,6 +151,20 @@ void main() {
 
       expect(result.content, 'Hello & world');
       expect(result.isError, isFalse);
+    });
+
+    test('format=html 原样返回并写入 value', () async {
+      final FetchUrlTool tool = FetchUrlTool(
+        client: MockClient((http.Request request) async =>
+            http.Response('<p>Hello</p>', 200)),
+      );
+
+      final ToolResult result = await tool.call(
+        _context(<String, Object?>{'url': 'https://e.com', 'format': 'html'}),
+      );
+
+      expect(result.content, '<p>Hello</p>');
+      expect((result.value! as Map<String, Object?>)['format'], 'html');
     });
 
     test('非 200 → FETCH_FAILED', () async {

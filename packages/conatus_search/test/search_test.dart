@@ -58,6 +58,27 @@ void main() {
           service.search('q', provider: 'z'), throwsA(isA<SearchException>()));
     });
 
+    test('provider 失败后进入冷却，状态可查询', () async {
+      final SearchService service = SearchService(
+        cooldown: const Duration(minutes: 5),
+      )
+        ..register(_FakeProvider('bad', fails: true))
+        ..register(_FakeProvider('good', results: <SearchResult>[_hit]));
+
+      expect((await service.search('q')).single.title, 'T');
+      expect(
+        service.runtimeStatuses().firstWhere(
+          (SearchSourceStatus item) => item.name == 'bad',
+        ).available,
+        isFalse,
+      );
+      await expectLater(
+        service.search('q', provider: 'bad'),
+        throwsA(isA<SearchException>()),
+      );
+      // 显式指定仍然会尝试（只是不优先），所以冷却不会阻断重试。
+    });
+
     test('无 provider 或全部失败时抛 SearchException', () async {
       await expectLater(
           SearchService().search('q'), throwsA(isA<SearchException>()));

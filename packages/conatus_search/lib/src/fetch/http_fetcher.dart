@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'fetcher.dart';
+import 'html_markdown.dart';
 
 /// 用 `http` 包直连的抓取器。
 ///
@@ -24,7 +25,11 @@ class HttpFetcher implements WebFetcher {
   final Duration timeout;
 
   @override
-  Future<FetchedPage> fetch(String url, {int maxChars = 20000}) async {
+  Future<FetchedPage> fetch(
+    String url, {
+    int maxChars = 20000,
+    FetchedFormat format = FetchedFormat.text,
+  }) async {
     final Uri? uri = Uri.tryParse(url);
     if (uri == null ||
         (uri.scheme != 'http' && uri.scheme != 'https') ||
@@ -44,11 +49,23 @@ class HttpFetcher implements WebFetcher {
     if (response.statusCode != 200) {
       throw FetchException('HTTP ${response.statusCode}');
     }
-    final String text = stripHtml(response.body);
+    final String contentType = response.headers['content-type'] ?? '';
+    final bool htmlPage = contentType.contains('html') ||
+        response.body.contains('<html') ||
+        response.body.contains('<p');
+    final String content = switch (format) {
+      FetchedFormat.html => response.body,
+      FetchedFormat.markdown =>
+        htmlPage ? htmlToMarkdown(response.body) : response.body,
+      FetchedFormat.text =>
+        htmlPage ? stripHtml(response.body) : response.body,
+    };
     return FetchedPage(
       url: url,
-      content: text.length > maxChars ? text.substring(0, maxChars) : text,
-      format: FetchedFormat.text,
+      content: content.length > maxChars
+          ? content.substring(0, maxChars)
+          : content,
+      format: format,
     );
   }
 }

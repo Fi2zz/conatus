@@ -21,6 +21,39 @@ void main() {
     expect(page.url, 'https://e.com');
   });
 
+  test('format=markdown 转换 HTML', () async {
+    final HttpFetcher fetcher = HttpFetcher(
+      client: MockClient((http.Request request) async => http.Response(
+            '<h1>Title</h1><p>Hello <a href="https://e.com">link</a></p>',
+            200,
+          )),
+    );
+
+    final FetchedPage page = await fetcher.fetch(
+      'https://e.com',
+      format: FetchedFormat.markdown,
+    );
+
+    expect(page.content, contains('# Title'));
+    expect(page.content, contains('[link](https://e.com)'));
+    expect(page.format, FetchedFormat.markdown);
+  });
+
+  test('format=html 保留原文', () async {
+    final HttpFetcher fetcher = HttpFetcher(
+      client: MockClient((http.Request request) async =>
+          http.Response('<p>Hello</p>', 200)),
+    );
+
+    final FetchedPage page = await fetcher.fetch(
+      'https://e.com',
+      format: FetchedFormat.html,
+    );
+
+    expect(page.content, '<p>Hello</p>');
+    expect(page.format, FetchedFormat.html);
+  });
+
   test('按 maxChars 截断', () async {
     final HttpFetcher fetcher = HttpFetcher(
       client: MockClient((http.Request request) async =>

@@ -8,6 +8,9 @@ enum FetchedFormat {
 
   /// 已转换的 markdown。
   markdown,
+
+  /// 原始 HTML。
+  html,
 }
 
 /// 一次抓取的结果。
@@ -42,5 +45,9 @@ class FetchException implements Exception {
 /// 抓取接缝。
 abstract class WebFetcher {
   /// 抓取 [url]，正文最多 [maxChars] 字符；失败抛 [FetchException]。
-  Future<FetchedPage> fetch(String url, {int maxChars = 20000});
+  Future<FetchedPage> fetch(
+    String url, {
+    int maxChars = 20000,
+    FetchedFormat format = FetchedFormat.text,
+  });
 }

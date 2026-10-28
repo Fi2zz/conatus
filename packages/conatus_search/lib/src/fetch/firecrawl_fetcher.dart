@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'fetcher.dart';
+import 'http_fetcher.dart';
 
 /// Firecrawl API Key 的凭据键名。
 const String kFirecrawlCredentialKey = 'FIRECRAWL_API_KEY';
@@ -36,13 +37,17 @@ class FirecrawlFetcher implements WebFetcher {
   final Uri _endpoint;
 
   @override
-  Future<FetchedPage> fetch(String url, {int maxChars = 20000}) async {
+  Future<FetchedPage> fetch(
+    String url, {
+    int maxChars = 20000,
+    FetchedFormat format = FetchedFormat.text,
+  }) async {
     _validateUrl(url);
-    final http.Response response = await _scrape(url);
+    final http.Response response = await _scrape(url, format);
     if (response.statusCode != 200) {
       throw FetchException('Firecrawl HTTP ${response.statusCode}');
     }
-    return _parsePage(url, response.body, maxChars);
+    return _parsePage(url, response.body, maxChars, format);
   }
 
   void _validateUrl(String url) {
@@ -54,7 +59,7 @@ class FirecrawlFetcher implements WebFetcher {
     }
   }
 
-  Future<http.Response> _scrape(String url) async {
+  Future<http.Response> _scrape(String url, FetchedFormat format) async {
     try {
       return await _client
           .post(
@@ -65,7 +70,9 @@ class FirecrawlFetcher implements WebFetcher {
             },
             body: jsonEncode(<String, Object?>{
               'url': url,
-              'formats': <String>['markdown'],
+              'formats': <String>[
+                format == FetchedFormat.html ? 'html' : 'markdown',
+              ],
             }),
           )
           .timeout(timeout);
@@ -78,7 +85,12 @@ class FirecrawlFetcher implements WebFetcher {
     }
   }
 
-  FetchedPage _parsePage(String url, String body, int maxChars) {
+  FetchedPage _parsePage(
+    String url,
+    String body,
+    int maxChars,
+    FetchedFormat format,
+  ) {
     final Map<String, Object?> decoded = _decodePage(body);
     if (decoded['success'] == false) {
       throw FetchException('Firecrawl 抓取失败：${decoded['error'] ?? '未知原因'}');
@@ -88,12 +100,19 @@ class FirecrawlFetcher implements WebFetcher {
       throw const FetchException('Firecrawl 响应缺少 data');
     }
     final String markdown = _readMarkdown(data);
+    final String html = _readHtml(data);
+    final String content = switch (format) {
+      FetchedFormat.html => html.isEmpty ? markdown : html,
+      FetchedFormat.markdown => markdown,
+      FetchedFormat.text =>
+        html.isEmpty ? markdown : stripHtml(html),
+    };
     return FetchedPage(
       url: url,
-      content: markdown.length > maxChars
-          ? markdown.substring(0, maxChars)
-          : markdown,
-      format: FetchedFormat.markdown,
+      content: content.length > maxChars
+          ? content.substring(0, maxChars)
+          : content,
+      format: format,
     );
   }
 
@@ -111,6 +130,15 @@ class FirecrawlFetcher implements WebFetcher {
     } on FormatException {
       throw const FetchException('Firecrawl 返回了非 JSON 响应');
     }
+  }
+
+  String _readHtml(Map<String, Object?> data) {
+    final Object? raw = data['html'];
+    if (raw == null) return '';
+    if (raw is! String) {
+      throw const FetchException('Firecrawl 返回了非字符串的 html');
+    }
+    return raw;
   }
 
   String _readMarkdown(Map<String, Object?> data) {

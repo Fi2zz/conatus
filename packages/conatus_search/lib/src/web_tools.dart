@@ -39,6 +39,10 @@ class WebSearchTool extends Tool {
   List<ParamSpec> get params => <ParamSpec>[
         ParamSpec.string('query', required: true, description: '搜索关键词'),
         ParamSpec.integer('limit', description: '返回条数'),
+        ParamSpec.string(
+          'provider',
+          description: '可选：只走指定 provider（tavily/exa/brave/duckduckgo）',
+        ),
       ];
 
   @override
@@ -47,7 +51,11 @@ class WebSearchTool extends Tool {
     final int limit = ctx.integer('limit') ?? defaultLimit;
     final List<SearchResult> results;
     try {
-      results = await _search.search(query, limit: limit);
+      results = await _search.search(
+        query,
+        limit: limit,
+        provider: ctx.optional<String>('provider'),
+      );
     } on SearchException catch (error) {
       return ToolResult.failure(
         _unavailableMessage(error),
@@ -109,6 +117,12 @@ class FetchUrlTool extends Tool {
   /// 当前使用的抓取后端（供测试与诊断）。
   WebFetcher get fetcher => _fetcher;
 
+  FetchedFormat _format(String? value) => switch (value) {
+        'text' => FetchedFormat.text,
+        'html' => FetchedFormat.html,
+        _ => FetchedFormat.markdown,
+      };
+
   @override
   String get name => 'fetch_url';
 
@@ -121,6 +135,11 @@ class FetchUrlTool extends Tool {
   @override
   List<ParamSpec> get params => <ParamSpec>[
         ParamSpec.string('url', required: true, description: 'http(s) 链接'),
+        ParamSpec.enumeration(
+          'format',
+          const <String>['markdown', 'text', 'html'],
+          description: '返回格式，默认 markdown',
+        ),
       ];
 
   @override
@@ -133,9 +152,10 @@ class FetchUrlTool extends Tool {
         error: ToolError('INVALID_URL', 'unsupported url "$raw"'),
       );
     }
+    final FetchedFormat format = _format(ctx.optional<String>('format'));
     final FetchedPage page;
     try {
-      page = await _fetcher.fetch(raw, maxChars: maxChars);
+      page = await _fetcher.fetch(raw, maxChars: maxChars, format: format);
     } on FetchException catch (error) {
       return ToolResult.failure(
         '无法联网：抓取 $raw 失败。${error.message}',
