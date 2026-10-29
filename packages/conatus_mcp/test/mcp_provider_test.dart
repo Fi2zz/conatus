@@ -49,8 +49,8 @@ void main() {
     expect(registry.clientOf('fs')?.ready, isTrue);
     expect(registry.toolsOf('fs').single.name, 'fs__read_file');
     expect(registry.toolsOf('net').single.group, 'mcp:net');
-    expect(tools.names, <String>['fs__read_file', 'net__read']);
-    expect(tools.get('fs__read_file')?.description, 'fs 的 read');
+    expect(tools.names, <String>['fs__read_file', 'net__read_file']);
+    expect(tools.get('fs__read_file')?.description, 'fs 的 read_file');
     expect(fakes.transports['fs']?.connected, isTrue);
     expect(registry.clientOf('missing'), isNull);
   });
@@ -60,7 +60,7 @@ void main() {
 
     final ToolResult result = await ctx.tools.call(
       const ToolCall(
-        name: 'net__read',
+        name: 'net__read_file',
         arguments: <String, Object?>{'path': '/a'},
       ),
     );
@@ -74,10 +74,10 @@ void main() {
   });
 
   test('别名：短名指向全名，schema 里的 name 也是短名', () async {
-    await boot(aliases: <String, String>{'read': 'fs__read_file'});
+    await boot(aliases: <String, String>{'read_file': 'fs__read_file'});
 
-    expect(tools.get('read')?.group, 'mcp:fs');
-    expect(tools.get('read')?.toSchema()['name'], 'read');
+    expect(tools.get('read_file')?.group, 'mcp:fs');
+    expect(tools.get('read_file')?.toSchema()['name'], 'read_file');
     expect(tools.names.contains('fs__read_file'), isTrue);
   });
 
@@ -90,7 +90,7 @@ void main() {
 
   test('别名：短名撞车抛 StateError', () async {
     await expectLater(
-      boot(aliases: <String, String>{'fs__read_file': 'net__read'}),
+      boot(aliases: <String, String>{'fs__read_file': 'net__read_file'}),
       throwsA(isA<StateError>()),
     );
   });
@@ -101,11 +101,11 @@ void main() {
     await fakes.transports['fs']!.finish();
     await pumpEventQueue();
 
-    expect(tools.names, <String>['net__read']);
+    expect(tools.names, <String>['net__read_file']);
     expect(ctx.mcp.servers, <String>['net']);
     expect(ctx.mcp.clientOf('fs'), isNull);
     final ToolResult result = await ctx.tools.call(
-      const ToolCall(name: 'net__read'),
+      const ToolCall(name: 'net__read_file'),
     );
     expect(result.content, 'net:ok');
   });

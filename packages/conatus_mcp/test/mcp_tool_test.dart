@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 import 'fake_transport.dart';
 
 McpTool _tool({
-  String name = 'read',
+  String name = 'read_file',
   String? description,
   String? title,
   Map<String, Object?> schema = const <String, Object?>{},
@@ -31,7 +31,7 @@ void main() {
       final McpToolAdapter adapter = _adapter(_tool(description: '读文件'));
 
       expect(adapter.name, 'fs__read_file');
-      expect(mcpToolName('fs', 'read'), 'fs__read_file');
+      expect(mcpToolName('fs', 'read_file'), 'fs__read_file');
       expect(adapter.group, 'mcp:fs');
       expect(adapter.description, '读文件');
       expect(adapter.params, isEmpty);
@@ -39,7 +39,7 @@ void main() {
 
     test('简介回退顺序：description → title → name', () {
       expect(_adapter(_tool(title: '读取')).description, '读取');
-      expect(_adapter(_tool()).description, 'read');
+      expect(_adapter(_tool()).description, 'read_file');
     });
 
     test('toSchema 透传服务端 inputSchema', () {
@@ -54,7 +54,7 @@ void main() {
 
       expect(adapter.toSchema(), <String, Object?>{
         'name': 'fs__read_file',
-        'description': 'read',
+        'description': 'read_file',
         'parameters': schema,
       });
     });
@@ -94,7 +94,7 @@ void main() {
       expect(result.isError, isFalse);
       expect(result.content, 'file body');
       expect(result.value, <String, Object?>{'bytes': 9});
-      expect(transport.requests.single.params?['name'], 'read');
+      expect(transport.requests.single.params?['name'], 'read_file');
       expect(
         transport.requests.single.params?['arguments'],
         <String, Object?>{'path': '/tmp/a'},
@@ -149,13 +149,13 @@ void main() {
           schema: <String, Object?>{'type': 'object'},
         ),
       );
-      final McpToolAlias alias = McpToolAlias(inner: inner, alias: 'read');
+      final McpToolAlias alias = McpToolAlias(inner: inner, alias: 'read_file');
 
-      expect(alias.name, 'read');
+      expect(alias.name, 'read_file');
       expect(alias.description, '读文件');
       expect(alias.group, 'mcp:fs');
       expect(alias.riskLevel, ToolRisk.low);
-      expect(alias.toSchema()['name'], 'read');
+      expect(alias.toSchema()['name'], 'read_file');
       expect(alias.toSchema()['parameters'], <String, Object?>{
         'type': 'object',
       });
@@ -176,14 +176,14 @@ void main() {
       addTearDown(client.close);
       final McpToolAlias alias = McpToolAlias(
         inner: _adapter(_tool(), client: client),
-        alias: 'read',
+        alias: 'read_file',
       );
 
       final ToolResult result =
-          await alias.call(const ToolContext(ToolCall(name: 'read')));
+          await alias.call(const ToolContext(ToolCall(name: 'read_file')));
 
       expect(result.content, '透传');
-      expect(transport.requests.single.params?['name'], 'read');
+      expect(transport.requests.single.params?['name'], 'read_file');
     });
   });
 }

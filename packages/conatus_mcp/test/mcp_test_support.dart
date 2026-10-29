@@ -168,8 +168,8 @@ class FakeMcpServers {
         return <String, Object?>{
           'tools': <Object?>[
             <String, Object?>{
-              'name': 'read',
-              'description': '${config.name} 的 read',
+              'name': 'read_file',
+              'description': '${config.name} 的 read_file',
             },
           ],
         };
