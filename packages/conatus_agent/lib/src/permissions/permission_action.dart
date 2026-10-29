@@ -50,6 +50,27 @@ const Set<String> _pathActions = <String>{
 /// MCP 工具名里的 server / tool 分隔符。
 const String _mcpSeparator = '__';
 
+/// 改名前的权限动作 / 工具名 → 新动作名；只用于升级提示，不参与匹配。
+const Map<String, String> kLegacyPermissionActions = <String, String>{
+  'shell': 'bash',
+  'subagent': 'task',
+  'read_file': 'read',
+  'write_file': 'write',
+  'edit_file': 'edit',
+  'list_files': 'read',
+  'run_command': 'bash',
+  'rg': 'grep',
+  'web_search': 'websearch',
+  'fetch_url': 'webfetch',
+  'spawn_agent': 'task',
+  'ask_user': 'question',
+  'update_plan': 'todowrite',
+};
+
+/// [action] 是改名前的旧动作时返回新名，否则返回 `null`。
+String? legacyPermissionAction(String action) =>
+    kLegacyPermissionActions[action.trim()];
+
 /// 取 [toolName] 的权限动作。
 String permissionActionFor(String toolName) {
   if (toolName.contains(_mcpSeparator)) {

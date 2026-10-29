@@ -38,6 +38,23 @@ void main() {
 
   test('文件不存在时载入空列表', () async {
     expect(await store.load(), isEmpty);
+    expect(store.legacyRules, 0);
+  });
+
+  test('旧动作名规则仍载入，但计入 legacyRules', () async {
+    File(path).writeAsStringSync(jsonEncode(<String, Object?>{
+      'version': 1,
+      'rules': <Object?>[
+        <String, Object?>{
+          'action': 'shell',
+          'resource': '*',
+          'effect': 'deny',
+        },
+      ],
+    }));
+
+    expect(await store.load(), hasLength(1));
+    expect(store.legacyRules, 1);
   });
 
   test('save → load 往返保留全部字段', () async {

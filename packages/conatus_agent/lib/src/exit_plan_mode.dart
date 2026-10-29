@@ -1,7 +1,7 @@
 /// `exit_plan_mode` 工具：把计划提交 [PlanMode] 评审。
 ///
 /// 批准后 [PlanMode.exit] 随调用自动发生（工具内完成，模型无需关心）；
-/// 拒绝时保持 Plan Mode 激活，反馈由模型带回修订计划。与 `plan_write`
+/// 拒绝时保持 Plan Mode 激活，反馈由模型带回修订计划。与 `todowrite`
 /// （写草稿）共存：先草稿迭代，后定稿提交。
 library;
 

@@ -86,7 +86,7 @@ class AgentLoop {
   /// 每轮召回的长期记忆条数。
   final int memoryLimit;
 
-  /// 是否在无计划时先跑一次规划轮（需注册 `plan_write`）。
+  /// 是否在无计划时先跑一次规划轮（需注册 `todowrite`）。
   final bool planning;
 
   /// 未提供 [systemPrompt] 时的兜底人设。

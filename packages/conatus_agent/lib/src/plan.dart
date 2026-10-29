@@ -1,19 +1,18 @@
 /// planning 插件：Agent 先产出结构化计划，持久化到会话，再进入执行。
 /// 计划以 `plan/updated` 事件追加进 [Session]（append-only，取最后一条为当前
-/// 计划）。`plan_write` 工具供规划阶段写入；[runPlanningPhase] 在 Agent Loop
-/// 里替模型跑一次「只允许 plan_write」的规划轮。
+/// 计划）。`todowrite` 工具（conatus_code 提供）负责创建与推进；[runPlanningPhase]
+/// 在 Agent Loop 里替模型跑一次「只允许 todowrite」的规划轮。
 library;
 
 import 'dart:convert';
-import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_llm/conatus_llm.dart';
 
 /// 计划变更事件类型。
 const String kPlanEvent = 'plan/updated';
 
-/// 规划工具名。
-const String kPlanToolName = 'plan_write';
+/// 规划工具名（与 conatus_code 的 `todowrite` 一致）。
+const String kTodoToolName = 'todowrite';
 
 /// 计划的一步。
 class PlanStep {
@@ -100,50 +99,9 @@ String planSection(Session? session) {
   return plan == null ? '' : '[当前计划]\n${plan.summary()}';
 }
 
-/// `plan_write` 工具：写入/更新当前会话的计划。
-class PlanTool extends Tool {
-  PlanTool({required this.session});
-
-  /// 计划持久化到的会话。
-  final Session session;
-
-  @override
-  String get name => kPlanToolName;
-
-  @override
-  String get description => '制定或更新当前任务的执行计划（目标 + 有序步骤）。';
-
-  @override
-  ToolRisk get riskLevel => ToolRisk.low;
-
-  @override
-  List<ParamSpec> get params => <ParamSpec>[
-        ParamSpec.string('goal', required: true, description: '任务目标'),
-        ParamSpec.array(
-          'steps',
-          items: ParamSpec.string('item'),
-          description: '按顺序的步骤',
-        ),
-      ];
-
-  @override
-  Future<ToolResult> call(ToolContext ctx) async {
-    final String goal = ctx.str('goal');
-    final List<PlanStep> steps = <PlanStep>[];
-    final List<Object?> raw = ctx.array('steps') ?? const <Object?>[];
-    for (int i = 0; i < raw.length; i++) {
-      final String text = '${raw[i]}'.trim();
-      if (text.isNotEmpty) steps.add(PlanStep(id: 's${i + 1}', text: text));
-    }
-    final Plan plan = Plan(goal: goal, steps: steps);
-    writePlan(session, plan);
-    return ToolResult.success(plan.summary(), value: plan.toJson());
-  }
-}
-
-/// 规划轮：只下发 `plan_write`，让模型先产出计划；写好后刷新 system 消息。
+/// 规划轮：只下发 `todowrite`，让模型先产出计划；写好后刷新 system 消息。
 ///
-/// 返回是否真正跑了规划（未注册 `plan_write` 时返回 false）。
+/// 返回是否真正跑了规划（未注册 `todowrite` 时返回 false）。
 Future<bool> runPlanningPhase({
   required LlmProvider llm,
   required ToolRegistry tools,
@@ -151,12 +109,12 @@ Future<bool> runPlanningPhase({
   required List<LlmMessage> messages,
   required String Function() systemText,
 }) async {
-  final Map<String, Object?>? schema = tools.describeOne(kPlanToolName);
+  final Map<String, Object?>? schema = tools.describeOne(kTodoToolName);
   if (schema == null) return false;
   final List<LlmMessage> planning = <LlmMessage>[
     LlmMessage(
       'system',
-      '${systemText()}\n\n先制定一个简洁的执行计划：只调用 $kPlanToolName 工具，'
+      '${systemText()}\n\n先制定一个简洁的执行计划：只调用 $kTodoToolName 工具，'
           '不要直接回答用户。',
     ),
     ...messages.skip(1),
@@ -164,7 +122,7 @@ Future<bool> runPlanningPhase({
   final LlmResult result =
       await llm.chat(planning, tools: <Map<String, Object?>>[schema]);
   for (final LlmToolCall call in result.toolCalls) {
-    if (call.name != kPlanToolName) continue;
+    if (call.name != kTodoToolName) continue;
     await tools.call(ToolCall(
       name: call.name,
       callId: call.id,
@@ -185,14 +143,3 @@ Map<String, Object?> _parseArguments(String raw) {
   return <String, Object?>{};
 }
 
-/// 把 `plan_write` 工具注册到 `ctx.tools`。
-PlanTool providePlanTool(
-  Context ctx, {
-  required Session session,
-  ToolRegistry? tools,
-}) {
-  final ToolRegistry registry = tools ?? ctx.tools;
-  final PlanTool tool = PlanTool(session: session);
-  ctx.effect(() => registry.register(tool));
-  return tool;
-}

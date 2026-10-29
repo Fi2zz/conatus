@@ -12,6 +12,7 @@ import 'dart:io';
 
 import 'package:conatus_foundation/conatus_foundation.dart';
 
+import 'permission_action.dart';
 import 'permission_effect.dart';
 import 'permission_rule.dart';
 
@@ -49,12 +50,17 @@ class PermissionStore {
   int get skippedRules => _skippedRules;
   int _skippedRules = 0;
 
+  /// 最近一次 [load] 中仍使用旧动作名、已不再命中的规则条数。
+  int get legacyRules => _legacyRules;
+  int _legacyRules = 0;
+
   /// 读取全部规则；文件不存在或内容不可用时返回空列表。
   ///
   /// 单条非法规则被跳过，其余照常返回；版本 / 形状不符整体视为不可用。
   Future<List<PermissionRule>> load() async {
     _loadError = null;
     _skippedRules = 0;
+    _legacyRules = 0;
     try {
       final File file = File(path);
       if (!await file.exists()) return <PermissionRule>[];
@@ -69,6 +75,9 @@ class PermissionStore {
       if (rawRules is List<Object?>) {
         _skippedRules = rawRules.length - rules.length;
       }
+      _legacyRules = rules
+          .where((PermissionRule rule) => legacyPermissionAction(rule.action) != null)
+          .length;
       return rules;
     } on FormatException {
       _loadError = '权限文件 $path 不是合法 JSON，已按无规则启动';

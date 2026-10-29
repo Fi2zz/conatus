@@ -143,6 +143,8 @@ export 'src/pareto.dart'
         selectRepresentatives;
 export 'src/permissions/permission_action.dart'
     show
+        kLegacyPermissionActions,
+        legacyPermissionAction,
         permissionActionFor,
         permissionActionUsesPath,
         permissionBoundaryPathsFor,
@@ -177,11 +179,9 @@ export 'src/plan.dart'
     show
         Plan,
         PlanStep,
-        PlanTool,
         kPlanEvent,
-        kPlanToolName,
+        kTodoToolName,
         planSection,
-        providePlanTool,
         readPlan,
         runPlanningPhase,
         writePlan;

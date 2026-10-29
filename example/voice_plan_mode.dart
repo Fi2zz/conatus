@@ -1,4 +1,4 @@
-// 演示：Plan Mode 语音闭环 —— Agent 先用 plan_write 迭代草稿，再经
+// 演示：Plan Mode 语音闭环 —— Agent 用 exit_plan_mode 提交计划，
 // exit_plan_mode 提交定稿；VoiceApproval 用 TTS 播报计划摘要 + ASR 听取
 // 口头确认。批准后 Plan Mode 退出、Agent 开始执行；拒绝则带反馈修订计划。
 //
@@ -75,8 +75,7 @@ Future<void> main() async {
       .listen(ask.submit);
   app.onDispose(inputSub.cancel);
 
-  // plan_write 草稿工具：与 exit_plan_mode（提交定稿）共存。
-  providePlanTool(app, session: session);
+  // 计划由 exit_plan_mode 一次提交（goal + steps），无需额外的草稿工具。
 
   // 联网搜索：plan:policy 段引导模型先查资料再规划。
   provideSearch(app);

@@ -4,7 +4,7 @@
 /// （软指引），`exit_plan_mode` 工具提交计划走 [Approval] 评审闭环；状态以
 /// `plan/mode` 事件持久化到 [Session]（append-only，折叠最后一条）。派生状态
 /// 只折叠会话自身后缀（[Session.ownEvents]），fork 出的会话不继承 Plan Mode。
-/// 与 `plan.dart` 的 `plan_write` 共存：前者写草稿，后者提交定稿。
+/// 计划本身由 `todowrite` 写入，`exit_plan_mode` 负责提交定稿。
 library;
 
 import 'package:conatus_core/conatus_core.dart';
@@ -14,13 +14,13 @@ import 'plan.dart';
 /// Plan Mode 变更事件类型。
 const String kPlanModeEvent = 'plan/mode';
 
-/// `plan:policy` 段文本：只提 `websearch` 与 `question`，不提读本地文件
-/// （语音优先场景）。
+/// `plan:policy` 段文本：规划阶段可用的只读工具与计划写入方式。
 const String kPlanModePolicy =
-    'You are in plan mode. Use websearch and question to gather '
-    'information before presenting a complete plan through '
-    'exit_plan_mode. Do not execute mutating operations until the '
-    'plan is approved.';
+    'You are in plan mode. Inspect the workspace with read / list / grep / '
+    'glob, gather external information with websearch / webfetch, ask the '
+    'user with question, and write the plan with todowrite. Present the '
+    'complete plan through exit_plan_mode. Do not modify files or run shell '
+    'commands until the plan is approved.';
 
 /// Plan Mode 状态。
 enum PlanModeState { inactive, active }

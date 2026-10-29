@@ -26,7 +26,7 @@ for (final step in turn.steps) print('${step.call.name}: ${step.result.content}'
 | 能力 | 入口 | 说明 |
 |------|------|------|
 | Agent Loop | `provideAgentLoop`（服务键 `'agentLoop'`） | 会话事件 + prompt 装配 + 压缩 + 记忆 + 工具闭环；循环有界（`maxSteps` 默认 8） |
-| 规划 | `providePlanTool` / `providePlanMode` / `runPlanningPhase` | `plan` 工具读写持久计划；Plan Mode 只读规划→`exit_plan_mode` 批准后执行 |
+| 规划 | `providePlanMode` / `runPlanningPhase` | `todowrite`（conatus_code）读写持久计划；Plan Mode 只读规划→`exit_plan_mode` 批准后执行 |
 | 子 Agent | `provideSpawnAgent` | `task` 委托：独立 Session + 受限 ToolRegistry，只回传结论；白名单按风险过滤，复用宿主审批/中间件管线 |
 | 自省与重试 | `provideReflection` | 失败轮次反思，`reflectAndRetry` 按策略重试 |
 | 目标延续 | `provideGoal` | 长期目标（`Goal`）驱动多轮延续，`GoalRoundDriver` 按轮推进 |
