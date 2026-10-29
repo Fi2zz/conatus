@@ -54,7 +54,7 @@ class KimiSearchProvider implements SearchProvider {
           // 与服务端超时对齐：本地等多久，就让上游也花同样的预算。
           'timeout_seconds': _serverTimeoutSeconds,
           // 默认 false：Basic 的 `text` 是整页正文，单条就可能上千字符；结果展示
-          // 只需要摘要，要正文的话该走 `fetch_url` 精确取目标页。
+          // 只需要摘要，要正文的话该走 `webfetch` 精确取目标页。
           'include_content': false,
         }),
       ),

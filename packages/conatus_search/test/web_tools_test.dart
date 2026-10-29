@@ -72,7 +72,7 @@ void main() {
       expect(result.content, contains('https://e.com'));
       expect(
           (result.value! as List<Object?>).single, isA<Map<String, Object?>>());
-      expect(tool.name, 'web_search');
+      expect(tool.name, 'websearch');
       expect(tool.riskLevel, ToolRisk.low);
       expect(tool.params.first.name, 'query');
     });
@@ -234,12 +234,17 @@ void main() {
       final List<Tool> registered = provideWebTools(ctx);
 
       expect(registered, hasLength(2));
-      expect(tools.names, containsAll(<String>['web_search', 'fetch_url']));
+      expect(tools.names, containsAll(<String>['websearch', 'webfetch']));
       ctx.dispose();
       expect(tools.names, isEmpty);
     });
 
-    test('有 FIRECRAWL_API_KEY 时 fetch_url 走 Firecrawl', () {
+    test('远端 MCP 工具名保持上游值', () {
+      expect(kParallelSearchTool, 'web_search');
+      expect(kExaMcpSearchTool, 'web_search_exa');
+    });
+
+    test('有 FIRECRAWL_API_KEY 时 webfetch 走 Firecrawl', () {
       final Context ctx = Context.root();
       addTearDown(ctx.dispose);
       provideSearch(ctx);
@@ -256,7 +261,7 @@ void main() {
       expect(fetch.fetcher, isA<FirecrawlFetcher>());
     });
 
-    test('无 Firecrawl Key 时 fetch_url 走 HttpFetcher', () {
+    test('无 Firecrawl Key 时 webfetch 走 HttpFetcher', () {
       final Context ctx = Context.root();
       addTearDown(ctx.dispose);
       provideSearch(ctx);

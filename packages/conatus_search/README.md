@@ -10,8 +10,8 @@ conatus 的搜索能力缝：
   时也能用
 - 凭据统一经 `conatus_credentials`（`TAVILY_API_KEY` / `EXA_API_KEY` /
   `BRAVE_API_KEY` / `DEEPSEEK_API_KEY` / `MOONSHOT_API_KEY`），**不直接读环境变量**
-- `WebSearchTool` / `FetchUrlTool` 与 `provideWebTools`（注册 `web_search` /
-  `fetch_url`）；`fetch_url` 缺省裸 http，配了 `FIRECRAWL_API_KEY` 时改走
+- `WebSearchTool` / `FetchUrlTool` 与 `provideWebTools`（注册 `websearch` /
+  `webfetch`）；`webfetch` 缺省裸 http，配了 `FIRECRAWL_API_KEY` 时改走
   Firecrawl（返回 markdown），也可显式指定 `FetchBackend.deepseek` /
   `FetchBackend.kimi`
 
@@ -28,7 +28,7 @@ provideSearch(app,
     order: <String>['brave', 'duckduckgo'], credentials: credentials);
 ```
 
-搜索全失败时 `web_search` 返回 `SEARCH_UNAVAILABLE`，文案以「无法联网：所有搜索源
+搜索全失败时 `websearch` 返回 `SEARCH_UNAVAILABLE`，文案以「无法联网：所有搜索源
 都不可用。」开头，并列出没配好的源（如 `exa（缺少 EXA_API_KEY）`）。
 
 ## 内置搜索源
@@ -72,7 +72,7 @@ final SearchService search = provideSearch(app);
 
 ## 抓取后端
 
-`fetch_url` 的后端由 `provideWebTools` 的 `backend` 决定：
+`webfetch` 的后端由 `provideWebTools` 的 `backend` 决定：
 
 | `backend` | 行为 |
 |-----------|------|

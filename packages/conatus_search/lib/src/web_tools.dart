@@ -27,7 +27,7 @@ class WebSearchTool extends Tool {
   final int defaultLimit;
 
   @override
-  String get name => 'web_search';
+  String get name => 'websearch';
 
   @override
   String get description => '在互联网上搜索，返回结果的标题、链接与摘要。';
@@ -124,7 +124,7 @@ class FetchUrlTool extends Tool {
       };
 
   @override
-  String get name => 'fetch_url';
+  String get name => 'webfetch';
 
   @override
   String get description => '抓取一个网页并返回其正文内容。';
