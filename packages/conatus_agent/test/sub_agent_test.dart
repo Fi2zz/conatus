@@ -167,7 +167,7 @@ void main() {
       );
 
       final ToolResult result = await spawn.call(const ToolContext(ToolCall(
-        name: 'spawn_agent',
+        name: 'task',
         arguments: <String, Object?>{
           'task': '查现在几点',
           'tools': <Object?>['get_time'],
@@ -182,7 +182,7 @@ void main() {
       host.dispose();
     });
 
-    test('显式白名单同样排除 high 风险与 spawn_agent 自身', () async {
+    test('显式白名单同样排除 high 风险与 task 自身', () async {
       final Context host = Context.root();
       final ToolRegistry parent = _parentTools();
       parent.fn('danger',
@@ -195,10 +195,10 @@ void main() {
       parent.register(spawn);
 
       await spawn.call(const ToolContext(ToolCall(
-        name: 'spawn_agent',
+        name: 'task',
         arguments: <String, Object?>{
           'task': '随便做点什么',
-          'tools': <Object?>['get_time', 'danger', 'spawn_agent'],
+          'tools': <Object?>['get_time', 'danger', 'task'],
         },
       )));
 
@@ -206,7 +206,7 @@ void main() {
       host.dispose();
     });
 
-    test('默认白名单排除 high 风险与 spawn_agent 自身', () async {
+    test('默认白名单排除 high 风险与 task 自身', () async {
       final Context host = Context.root();
       final ToolRegistry parent = _parentTools();
       parent.fn('write',
@@ -222,7 +222,7 @@ void main() {
       parent.register(spawn);
 
       await spawn.call(const ToolContext(ToolCall(
-        name: 'spawn_agent',
+        name: 'task',
         arguments: <String, Object?>{'task': '随便做点什么'},
       )));
 
@@ -240,7 +240,7 @@ void main() {
       );
 
       final ToolResult result = await spawn.call(const ToolContext(ToolCall(
-        name: 'spawn_agent',
+        name: 'task',
         arguments: <String, Object?>{'task': 'x'},
       )));
 
@@ -259,7 +259,7 @@ void main() {
       );
 
       final Future<ToolResult> pending = spawn.call(const ToolContext(ToolCall(
-        name: 'spawn_agent',
+        name: 'task',
         arguments: <String, Object?>{'task': '长时间任务'},
       )));
       await Future<void>.delayed(Duration.zero);
@@ -282,7 +282,7 @@ void main() {
       );
 
       final Future<ToolResult> pending = spawn.call(const ToolContext(ToolCall(
-        name: 'spawn_agent',
+        name: 'task',
         arguments: <String, Object?>{'task': '长时间任务'},
       )));
       await Future<void>.delayed(Duration.zero);
@@ -318,7 +318,7 @@ void main() {
       parent.register(spawn);
 
       final ToolResult result = await spawn.call(const ToolContext(ToolCall(
-        name: 'spawn_agent',
+        name: 'task',
         arguments: <String, Object?>{
           'task': 'x',
           'tools': <Object?>['write'],
@@ -357,7 +357,7 @@ void main() {
       parent.register(spawn);
 
       await spawn.call(const ToolContext(ToolCall(
-        name: 'spawn_agent',
+        name: 'task',
         arguments: <String, Object?>{
           'task': 'x',
           'tools': <Object?>['write'],
@@ -385,7 +385,7 @@ void main() {
       parent.register(spawn);
 
       await spawn.call(const ToolContext(ToolCall(
-        name: 'spawn_agent',
+        name: 'task',
         arguments: <String, Object?>{'task': 'x'},
       )));
 
@@ -427,7 +427,7 @@ void main() {
       parent.register(spawn);
 
       await spawn.call(const ToolContext(ToolCall(
-        name: 'spawn_agent',
+        name: 'task',
         arguments: <String, Object?>{
           'task': 'x',
           'tools': <Object?>['write', 'read'],
@@ -455,7 +455,7 @@ void main() {
   });
 
   group('provideSpawnAgent', () {
-    test('从上下文取 llm/tools 并注册 spawn_agent', () {
+    test('从上下文取 llm/tools 并注册 task', () {
       final Context ctx = Context.root();
       final ToolRegistry tools = _parentTools();
       provideLlm(
@@ -467,9 +467,9 @@ void main() {
 
       provideSpawnAgent(ctx, tools: tools);
 
-      expect(tools.get('spawn_agent'), isNotNull);
+      expect(tools.get('task'), isNotNull);
       ctx.dispose();
-      expect(tools.get('spawn_agent'), isNull);
+      expect(tools.get('task'), isNull);
     });
 
     test('从上下文取 compaction 接入子 AgentLoop', () async {
@@ -486,7 +486,7 @@ void main() {
 
       final SpawnAgentTool spawn = provideSpawnAgent(ctx, tools: tools);
       await spawn.call(const ToolContext(ToolCall(
-        name: 'spawn_agent',
+        name: 'task',
         arguments: <String, Object?>{'task': 'x'},
       )));
 

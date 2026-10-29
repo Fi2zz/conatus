@@ -1,4 +1,4 @@
-/// `spawn_agent` profile 测试的共用替身。
+/// `task` profile 测试的共用替身。
 library;
 
 import 'package:conatus_agent/conatus_agent.dart';
@@ -100,14 +100,14 @@ ToolRegistry fakeTools({List<String>? writes}) {
     handler: (ToolContext ctx) async => ToolResult.success('12:00'),
   );
   tools.fn(
-    'read_file',
+    'read',
     handler: (ToolContext ctx) async => ToolResult.success('内容'),
   );
   tools.fn(
-    'write_file',
+    'write',
     riskLevel: ToolRisk.medium,
     handler: (ToolContext ctx) async {
-      writes?.add('write_file');
+      writes?.add('write');
       return ToolResult.success('w');
     },
   );

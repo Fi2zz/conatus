@@ -52,14 +52,14 @@ Session _dialog({int rounds = 24}) {
       'toolCalls': <Map<String, Object?>>[
         <String, Object?>{
           'id': 'c$round',
-          'name': 'read_file',
+          'name': 'read',
           'arguments': '{"path":"a.txt"}',
         },
       ],
     });
     session.append(kToolResultEvent, data: <String, Object?>{
       'callId': 'c$round',
-      'name': 'read_file',
+      'name': 'read',
       'content': '文件$round首行${'x' * 5000}\n文件$round结尾',
       'isError': false,
     });
@@ -108,7 +108,7 @@ void main() {
       expect(result.summary, contains(_preference));
       // ③ 工具结果只有「摘要 + 指针」，正文没整体进入摘要
       expect(result.summary, contains('[工具结果]'));
-      expect(result.summary, contains('工具 read_file：文件0首行'));
+      expect(result.summary, contains('工具 read：文件0首行'));
       expect(result.summary, contains('字符'));
       expect(result.summary, contains('会话日志'));
       expect(result.summary.contains('x' * 200), isFalse);

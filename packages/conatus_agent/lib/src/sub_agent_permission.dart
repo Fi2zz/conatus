@@ -1,7 +1,7 @@
 /// 子代理的权限模式：决定子 Agent 的工具调用如何过审批。
 ///
 /// 与宿主全局权限模式（TUI 三档）不同，这是**子代理级**策略，对齐 Claude Code
-/// 子代理的 `permissionMode` 字段。宿主在装配时给默认档，模型可在 `spawn_agent`
+/// 子代理的 `permissionMode` 字段。宿主在装配时给默认档，模型可在 `task`
 /// 里请求，但只允许**收紧**（见 [tightenBelow]）。
 library;
 

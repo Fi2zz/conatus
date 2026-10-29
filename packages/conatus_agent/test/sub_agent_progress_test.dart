@@ -108,7 +108,7 @@ void main() {
       );
 
       await spawn.call(const ToolContext(ToolCall(
-        name: 'spawn_agent',
+        name: 'task',
         arguments: <String, Object?>{'task': '查时间'},
       )));
 
@@ -145,7 +145,7 @@ void main() {
       );
 
       await spawn.call(const ToolContext(ToolCall(
-        name: 'spawn_agent',
+        name: 'task',
         arguments: <String, Object?>{'task': 'x'},
       )));
 
@@ -170,7 +170,7 @@ void main() {
       );
 
       final Future<ToolResult> pending = spawn.call(const ToolContext(ToolCall(
-        name: 'spawn_agent',
+        name: 'task',
         arguments: <String, Object?>{'task': '慢任务'},
       )));
       await Future<void>.delayed(Duration.zero);
@@ -195,7 +195,7 @@ void main() {
       );
 
       await spawn.call(const ToolContext(ToolCall(
-        name: 'spawn_agent',
+        name: 'task',
         arguments: <String, Object?>{'task': 'x'},
       )));
 
@@ -213,7 +213,7 @@ void main() {
       );
 
       final ToolResult result = await spawn.call(const ToolContext(ToolCall(
-        name: 'spawn_agent',
+        name: 'task',
         arguments: <String, Object?>{'task': 'x'},
       )));
 
@@ -234,7 +234,7 @@ void main() {
       );
 
       await spawn.call(const ToolContext(ToolCall(
-        name: 'spawn_agent',
+        name: 'task',
         arguments: <String, Object?>{'task': 'x'},
       )));
 
@@ -261,7 +261,7 @@ void main() {
       );
 
       await spawn.call(const ToolContext(ToolCall(
-        name: 'spawn_agent',
+        name: 'task',
         arguments: <String, Object?>{'task': 'x'},
       )));
 
@@ -288,7 +288,7 @@ void main() {
 
       for (int i = 0; i < 2; i++) {
         await spawn.call(const ToolContext(ToolCall(
-          name: 'spawn_agent',
+          name: 'task',
           arguments: <String, Object?>{'task': 'x'},
         )));
       }

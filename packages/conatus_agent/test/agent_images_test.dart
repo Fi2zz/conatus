@@ -41,7 +41,7 @@ const LlmImage _image = LlmImage(
 
 class _ImageTool extends Tool {
   @override
-  String get name => 'read_file';
+  String get name => 'read';
 
   @override
   String get description => '读取图片';
@@ -57,7 +57,7 @@ class _ImageTool extends Tool {
 
 class _FileTool extends Tool {
   @override
-  String get name => 'read_file';
+  String get name => 'read';
 
   @override
   String get description => '读取 PDF';
@@ -152,7 +152,7 @@ void main() {
 
     test('工具结果图片进入下一轮 tool 消息', () async {
       final _ScriptedProvider provider = _ScriptedProvider(<LlmResult>[
-        _call('call_1', 'read_file'),
+        _call('call_1', 'read'),
         _text('收到图片'),
       ]);
       final ToolRegistry tools = ToolRegistry()..register(_ImageTool());
@@ -168,7 +168,7 @@ void main() {
     });
     test('工具结果 PDF 进入下一轮 tool 消息', () async {
       final _ScriptedProvider provider = _ScriptedProvider(<LlmResult>[
-        _call('call_2', 'read_file'),
+        _call('call_2', 'read'),
         _text('收到 PDF'),
       ]);
       final ToolRegistry tools = ToolRegistry()..register(_FileTool());

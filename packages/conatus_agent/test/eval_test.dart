@@ -37,7 +37,7 @@ void main() {
       const EvalResult missing = EvalResult(
         caseId: 'c',
         passed: false,
-        actualTools: <String>['web_search'],
+        actualTools: <String>['websearch'],
         actualOutput: '12:00',
         rounds: 1,
         duration: Duration.zero,

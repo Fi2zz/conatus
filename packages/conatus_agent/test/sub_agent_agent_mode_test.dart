@@ -16,7 +16,7 @@ const SubAgentProfile _inheritGeneral = SubAgentProfile(
 
 Future<void> _spawn(SpawnAgentTool spawn) => spawn.call(
       const ToolContext(ToolCall(
-        name: 'spawn_agent',
+        name: 'task',
         arguments: <String, Object?>{
           'task': 'x',
           'agent': 'general',
@@ -33,7 +33,7 @@ void main() {
     final SpawnAgentTool spawn = SpawnAgentTool(
       host: host,
       llm: RecordingProvider(<LlmResult>[
-        callResult('c1', 'write_file'),
+        callResult('c1', 'write'),
         textResult('done'),
       ]),
       tools: fakeTools(writes: writes),
@@ -54,7 +54,7 @@ void main() {
     final SpawnAgentTool spawn = SpawnAgentTool(
       host: host,
       llm: RecordingProvider(<LlmResult>[
-        callResult('c1', 'write_file'),
+        callResult('c1', 'write'),
         textResult('done'),
       ]),
       tools: fakeTools(writes: writes),

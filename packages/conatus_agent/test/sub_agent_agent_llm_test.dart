@@ -27,21 +27,21 @@ void main() {
         id: 'reader',
         system: 'READ',
         steps: 2,
-        tools: <String>['read_file'],
+        tools: <String>['read'],
       )),
     );
 
     await spawn.call(const ToolContext(ToolCall(
-      name: 'spawn_agent',
+      name: 'task',
       arguments: <String, Object?>{
         'task': 'x',
         'agent': 'reader',
         'max_rounds': 5,
-        'tools': <Object?>['read_file', 'get_time'],
+        'tools': <Object?>['read', 'get_time'],
       },
     )));
 
-    expect(schemaNames(provider.schemas.first), <String>{'read_file'});
+    expect(schemaNames(provider.schemas.first), <String>{'read'});
     expect(provider.calls, 2);
   });
 
@@ -70,7 +70,7 @@ void main() {
     );
 
     await spawn.call(const ToolContext(ToolCall(
-      name: 'spawn_agent',
+      name: 'task',
       arguments: <String, Object?>{'task': 'x', 'agent': 'custom'},
     )));
 
@@ -96,7 +96,7 @@ void main() {
     );
 
     await spawn.call(const ToolContext(ToolCall(
-      name: 'spawn_agent',
+      name: 'task',
       arguments: <String, Object?>{'task': 'x', 'agent': 'empty'},
     )));
 

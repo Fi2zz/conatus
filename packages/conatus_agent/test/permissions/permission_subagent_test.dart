@@ -26,18 +26,18 @@ _Host _host({List<PermissionRule> rules = const <PermissionRule>[]}) {
   final ToolRegistry tools = ToolRegistry();
   final List<String> runs = <String>[];
   tools.fn(
-    'run_command',
+    'bash',
     riskLevel: ToolRisk.high,
     handler: (ToolContext c) async {
-      runs.add('run_command');
+      runs.add('bash');
       return ToolResult.success('ok');
     },
   );
   tools.fn(
-    'write_file',
+    'write',
     riskLevel: ToolRisk.medium,
     handler: (ToolContext c) async {
-      runs.add('write_file');
+      runs.add('write');
       return ToolResult.success('ok');
     },
   );
@@ -45,10 +45,10 @@ _Host _host({List<PermissionRule> rules = const <PermissionRule>[]}) {
 }
 
 void main() {
-  test('宿主 deny shell 在子代理 auto 档仍然生效', () async {
+  test('宿主 deny bash 在子代理 auto 档仍然生效', () async {
     final _Host host = _host(rules: const <PermissionRule>[
       PermissionRule(
-        action: 'shell',
+        action: 'bash',
         resource: '*',
         effect: PermissionEffect.deny,
       ),
@@ -62,7 +62,7 @@ void main() {
 
     final ToolResult result = await host.tools.call(
       const ToolCall(
-        name: 'run_command',
+        name: 'bash',
         arguments: <String, Object?>{'command': 'ls'},
       ),
     );
@@ -81,12 +81,12 @@ void main() {
 
     final ToolResult result = await host.tools.call(
       const ToolCall(
-        name: 'run_command',
+        name: 'bash',
         arguments: <String, Object?>{'command': 'ls'},
       ),
     );
     expect(result.isError, isFalse);
-    expect(host.runs, <String>['run_command']);
+    expect(host.runs, <String>['bash']);
   });
 
   test('readonly 档仍拒绝 medium 工具', () async {
@@ -100,7 +100,7 @@ void main() {
 
     final ToolResult result = await host.tools.call(
       const ToolCall(
-        name: 'write_file',
+        name: 'write',
         arguments: <String, Object?>{'path': 'a.txt'},
       ),
     );
@@ -111,7 +111,7 @@ void main() {
   test('ask 档在宿主 deny 前仍直接拒绝（deny 优先于询问）', () async {
     final _Host host = _host(rules: const <PermissionRule>[
       PermissionRule(
-        action: 'shell',
+        action: 'bash',
         resource: '*',
         effect: PermissionEffect.deny,
       ),
@@ -125,7 +125,7 @@ void main() {
 
     final ToolResult result = await host.tools.call(
       const ToolCall(
-        name: 'run_command',
+        name: 'bash',
         arguments: <String, Object?>{'command': 'ls'},
       ),
     );
@@ -136,7 +136,7 @@ void main() {
   test('ask 档不继承父级 allow：仍逐次询问', () async {
     final _Host host = _host(rules: const <PermissionRule>[
       PermissionRule(
-        action: 'shell',
+        action: 'bash',
         resource: '*',
         effect: PermissionEffect.allow,
       ),
@@ -150,7 +150,7 @@ void main() {
 
     final ToolResult result = await host.tools.call(
       const ToolCall(
-        name: 'run_command',
+        name: 'bash',
         arguments: <String, Object?>{'command': 'ls'},
       ),
     );

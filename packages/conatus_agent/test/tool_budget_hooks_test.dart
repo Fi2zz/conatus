@@ -12,7 +12,7 @@ void _install(
 }) {
   provideTools(ctx);
   ctx.tools.fn('noop', handler: _ok);
-  ctx.tools.fn('read_file', handler: _ok);
+  ctx.tools.fn('read', handler: _ok);
   provideToolBudget(ctx, policy: policy, telemetry: telemetry);
 }
 
@@ -46,7 +46,7 @@ void main() {
     final ToolResult denied =
         await ctx.tools.call(const ToolCall(name: 'noop'));
     final ToolResult allowed =
-        await ctx.tools.call(const ToolCall(name: 'read_file'));
+        await ctx.tools.call(const ToolCall(name: 'read'));
 
     expect(denied.isError, isTrue);
     expect(denied.error?.code, 'TOOL_BUDGET_EXHAUSTED');

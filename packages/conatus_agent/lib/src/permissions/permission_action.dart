@@ -1,8 +1,8 @@
 /// 工具名 → 权限动作 / 资源的映射。
 ///
 /// 动作是规则匹配的左边（`PermissionRule.action`），必须**精确**且与设计文档
-/// 的动作表一致：路径工具归一到 `read` / `edit`，命令类归一到 `shell`，联网
-/// 工具是 `websearch` / `webfetch`，子代理是 `subagent`，MCP 工具
+/// 的动作表一致：路径工具归一到 `read` / `edit`，命令类归一到 `bash`，联网
+/// 工具是 `websearch` / `webfetch`，子代理是 `task`，MCP 工具
 /// `server__tool` 归一为 `server_tool`；未列出的工具直接用工具名，新增工具
 /// 无需改映射也能被规则命中。
 library;
@@ -12,35 +12,27 @@ import 'package:conatus_foundation/conatus_foundation.dart';
 import 'permission_patch.dart';
 import 'permission_path.dart';
 
-/// 具名工具的动作归一表（与设计文档「动作映射」表一致）。
+/// 具名工具的动作归一表（动作名与 OpenCode permission key 一致）。
 ///
-/// git 写工具归一到 `shell`：它们经 `runGit` 执行真实 git 命令，规则
-/// `action="shell", resource="git *"` 必须能拦住，否则「只允许只读 git」的
-/// 策略会被 `git_add` / `git_commit` / `git_branch` / `git_stash` 绕过。
+/// 工具名与动作名同名的条目走兜底（[permissionActionFor] 直接返回工具名），
+/// 这里只保留需要改名的条目。git 写工具归一到 `bash`：它们经 `runGit` 执行
+/// 真实 git 命令，规则 `action="bash", resource="git *"` 必须能拦住，否则
+/// 「只允许只读 git」的策略会被 `git_add` / `git_commit` / `git_branch` /
+/// `git_stash` 绕过。
 const Map<String, String> _toolActions = <String, String>{
-  'read_file': 'read',
-  'list_files': 'read',
-  'rg': 'grep',
-  'glob': 'glob',
-  'write_file': 'edit',
-  'edit_file': 'edit',
+  'list': 'read',
+  'write': 'edit',
   'apply_patch': 'edit',
-  'run_command': 'shell',
-  'run_tests': 'shell',
-  'run_code': 'shell',
-  'run_command_background': 'shell',
-  'list_background_tasks': 'shell',
-  'background_output': 'shell',
-  'background_kill': 'shell',
-  'git_add': 'shell',
-  'git_commit': 'shell',
-  'git_branch': 'shell',
-  'git_stash': 'shell',
-  'web_search': 'websearch',
-  'fetch_url': 'webfetch',
-  'spawn_agent': 'subagent',
-  'skill': 'skill',
-  'ask_user': 'question',
+  'run_tests': 'bash',
+  'run_code': 'bash',
+  'run_command_background': 'bash',
+  'list_background_tasks': 'bash',
+  'background_output': 'bash',
+  'background_kill': 'bash',
+  'git_add': 'bash',
+  'git_commit': 'bash',
+  'git_branch': 'bash',
+  'git_stash': 'bash',
 };
 
 /// 以路径为资源的动作：资源需要规范化。
@@ -90,11 +82,11 @@ List<String> permissionPathsFor(ToolCall call, List<String> pathArgs) {
 ///   解析不出时落回 `*`；
 /// - `glob`：请求的 pattern；
 /// - `grep`：请求的 pattern（`rg` 的搜索表达式）；
-/// - `shell`：命令 / git 写工具的实际 argv（`git add ...` 等）；
+/// - `bash`：命令 / git 写工具的实际 argv（`git add ...` 等）；
 /// - `skill`：请求的技能 id（参数 `name`）；
-/// - shell / web / subagent：命令 / URL / 查询词 / agent id（`subagent` 取
-///   `spawn_agent` 的 `agent` 参数，缺省 `default`；因此按
-///   `subagent/default` 写的旧规则不再命中带 `agent` 的调用）；
+/// - bash / web / task：命令 / URL / 查询词 / agent id（`task` 取
+///   `task` 的 `agent` 参数，缺省 `default`；因此按
+///   `task/default` 写的旧规则不再命中带 `agent` 的调用）；
 /// - `list_mcp_resources`：`server`（缺省 `*`）；
 /// - `read_mcp_resource`：`<server>:<uri>`（缺 uri 时只给 server）；
 /// - 其余（含其他 MCP 工具、question）：`*`。空值同样落回 `*`。
@@ -113,7 +105,7 @@ List<String> permissionResourcesFor(
     if (paths.isNotEmpty) return paths;
   }
   final String? value = switch (action) {
-    'shell' => _gitResource(call) ??
+    'bash' => _gitResource(call) ??
         _firstArgument(call.arguments, const <String>[
           'command',
           'test_cmd',
@@ -122,7 +114,7 @@ List<String> permissionResourcesFor(
     'webfetch' => _stringArgument(call.arguments, 'url'),
     'websearch' => _stringArgument(call.arguments, 'query'),
     'skill' => _stringArgument(call.arguments, 'name'),
-    'subagent' => _stringArgument(call.arguments, 'agent') ?? 'default',
+    'task' => _stringArgument(call.arguments, 'agent') ?? 'default',
     _ => null,
   };
   if (value == null || value.isEmpty) return const <String>['*'];
@@ -186,7 +178,7 @@ List<String> permissionBoundaryPathsFor(
   ];
 }
 
-/// git 写工具的等价命令行，用于 `shell` 规则匹配。
+/// git 写工具的等价命令行，用于 `bash` 规则匹配。
 ///
 /// 与 `git_write_tools.dart` 拼的 argv 保持同形（前缀 `git <子命令>`）；规则
 /// 通常写成 `git *` / `git add *`，只依赖前缀。返回 `null` 表示不是 git 写

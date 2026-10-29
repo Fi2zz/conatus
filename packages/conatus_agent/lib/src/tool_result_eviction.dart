@@ -2,7 +2,7 @@
 ///
 /// 在 [ToolRegistry.use] 上加一层环绕中间件：工具返回成功且正文超过阈值时，
 /// 把完整内容写入临时文件，正文替换为「前 N 字符 + 省略提示 + 后 N 字符 +
-/// 路径」，模型需要细节时用 `read_file` 读取。失败结果不驱逐。
+/// 路径」，模型需要细节时用 `read` 读取。失败结果不驱逐。
 ///
 /// ```dart
 /// provideToolResultEviction(app, threshold: 80000);
@@ -71,7 +71,7 @@ class ToolResultEviction {
     final String tail = content.substring(content.length - preview);
     final int omitted = content.length - preview * 2;
     return '$head\n\n...(省略 $omitted 字符)...\n\n$tail\n\n'
-        '完整内容已写入文件：$path\n（需要细节时调用 read_file 读取该路径）';
+        '完整内容已写入文件：$path\n（需要细节时调用 read 读取该路径）';
   }
 
   String _path() {

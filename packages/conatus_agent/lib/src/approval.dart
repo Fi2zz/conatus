@@ -1,7 +1,7 @@
 /// approval 插件：高危工具执行前的人机协作审批。
 ///
 /// 审批是一个能力缝：[Approval] 只声明 `request` 与 `pending`，默认实现有
-/// 自动批准/拒绝（测试）、按规则批准、经 `ask_user` 询问用户；超时视为拒绝。
+/// 自动批准/拒绝（测试）、按规则批准、经 `question` 询问用户；超时视为拒绝。
 /// [instrumentApproval] 把它挂到 [ToolRegistry] 的调用链上，只对不低于阈值的
 /// 工具拦截；`provideApproval` 一次装好服务与拦截。
 library;
@@ -42,7 +42,7 @@ class ApprovalRequest {
   /// 无路径参数时为空列表。审批方据此把「工具 + 目录」作为信任粒度。
   final List<String> pathArgs;
 
-  /// 权限动作（如 `shell` / `read_file` / `server_tool`）；空串表示未经权限层。
+  /// 权限动作（如 `bash` / `read` / `server_tool`）；空串表示未经权限层。
   ///
   /// 审批方据此展示「将要保存的规则」，也是「总是允许」推导规则的一部分。
   final String action;
@@ -156,7 +156,7 @@ class RuleBasedApproval extends Approval {
   }
 }
 
-/// 经 `ask_user` 询问用户；超时或异常视为拒绝。
+/// 经 `question` 询问用户；超时或异常视为拒绝。
 class AskUserApproval extends Approval {
   AskUserApproval({
     required this.askUser,

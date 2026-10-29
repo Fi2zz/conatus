@@ -5,7 +5,7 @@ import 'permission_effect.dart';
 
 /// 一条 `<action, resource> -> effect` 规则。
 ///
-/// [action] 是工具动作标识（如 `shell` / `edit` / `read`），按**精确值**匹配；
+/// [action] 是工具动作标识（如 `bash` / `edit` / `read`），按**精确值**匹配；
 /// [resource] 是通配 pattern（见 `permissionPatternMatches`）。命中同一动作的
 /// 多条规则时**最后一条生效**，因此规则列表的先后顺序就是优先级。
 class PermissionRule {

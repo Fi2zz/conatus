@@ -28,17 +28,17 @@ void main() {
   });
 
   test('收口只拒非白名单工具', () {
-    expect(_policy.denialFor(7, 'read_file'), isNull);
-    expect(_policy.denialFor(7, 'shell'), contains('预算'));
-    expect(_policy.denialFor(7, 'shell'), contains('收口'));
-    expect(_policy.denialFor(6, 'shell'), isNull);
+    expect(_policy.denialFor(7, 'read'), isNull);
+    expect(_policy.denialFor(7, 'bash'), contains('预算'));
+    expect(_policy.denialFor(7, 'bash'), contains('收口'));
+    expect(_policy.denialFor(6, 'bash'), isNull);
   });
 
   test('finalizeAfter 为 0 表示不限', () {
     const ToolBudgetPolicy unlimited = ToolBudgetPolicy(finalizeAfter: 0);
 
     expect(unlimited.stageOf(1000), ToolBudgetStage.strict);
-    expect(unlimited.denialFor(1000, 'shell'), isNull);
+    expect(unlimited.denialFor(1000, 'bash'), isNull);
   });
 
   test('阶段阈值设为 0 即关闭该阶段', () {
@@ -50,7 +50,7 @@ void main() {
 
     expect(off.stageOf(100), ToolBudgetStage.normal);
     expect(off.note(100), isNull);
-    expect(off.denialFor(100, 'shell'), isNull);
+    expect(off.denialFor(100, 'bash'), isNull);
   });
 
   test('strictEvery 为 0 时只在边界提醒一次', () {
@@ -64,8 +64,8 @@ void main() {
   test('默认策略的收口白名单含只读工具', () {
     const ToolBudgetPolicy defaults = ToolBudgetPolicy();
 
-    expect(defaults.denialFor(45, 'read_file'), isNull);
-    expect(defaults.denialFor(45, 'shell'), isNotNull);
+    expect(defaults.denialFor(45, 'read'), isNull);
+    expect(defaults.denialFor(45, 'bash'), isNotNull);
     expect(defaults.stageOf(44), ToolBudgetStage.strict);
     expect(defaults.stageOf(45), ToolBudgetStage.finalize);
   });

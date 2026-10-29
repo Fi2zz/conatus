@@ -26,7 +26,7 @@ class ToolBudgetPolicy {
     this.strictAfter = 26,
     this.finalizeAfter = 44,
     this.strictEvery = 8,
-    this.finalizeAllowed = const <String>{'read_file'},
+    this.finalizeAllowed = const <String>{'read'},
   });
 
   /// 第几次调用起进入经济阶段；0 表示不启用。

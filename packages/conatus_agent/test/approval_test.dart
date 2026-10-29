@@ -25,9 +25,9 @@ void main() {
 
     test('RuleBasedApproval 按规则判定', () async {
       final RuleBasedApproval approval = RuleBasedApproval(
-        allow: (ApprovalRequest r) => r.toolName == 'read_file',
+        allow: (ApprovalRequest r) => r.toolName == 'read',
       );
-      expect(await approval.request(_request('read_file')), isTrue);
+      expect(await approval.request(_request('read')), isTrue);
       expect(await approval.request(_request()), isFalse);
       await approval.close();
     });

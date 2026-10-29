@@ -6,9 +6,9 @@ import 'package:conatus_llm/conatus_llm.dart';
 import 'permissions/permission_rule.dart';
 import 'sub_agent_permission.dart';
 
-/// 一次 `spawn_agent` 委托使用的 Agent 配置。
+/// 一次 `task` 委托使用的 Agent 配置。
 ///
-/// [tools] 为 `null` 表示沿用宿主默认白名单（`spawn_agent` 未显式配置时为
+/// [tools] 为 `null` 表示沿用宿主默认白名单（`task` 未显式配置时为
 /// 只读探索集）；非空时与请求的白名单取交集。宿主侧（nava 的
 /// `AgentDefinition`）仅在作为主会话 Agent 时把 `null` 解释为「不额外限制」，
 /// 子 Agent 路径统一以本类的默认白名单语义为准。[disabledTools] 在交集之后

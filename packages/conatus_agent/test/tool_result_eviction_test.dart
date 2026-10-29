@@ -37,7 +37,7 @@ void main() {
     expect(result.isError, isFalse);
     expect(result.content.length, lessThan(big.length));
     expect(result.content, contains('省略'));
-    expect(result.content, contains('read_file'));
+    expect(result.content, contains('read'));
 
     final Map<String, Object?> value = result.value! as Map<String, Object?>;
     expect(value['spilled'], isTrue);

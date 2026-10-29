@@ -1,4 +1,4 @@
-/// `spawn_agent` 的 `agent` 参数：profile 白名单 / 步数 / 人设 / 模型与未知 Agent。
+/// `task` 的 `agent` 参数：profile 白名单 / 步数 / 人设 / 模型与未知 Agent。
 library;
 
 import 'package:conatus_agent/conatus_agent.dart';
@@ -70,11 +70,11 @@ ToolRegistry _registry() {
     handler: (ToolContext ctx) async => ToolResult.success('12:00'),
   );
   tools.fn(
-    'read_file',
+    'read',
     handler: (ToolContext ctx) async => ToolResult.success('文件内容'),
   );
   tools.fn(
-    'write_file',
+    'write',
     riskLevel: ToolRisk.medium,
     handler: (ToolContext ctx) async => ToolResult.success('w'),
   );
@@ -113,21 +113,21 @@ void main() {
           id: 'reviewer',
           system: 'REVIEW ONLY',
           steps: 2,
-          tools: const <String>['read_file'],
+          tools: const <String>['read'],
           llm: assigned,
         ),
       }),
     );
 
     final ToolResult result = await spawn.call(const ToolContext(ToolCall(
-      name: 'spawn_agent',
+      name: 'task',
       arguments: <String, Object?>{'task': 'review', 'agent': 'reviewer'},
     )));
 
     expect(result.isError, isFalse);
     expect(hostLlm.calls, 0, reason: 'profile 模型优先于宿主模型');
     expect(assigned.calls, 2, reason: 'profile.steps 覆盖默认步数');
-    expect(_names(assigned.toolSchemas.first), <String>{'read_file'});
+    expect(_names(assigned.toolSchemas.first), <String>{'read'});
     expect(_system(assigned.messages.first), contains('REVIEW ONLY'));
     expect(
         (result.value! as Map<String, Object?>)['output'], contains('最大步数 2'));
@@ -142,7 +142,7 @@ void main() {
       host: host,
       llm: provider,
       tools: _registry(),
-      defaultTools: const <String>['get_time', 'read_file'],
+      defaultTools: const <String>['get_time', 'read'],
       profileResolver: _Resolver(<String, SubAgentProfile>{
         'reader': const SubAgentProfile(
           id: 'reader',
@@ -153,11 +153,11 @@ void main() {
     );
 
     await spawn.call(const ToolContext(ToolCall(
-      name: 'spawn_agent',
+      name: 'task',
       arguments: <String, Object?>{'task': 'read', 'agent': 'reader'},
     )));
 
-    expect(_names(provider.toolSchemas.first), <String>{'read_file'});
+    expect(_names(provider.toolSchemas.first), <String>{'read'});
   });
 
   test('未知 agent 返回 UNKNOWN_AGENT，不静默降级', () async {
@@ -173,7 +173,7 @@ void main() {
     );
 
     final ToolResult result = await spawn.call(const ToolContext(ToolCall(
-      name: 'spawn_agent',
+      name: 'task',
       arguments: <String, Object?>{'task': 'x', 'agent': 'missing'},
     )));
 

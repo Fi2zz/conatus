@@ -107,7 +107,7 @@ void main() {
       provideTelemetry(ctx, telemetry: telemetry);
       final ToolRegistry tools = provideTools(ctx);
       tools.fn(
-        'web_search',
+        'websearch',
         handler: (ToolContext c) async => ToolResult.failure(
           '无法联网：所有搜索源都不可用。',
           error: const ToolError('SEARCH_UNAVAILABLE', 'boom'),
@@ -115,12 +115,12 @@ void main() {
       );
       instrumentTools(ctx, telemetry: telemetry);
 
-      await tools.call(const ToolCall(name: 'web_search'));
+      await tools.call(const ToolCall(name: 'websearch'));
 
       expect(telemetry.recent.map((TelemetryEvent e) => e.name),
           <String>['tool.called', 'tool.failed']);
       final TelemetryEvent failed = telemetry.recent.last;
-      expect(failed.data['tool'], 'web_search');
+      expect(failed.data['tool'], 'websearch');
       expect(failed.data['error'], 'boom');
       ctx.dispose();
     });

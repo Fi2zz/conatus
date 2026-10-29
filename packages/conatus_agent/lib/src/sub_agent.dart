@@ -1,6 +1,6 @@
 /// sub-agent 插件：把子任务委托给隔离的子 Agent 执行。
 ///
-/// [SpawnAgentTool]（`spawn_agent`）是一个普通工具：主 Agent 调用它时，本插件
+/// [SpawnAgentTool]（`task`）是一个普通工具：主 Agent 调用它时，本插件
 /// 在宿主上下文下派生一个隔离子上下文，创建独立的 [Session] 与受限的
 /// [ToolRegistry]，跑一个独立的 [AgentLoop]，只把最终结果回传主 Agent。子上下文
 /// 随宿主释放，宿主被取消/释放时子 Agent 一并终止。
@@ -54,7 +54,7 @@ class SubAgentResult {
       };
 }
 
-/// `spawn_agent`：把一段自包含的任务委托给隔离子 Agent。
+/// `task`：把一段自包含的任务委托给隔离子 Agent。
 class SpawnAgentTool extends Tool {
   SpawnAgentTool({
     required this.host,
@@ -98,7 +98,7 @@ class SpawnAgentTool extends Tool {
   /// `provideCompaction`，注册期取不到。
   final CompactionEngine? compactor;
 
-  /// 子代理默认权限模式；模型可在 `spawn_agent` 请求，但只能收紧（不能放宽）。
+  /// 子代理默认权限模式；模型可在 `task` 请求，但只能收紧（不能放宽）。
   final SubAgentPermission permissionMode;
 
   /// 进度回调；缺省不报（子 Agent 仍是黑箱）。
@@ -122,7 +122,7 @@ class SpawnAgentTool extends Tool {
   /// 取消所有在途子 Agent（主轮次被打断时调用）。
   ///
   /// 子 Agent 跑在自己的 [Session]、不参与主轮次的取消竞速，主轮次 Esc 只会
-  /// 丢掉 `spawn_agent` 的结果，子循环仍在后台烧 token；这里把它一并收掉。
+  /// 丢掉 `task` 的结果，子循环仍在后台烧 token；这里把它一并收掉。
   void interrupt() {
     for (final AgentCancel cancel in List<AgentCancel>.of(_inflight)) {
       cancel.cancel();
@@ -130,12 +130,12 @@ class SpawnAgentTool extends Tool {
   }
 
   @override
-  String get name => 'spawn_agent';
+  String get name => 'task';
 
   @override
   String get description => '把一个自包含的子任务委托给独立的子 Agent 执行，只回结论。';
 
-  /// 权限动作是 `subagent`；资源取 `agent` 参数（未传时回落到 `default`，见
+  /// 权限动作是 `task`；资源取 `agent` 参数（未传时回落到 `default`，见
   /// `permission_action.dart`）。
   @override
   ToolRisk get riskLevel => ToolRisk.medium;
@@ -353,7 +353,7 @@ class SpawnAgentTool extends Tool {
   }
 }
 
-/// 把 `spawn_agent` 工具注册到宿主上下文的 `ctx.tools`。
+/// 把 `task` 工具注册到宿主上下文的 `ctx.tools`。
 SpawnAgentTool provideSpawnAgent(
   Context ctx, {
   Context? host,

@@ -32,7 +32,7 @@ _Rig _rig(String workdir) {
   final Context ctx = Context.root();
   addTearDown(ctx.dispose);
   provideTools(ctx);
-  for (final String name in <String>['read_file', 'write_file']) {
+  for (final String name in <String>['read', 'write']) {
     ctx.tools.fn(
       name,
       pathParams: const <String>['path'],
@@ -58,7 +58,7 @@ void main() {
     final String target = '${dir.path}${Platform.pathSeparator}src/x.dart';
 
     final PermissionVerdict verdict = rig.verdict(
-      (name: 'write_file', args: <String, Object?>{'path': target}),
+      (name: 'write', args: <String, Object?>{'path': target}),
       const <PermissionRule>[
         PermissionRule(
           action: 'edit',
@@ -77,7 +77,7 @@ void main() {
     final String rule = '${dir.path}${Platform.pathSeparator}secret/*';
 
     final PermissionVerdict verdict = rig.verdict(
-      (name: 'read_file', args: <String, Object?>{'path': 'secret/x'}),
+      (name: 'read', args: <String, Object?>{'path': 'secret/x'}),
       <PermissionRule>[
         PermissionRule(
           action: 'read',
@@ -100,7 +100,7 @@ void main() {
     final _Rig rig = _rig(dir.path);
 
     final PermissionVerdict verdict = rig.verdict(
-      (name: 'read_file', args: <String, Object?>{'path': 'notes.txt'}),
+      (name: 'read', args: <String, Object?>{'path': 'notes.txt'}),
       <PermissionRule>[
         PermissionRule(
           action: 'read',
@@ -123,7 +123,7 @@ void main() {
     final _Rig rig = _rig(dir.path);
 
     final PermissionVerdict verdict = rig.verdict(
-      (name: 'read_file', args: <String, Object?>{'path': 'notes.txt'}),
+      (name: 'read', args: <String, Object?>{'path': 'notes.txt'}),
       const <PermissionRule>[
         PermissionRule(
           action: 'external_directory',

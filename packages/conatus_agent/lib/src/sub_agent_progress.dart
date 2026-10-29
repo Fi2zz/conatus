@@ -122,7 +122,7 @@ class ProgressTool extends Tool {
 ///
 /// 子注册表**复制主注册表的守卫与中间件**（`copyPipelineTo`）：审批、工具结果
 /// 驱逐、hooks、lint 等必须对子 Agent 的工具调用同样生效。此前子表是全新的空
-/// 管线——既不驱逐大结果（`read_file` 20 万字符直接灌进子历史），也让显式点名的
+/// 管线——既不驱逐大结果（`read` 20 万字符直接灌进子历史），也让显式点名的
 /// high 工具绕过人工确认。工具本身仍只有白名单内的那些。
 ToolRegistry buildChildRegistry(
   ToolRegistry source,

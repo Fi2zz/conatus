@@ -34,9 +34,9 @@ void main() {
 
     test('工具调用：必须调用与禁止调用', () {
       expect(const ToolUse('get_time').evaluate(_result), isTrue);
-      expect(const ToolUse('web_search').evaluate(_result), isFalse);
+      expect(const ToolUse('websearch').evaluate(_result), isFalse);
       expect(
-        const ToolUse('web_search', required: false).evaluate(_result),
+        const ToolUse('websearch', required: false).evaluate(_result),
         isTrue,
       );
       expect(
@@ -56,7 +56,7 @@ void main() {
         const OutputContains('下雨', absent: true),
         OutputMatches(r'1\d'),
         const ToolUse('get_time'),
-        const ToolUse('web_search', required: false),
+        const ToolUse('websearch', required: false),
         const RoundsWithin(5),
       ];
 
@@ -108,7 +108,7 @@ void main() {
       const EvalCase evalCase = EvalCase(
         id: 'c',
         input: 'x',
-        expectedTools: <String>['web_search'],
+        expectedTools: <String>['websearch'],
         checks: <EvalCheck>[OutputContains('12:00')],
       );
 

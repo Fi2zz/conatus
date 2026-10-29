@@ -80,28 +80,28 @@ void main() {
     test('returns null when no resource pattern matches', () {
       final List<PermissionRule> rules = <PermissionRule>[
         const PermissionRule(
-            action: 'shell',
+            action: 'bash',
             resource: 'git status *',
             effect: PermissionEffect.allow),
       ];
-      expect(lastMatchingRule(rules, 'shell', 'git push'), isNull);
-      expect(lastMatchingRule(rules, 'shell', 'git status'), isNotNull);
-      expect(lastMatchingRule(const <PermissionRule>[], 'shell', 'git status'),
+      expect(lastMatchingRule(rules, 'bash', 'git push'), isNull);
+      expect(lastMatchingRule(rules, 'bash', 'git status'), isNotNull);
+      expect(lastMatchingRule(const <PermissionRule>[], 'bash', 'git status'),
           isNull);
     });
 
     test('later rule overrides earlier rule for the same resource', () {
       final List<PermissionRule> rules = <PermissionRule>[
         const PermissionRule(
-            action: 'shell', resource: 'git *', effect: PermissionEffect.deny),
+            action: 'bash', resource: 'git *', effect: PermissionEffect.deny),
         const PermissionRule(
-            action: 'shell',
+            action: 'bash',
             resource: 'git status *',
             effect: PermissionEffect.allow,
             source: 'session'),
       ];
       final PermissionRule? rule =
-          lastMatchingRule(rules, 'shell', 'git status --short');
+          lastMatchingRule(rules, 'bash', 'git status --short');
       expect(rule!.effect, PermissionEffect.allow);
       expect(rule.source, 'session');
     });

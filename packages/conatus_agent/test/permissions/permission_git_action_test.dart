@@ -1,4 +1,4 @@
-/// C3：git 写工具归一到 shell，`shell git *` 规则必须能拦住。
+/// C3：git 写工具归一到 bash，`bash git *` 规则必须能拦住。
 library;
 
 import 'package:conatus_agent/conatus_agent.dart';
@@ -23,9 +23,9 @@ Map<String, Object?> _argsFor(String tool) => switch (tool) {
     };
 
 void main() {
-  test('四个 git 写工具都映射为 shell，资源带 git 前缀', () {
+  test('四个 git 写工具都映射为 bash，资源带 git 前缀', () {
     for (final String tool in _gitTools) {
-      expect(permissionActionFor(tool), 'shell');
+      expect(permissionActionFor(tool), 'bash');
       final List<String> resources = permissionResourcesFor(
         ToolCall(name: tool, arguments: _argsFor(tool)),
         const <String>[],
@@ -45,7 +45,7 @@ void main() {
     expect(resources.single, 'git branch --list');
   });
 
-  test('action=shell resource="git *" deny 拦住四个工具', () async {
+  test('action=bash resource="git *" deny 拦住四个工具', () async {
     for (final String tool in _gitTools) {
       final Context ctx = Context.root();
       addTearDown(ctx.dispose);
@@ -65,7 +65,7 @@ void main() {
           const PermissionScope(
             rules: <PermissionRule>[
               PermissionRule(
-                action: 'shell',
+                action: 'bash',
                 resource: 'git *',
                 effect: PermissionEffect.deny,
               ),

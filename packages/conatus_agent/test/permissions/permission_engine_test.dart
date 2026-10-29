@@ -6,7 +6,7 @@ import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:test/test.dart';
 
 PermissionVerdict _evaluate({
-  String action = 'shell',
+  String action = 'bash',
   List<String> resources = const <String>['git status'],
   ToolRisk risk = ToolRisk.low,
   PermissionScope scope = const PermissionScope(),
@@ -71,7 +71,7 @@ void main() {
       const PermissionScope scope = PermissionScope(
         rules: <PermissionRule>[
           PermissionRule(
-            action: 'shell',
+            action: 'bash',
             resource: 'git push *',
             effect: PermissionEffect.deny,
           ),
@@ -91,7 +91,7 @@ void main() {
         askThreshold: ToolRisk.high,
         rules: <PermissionRule>[
           PermissionRule(
-            action: 'shell',
+            action: 'bash',
             resource: 'git status *',
             effect: PermissionEffect.allow,
           ),
@@ -146,17 +146,17 @@ void main() {
       const PermissionScope scope = PermissionScope(
         rules: <PermissionRule>[
           PermissionRule(
-            action: 'shell',
+            action: 'bash',
             resource: '*',
             effect: PermissionEffect.allow,
           ),
           PermissionRule(
-            action: 'shell',
+            action: 'bash',
             resource: 'rm *',
             effect: PermissionEffect.deny,
           ),
           PermissionRule(
-            action: 'shell',
+            action: 'bash',
             resource: 'git push *',
             effect: PermissionEffect.ask,
           ),
@@ -176,12 +176,12 @@ void main() {
       const PermissionScope scope = PermissionScope(
         rules: <PermissionRule>[
           PermissionRule(
-            action: 'shell',
+            action: 'bash',
             resource: 'git *',
             effect: PermissionEffect.allow,
           ),
           PermissionRule(
-            action: 'shell',
+            action: 'bash',
             resource: 'git push *',
             effect: PermissionEffect.ask,
           ),
@@ -227,7 +227,7 @@ void main() {
       const PermissionScope scope = PermissionScope(
         rules: <PermissionRule>[
           PermissionRule(
-            action: 'shell',
+            action: 'bash',
             resource: 'git *',
             effect: PermissionEffect.deny,
           ),
@@ -237,7 +237,7 @@ void main() {
             effect: PermissionEffect.allow,
           ),
           PermissionRule(
-            action: 'shell',
+            action: 'bash',
             resource: 'git status *',
             effect: PermissionEffect.allow,
             source: 'session',
@@ -281,12 +281,12 @@ void main() {
       const PermissionScope scope = PermissionScope(
         rules: <PermissionRule>[
           PermissionRule(
-            action: 'shell',
+            action: 'bash',
             resource: '*',
             effect: PermissionEffect.allow,
           ),
           PermissionRule(
-            action: 'shell',
+            action: 'bash',
             resource: 'git push *',
             effect: PermissionEffect.deny,
           ),
@@ -311,7 +311,7 @@ void main() {
       const PermissionScope scope = PermissionScope(
         rules: <PermissionRule>[
           PermissionRule(
-            action: 'shell',
+            action: 'bash',
             resource: '*',
             effect: PermissionEffect.allow,
           ),

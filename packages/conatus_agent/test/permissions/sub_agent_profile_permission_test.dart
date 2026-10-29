@@ -26,18 +26,18 @@ _Host _host({List<PermissionRule> rules = const <PermissionRule>[]}) {
   final ToolRegistry tools = ToolRegistry();
   final List<String> runs = <String>[];
   tools.fn(
-    'run_command',
+    'bash',
     riskLevel: ToolRisk.high,
     handler: (ToolContext c) async {
-      runs.add('run_command');
+      runs.add('bash');
       return ToolResult.success('ok');
     },
   );
   tools.fn(
-    'write_file',
+    'write',
     riskLevel: ToolRisk.medium,
     handler: (ToolContext c) async {
-      runs.add('write_file');
+      runs.add('write');
       return ToolResult.success('ok');
     },
   );
@@ -52,14 +52,14 @@ const PermissionRule _denyEdit = PermissionRule(
 
 Future<ToolResult> _write(_Host host) => host.tools.call(
       const ToolCall(
-        name: 'write_file',
+        name: 'write',
         arguments: <String, Object?>{'path': 'a.txt'},
       ),
     );
 
 Future<ToolResult> _shell(_Host host) => host.tools.call(
       const ToolCall(
-        name: 'run_command',
+        name: 'bash',
         arguments: <String, Object?>{'command': 'ls'},
       ),
     );
@@ -102,7 +102,7 @@ void main() {
   test('profile allow 不能放宽宿主 deny', () async {
     final _Host host = _host(rules: const <PermissionRule>[
       PermissionRule(
-        action: 'shell',
+        action: 'bash',
         resource: '*',
         effect: PermissionEffect.deny,
       ),
@@ -115,7 +115,7 @@ void main() {
         gate: AutoApproval(true),
         extraRules: const <PermissionRule>[
           PermissionRule(
-            action: 'shell',
+            action: 'bash',
             resource: '*',
             effect: PermissionEffect.allow,
           ),
@@ -168,6 +168,6 @@ void main() {
 
     final ToolResult result = await _write(host);
     expect(result.isError, isFalse);
-    expect(host.runs, <String>['write_file']);
+    expect(host.runs, <String>['write']);
   });
 }

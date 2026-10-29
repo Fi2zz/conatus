@@ -24,7 +24,7 @@ void main() {
           MessageCategory.systemPrompt);
       expect(
           classifier.classify(
-              const LlmMessage('system', '可用工具：read_file、write_file')),
+              const LlmMessage('system', '可用工具：read、write')),
           MessageCategory.toolDefinition);
       expect(classifier.classify(const LlmMessage('system', '已启用技能：查天气')),
           MessageCategory.skillList);

@@ -11,7 +11,7 @@ import 'package:test/test.dart';
 int _permissionBits(String path) => File(path).statSync().mode & 0xFFF;
 
 const PermissionRule _shellDeny = PermissionRule(
-  action: 'shell',
+  action: 'bash',
   resource: 'git push *',
   effect: PermissionEffect.deny,
   source: 'project',
@@ -45,7 +45,7 @@ void main() {
 
     final List<PermissionRule> loaded = await store.load();
     expect(loaded, hasLength(2));
-    expect(loaded[0].action, 'shell');
+    expect(loaded[0].action, 'bash');
     expect(loaded[0].resource, 'git push *');
     expect(loaded[0].effect, PermissionEffect.deny);
     expect(loaded[0].source, 'project');
@@ -65,7 +65,7 @@ void main() {
     expect(
       rules.single,
       <String, Object?>{
-        'action': 'shell',
+        'action': 'bash',
         'resource': 'git push *',
         'effect': 'deny',
         'source': 'project',
@@ -121,11 +121,11 @@ void main() {
       'version': 1,
       'rules': <Object?>[
         <String, Object?>{
-          'action': 'shell',
+          'action': 'bash',
           'resource': '*',
           'effect': 'bogus'
         },
-        <String, Object?>{'action': 'shell', 'effect': 'deny'},
+        <String, Object?>{'action': 'bash', 'effect': 'deny'},
         <String, Object?>{'action': '', 'resource': '*', 'effect': 'deny'},
         'not-an-object',
         <String, Object?>{
@@ -150,7 +150,7 @@ void main() {
 
     final List<PermissionRule> loaded = await store.load();
     expect(loaded.map((PermissionRule rule) => rule.action),
-        <String>['shell', 'edit']);
+        <String>['bash', 'edit']);
     expect(loaded.last.effect, PermissionEffect.ask);
   });
 

@@ -14,10 +14,10 @@ import 'plan.dart';
 /// Plan Mode 变更事件类型。
 const String kPlanModeEvent = 'plan/mode';
 
-/// `plan:policy` 段文本：只提 `web_search` 与 `ask_user`，不提读本地文件
+/// `plan:policy` 段文本：只提 `websearch` 与 `question`，不提读本地文件
 /// （语音优先场景）。
 const String kPlanModePolicy =
-    'You are in plan mode. Use web_search and ask_user to gather '
+    'You are in plan mode. Use websearch and question to gather '
     'information before presenting a complete plan through '
     'exit_plan_mode. Do not execute mutating operations until the '
     'plan is approved.';
