@@ -41,7 +41,7 @@ class WebSearchTool extends Tool {
         ParamSpec.integer('limit', description: '返回条数'),
         ParamSpec.string(
           'provider',
-          description: '可选：只走指定 provider（tavily/exa/brave/duckduckgo）',
+          description: '可选：只走指定 provider（${kDefaultSearchOrder.join('/')}）',
         ),
       ];
 
