@@ -1,4 +1,4 @@
-/// task 插件的运行时接入：把 Agent Loop / spawn_agent / shell / schedule
+/// task 插件的运行时接入：把 Agent Loop / task / shell / schedule
 /// 的执行挂到 [TaskCenter] 上。
 ///
 /// 依赖方向是「组件接入中心」而非「中心依赖组件」：本文件的装饰器由
@@ -15,10 +15,10 @@ import 'package:conatus_schedule/conatus_schedule.dart';
 import 'task.dart';
 import 'task_center.dart';
 
-/// `spawn_agent` 工具名（与 sub_agent 插件一致；该插件未导出常量）。
-const String kSpawnAgentToolName = 'spawn_agent';
+/// `task` 工具名（与 sub_agent 插件一致；该插件未导出常量）。
+const String kSpawnAgentToolName = 'task';
 
-/// 轮次追踪 + `spawn_agent` 中间件的持有者。每个被追踪的会话一个实例。
+/// 轮次追踪 + `task` 中间件的持有者。每个被追踪的会话一个实例。
 class TaskTracking implements AgentTurnTracker {
   /// 提交任务 [TaskCenter]；[ctx] 用于惰性解析 `goal` / `planMode` 服务
   /// 写入任务 metadata（可空，缺省不关联）。
@@ -64,9 +64,9 @@ class TaskTracking implements AgentTurnTracker {
   bool _planModeActive() =>
       _ctx?.get<PlanMode>('planMode')?.state == PlanModeState.active;
 
-  /// 拦 `spawn_agent` 调用的中间件：为每次委托创建 subAgent 任务，
+  /// 拦 `task` 调用的中间件：为每次委托创建 subAgent 任务，
   /// 挂在当前轮次任务下；其余工具调用原样放行。子 Agent 的结局从结果值
-  /// 判定（`value['status'] == 'failed'`，spawn_agent 会把子 Agent 异常
+  /// 判定（`value['status'] == 'failed'`，task 会把子 Agent 异常
   /// 收敛进结果值而非失败结果）。
   ToolMiddleware get spawnAgentMiddleware =>
       (ToolCall call, Future<ToolResult> Function() next) async {

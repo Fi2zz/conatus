@@ -2,7 +2,7 @@
 ///
 /// [provideTaskCenter] 提供 `'tasks'` 服务并注册 `list_tasks` /
 /// `cancel_task` 工具；[provideTaskTracking] 把运行时接入挂好：
-/// `spawn_agent` 中间件注册到工具管线，`agentLoop` 可用时经 `ctx.inject`
+/// `task` 中间件注册到工具管线，`agentLoop` 可用时经 `ctx.inject`
 /// 把轮次追踪器挂到 [AgentLoop.addTurnTracker]（依赖消失自动摘除，与
 /// `provideGoal` 挂载续行驱动器同款）。
 library;
@@ -46,7 +46,7 @@ TaskCenter provideTaskCenter(
   return resolved;
 }
 
-/// 挂载运行时追踪：`spawn_agent` 中间件 + Agent Loop 轮次钩子。
+/// 挂载运行时追踪：`task` 中间件 + Agent Loop 轮次钩子。
 ///
 /// [tasks] 缺省取 `ctx.tasks`；[registry] 缺省取 `ctx.tools`。
 /// `agentLoop` 尚不可用时经 [Context.inject] 等待，依赖齐备即挂载、

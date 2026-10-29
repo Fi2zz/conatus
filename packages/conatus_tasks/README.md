@@ -16,7 +16,7 @@ final TaskCenter tasks = provideTaskCenter(
   // registerTools: false  // 关闭模型工具注册
 );
 
-// 挂运行时追踪：Agent Loop / spawn_agent / shell / schedule 现有代码零改动
+// 挂运行时追踪：Agent Loop / task / shell / schedule 现有代码零改动
 provideTaskTracking(ctx);
 ```
 
@@ -39,7 +39,7 @@ controller.configureSession = (Context ctx, Session session) {
 | 类型 | 来源 |
 |------|------|
 | `agentTurn` | Agent Loop 的一轮（`AgentLoop.addTurnTracker`，metadata 关联 goalId / planMode） |
-| `subAgent` | `spawn_agent` 委托（中间件按结果值 `status` 判定成败） |
+| `subAgent` | `task` 委托（中间件按结果值 `status` 判定成败） |
 | `shell` | 后台 / 前台 shell 执行（`TrackingShellExecutor`） |
 | `schedule` | 定时提醒交付（`trackScheduleDelivery`） |
 | `custom` | 宿主自定义 |

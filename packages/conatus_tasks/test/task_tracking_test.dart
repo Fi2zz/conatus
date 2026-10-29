@@ -79,6 +79,10 @@ Future<void> _waitTerminal(DefaultTaskCenter center, String id) async {
 }
 
 void main() {
+  test('子代理工具名与 OpenCode 一致', () {
+    expect(kSpawnAgentToolName, 'task');
+  });
+
   group('TaskTracking — Agent Turn', () {
     test('一轮收口：agentTurn 任务 completed，结果带回复', () async {
       final DefaultTaskCenter center = DefaultTaskCenter();
@@ -120,7 +124,7 @@ void main() {
     });
   });
 
-  group('TaskTracking — spawn_agent 中间件', () {
+  group('TaskTracking — task 中间件', () {
     test('委托建 subAgent 任务，挂在当前轮次下', () async {
       final Context host = Context.root();
       addTearDown(host.dispose);
@@ -171,7 +175,7 @@ void main() {
         arguments: <String, Object?>{'task': '必失败'},
       ));
 
-      expect(result.isError, isFalse, reason: 'spawn_agent 收敛子失败为结果');
+      expect(result.isError, isFalse, reason: 'task 收敛子失败为结果');
       final Task sub =
           center.all.firstWhere((Task t) => t.kind == TaskKind.subAgent);
       expect(sub.status, TaskStatus.failed);

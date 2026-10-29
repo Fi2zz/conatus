@@ -9,7 +9,7 @@
 ///
 /// ```dart
 /// final tasks = provideTaskCenter(ctx);
-/// provideTaskTracking(ctx);        // 挂 Agent Loop / spawn_agent 追踪
+/// provideTaskTracking(ctx);        // 挂 Agent Loop / task 追踪
 /// ctx.tools.call(const ToolCall(name: 'list_tasks'));
 /// ```
 library;
