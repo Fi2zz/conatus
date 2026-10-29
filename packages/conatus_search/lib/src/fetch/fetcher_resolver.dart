@@ -58,6 +58,7 @@ WebFetcher _autoFetcher(Credentials? credentials, http.Client? client) {
           (String apiKey) => KimiFetcher(apiKey: apiKey, client: client),
         ),
       // 上游已在开头分流；穷尽 switch 要求列出全部取值。
-      FetchBackend.auto || FetchBackend.http => throw ArgumentError(
-          '抓取后端 ${backend.name} 不需要凭据，应由调用方提前处理'),
+      FetchBackend.auto ||
+      FetchBackend.http =>
+        throw ArgumentError('抓取后端 ${backend.name} 不需要凭据，应由调用方提前处理'),
     };

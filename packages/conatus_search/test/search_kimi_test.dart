@@ -180,8 +180,8 @@ void main() {
 
     await expectLater(
       provider.search('q'),
-      throwsA(isA<SearchException>().having((SearchException e) => e.message,
-          'message', contains('kimi 请求超时'))),
+      throwsA(isA<SearchException>().having(
+          (SearchException e) => e.message, 'message', contains('kimi 请求超时'))),
     );
   });
 }

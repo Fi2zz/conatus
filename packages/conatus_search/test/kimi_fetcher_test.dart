@@ -117,8 +117,8 @@ void main() {
 
     await expectLater(
       fetcher.fetch('https://e.com'),
-      throwsA(isA<FetchException>().having(
-          (FetchException e) => e.message, 'message', 'kimi HTTP 403：security_risk')),
+      throwsA(isA<FetchException>().having((FetchException e) => e.message,
+          'message', 'kimi HTTP 403：security_risk')),
     );
   });
 
@@ -130,8 +130,8 @@ void main() {
 
     await expectLater(
       fetcher.fetch('https://e.com'),
-      throwsA(isA<FetchException>().having(
-          (FetchException e) => e.message, 'message', 'kimi HTTP 404')),
+      throwsA(isA<FetchException>()
+          .having((FetchException e) => e.message, 'message', 'kimi HTTP 404')),
     );
   });
 
@@ -147,8 +147,8 @@ void main() {
 
     await expectLater(
       fetcher.fetch('https://e.com'),
-      throwsA(isA<FetchException>().having((FetchException e) => e.message,
-          'message', contains('kimi 请求超时'))),
+      throwsA(isA<FetchException>().having(
+          (FetchException e) => e.message, 'message', contains('kimi 请求超时'))),
     );
   });
 }
