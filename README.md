@@ -612,12 +612,13 @@ provideToolResultEviction(app, threshold: 80000); // 或先 provide('toolResultT
 
 ### `plan` — 规划
 
-`plan_write` 工具把「目标 + 有序步骤」以 `plan/updated` 事件写入会话；
-`AgentLoop(planning: true)`（或 `provideAgentLoop(app, planning: true)`）在无计划时
-先跑一次「只允许 plan_write」的规划轮，之后每轮把 `[当前计划]` 注入 system。
+`todowrite` 工具把「目标 + 有序步骤」以 `plan/updated` 事件写入会话：无计划时
+创建、已有计划时按序号推进。`AgentLoop(planning: true)`（或
+`provideAgentLoop(app, planning: true)`）在无计划时先跑一次「只允许 todowrite」
+的规划轮，之后每轮把 `[当前计划]` 注入 system。
 
 ```dart
-providePlanTool(app, session: session); // 注册 plan_write
+provideUpdatePlanTool(app, session: session); // 注册 todowrite
 final agent = provideAgentLoop(app, session: session, planning: true);
 ```
 
@@ -1757,7 +1758,7 @@ root.provide('x', 1);
 |------|------|
 | `provideToolResultEviction(ctx, {eviction, fs, tools, threshold, previewChars, dir})` | 安装驱逐中间件，返回 `ToolResultEviction` |
 | `ToolResultEviction({fs, threshold, previewChars, dir})` / `evict(content)` / `clear()` / `spilledPaths` | 驱逐器 |
-| `PlanTool({session})` / `providePlanTool(ctx, {session, tools})` | `plan_write` 工具 |
+| `UpdatePlanTool({session})` / `provideUpdatePlanTool(ctx, {session, tools})`（conatus_code） | `todowrite` 工具（创建 + 推进） |
 | `Plan({goal, steps})` / `PlanStep` / `readPlan(session)` / `writePlan(session, plan)` / `planSection(session)` | 计划读写 |
 | `runPlanningPhase({llm, tools, session, messages, systemText})` | 规划轮 |
 | `AgentLoop(..., planning: true)` / `provideAgentLoop(ctx, {..., planning})` | 启用规划 |

@@ -4,6 +4,27 @@
 
 ## [未发布]
 
+**破坏性：工具标识与权限动作统一为 OpenCode 命名**（不保留旧名别名）：
+
+| 旧名 | 新名 |
+|---|---|
+| `read_file` / `write_file` / `edit_file` | `read` / `write` / `edit` |
+| `list_files` | `list` |
+| `run_command` / `rg` | `bash` / `grep` |
+| `web_search` / `fetch_url` | `websearch` / `webfetch` |
+| `spawn_agent` | `task` |
+| `ask_user` / `update_plan` | `question` / `todowrite` |
+| `plan_write` | 并入 `todowrite`（无计划时创建，有则增量更新） |
+| 权限动作 `shell` / `subagent` | `bash` / `task` |
+
+迁移：`[[permissions]]` 的 `action = "shell"` 改为 `"bash"`、`"subagent"` 改为
+`"task"`；Agent frontmatter / Skill 里的旧工具名改成新名。旧动作名不再命中，
+启动系统提示与 `/doctor` 会报出仍在使用旧名的规则条数。
+
+**`default_plan_mode`（kimi 兼容）**：顶层 `default_plan_mode = true` 或命令行
+`--plan` 会在启动后进入 Plan Mode（先规划、`exit_plan_mode` 批准后执行）；
+状态栏权限模式后追加 `plan`。
+
 **`conatus_mcp` OAuth 运行时**：`McpOAuthSession` 走授权码 + PKCE + loopback
 回调（登录等待与 HTTP 超时分离，授权地址始终输出到日志），`McpOAuthStore`
 原子写入 `~/.nava/oauth/<server>.json`（0600、目录 0700）并持久化 DCR
