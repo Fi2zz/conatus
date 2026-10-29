@@ -82,6 +82,7 @@ void main() {
         'tavily',
         'exa',
         'brave',
+        'deepseek',
         'parallel',
         'exa-mcp',
         'duckduckgo',
@@ -89,18 +90,43 @@ void main() {
     );
   });
 
-  test('内置表覆盖六个源，免 Key 的三个 credentialKey 为空', () {
+  test('内置表覆盖七个源，免 Key 的三个 credentialKey 为空', () {
     expect(kSearchProviderSpecs.keys.toSet(), <String>{
       'tavily',
       'exa',
       'brave',
+      'deepseek',
       'duckduckgo',
       'parallel',
       'exa-mcp',
     });
     expect(kSearchProviderSpecs['tavily']!.credentialKey, 'TAVILY_API_KEY');
+    expect(kSearchProviderSpecs['deepseek']!.credentialKey, 'DEEPSEEK_API_KEY');
     for (final String name in <String>['duckduckgo', 'parallel', 'exa-mcp']) {
       expect(kSearchProviderSpecs[name]!.credentialKey, '', reason: name);
     }
+  });
+
+  test('DeepSeek 复用 DEEPSEEK_API_KEY：配了 LLM 就不必另配搜索 Key', () {
+    final SearchProviderSet set = buildSearchProviders(
+      order: <String>['deepseek'],
+      credentials: InMemoryCredentials(
+        initial: <String, String>{'DEEPSEEK_API_KEY': 'sk'},
+      ),
+    );
+
+    expect(set.providers.single.name, 'deepseek');
+    expect((set.providers.single as DeepSeekSearchProvider).apiKey, 'sk');
+    expect(set.statuses.single.available, isTrue);
+  });
+
+  test('缺 DEEPSEEK_API_KEY 时跳过并给出键名', () {
+    final SearchProviderSet set = buildSearchProviders(
+      order: <String>['deepseek'],
+      credentials: InMemoryCredentials(),
+    );
+
+    expect(set.providers, isEmpty);
+    expect(set.statuses.single.reason, '缺少 DEEPSEEK_API_KEY');
   });
 }

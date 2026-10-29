@@ -67,9 +67,12 @@ void main() {
 
       expect((await service.search('q')).single.title, 'T');
       expect(
-        service.runtimeStatuses().firstWhere(
-          (SearchSourceStatus item) => item.name == 'bad',
-        ).available,
+        service
+            .runtimeStatuses()
+            .firstWhere(
+              (SearchSourceStatus item) => item.name == 'bad',
+            )
+            .available,
         isFalse,
       );
       await expectLater(

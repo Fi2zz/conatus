@@ -3,7 +3,9 @@ library;
 
 import 'package:conatus_credentials/conatus_credentials.dart';
 import 'package:http/http.dart' as http;
+import 'deepseek_shared.dart';
 import 'search_brave.dart';
+import 'search_deepseek.dart';
 import 'search_duckduckgo.dart';
 import 'search_exa.dart';
 import 'search_exa_mcp.dart';
@@ -62,6 +64,11 @@ const Map<String, SearchProviderSpec> kSearchProviderSpecs =
     credentialKey: kBraveCredentialKey,
     create: _createBrave,
   ),
+  'deepseek': SearchProviderSpec(
+    name: 'deepseek',
+    credentialKey: kDeepSeekCredentialKey,
+    create: _createDeepSeek,
+  ),
   'duckduckgo': SearchProviderSpec(
     name: 'duckduckgo',
     credentialKey: '',
@@ -98,6 +105,16 @@ SearchProvider _createBrave(String apiKey, SearchProviderDeps deps) =>
       apiKey: apiKey,
       client: deps.client,
       timeout: deps.timeout,
+    );
+
+SearchProvider _createDeepSeek(String apiKey, SearchProviderDeps deps) =>
+    DeepSeekSearchProvider(
+      apiKey: apiKey,
+      client: deps.client,
+      // DeepSeek 检索惯常比单次网页请求慢，装配期给 20s 而不是通用 15s。
+      timeout: deps.timeout > const Duration(seconds: 20)
+          ? deps.timeout
+          : const Duration(seconds: 20),
     );
 
 SearchProvider _createDuckDuckGo(String apiKey, SearchProviderDeps deps) =>
@@ -151,6 +168,7 @@ const List<String> kDefaultSearchOrder = <String>[
   'tavily',
   'exa',
   'brave',
+  'deepseek',
   'parallel',
   'exa-mcp',
   'duckduckgo',

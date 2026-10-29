@@ -41,8 +41,8 @@ void main() {
 
   test('format=html 保留原文', () async {
     final HttpFetcher fetcher = HttpFetcher(
-      client: MockClient((http.Request request) async =>
-          http.Response('<p>Hello</p>', 200)),
+      client: MockClient(
+          (http.Request request) async => http.Response('<p>Hello</p>', 200)),
     );
 
     final FetchedPage page = await fetcher.fetch(
@@ -68,8 +68,8 @@ void main() {
   test('超过 maxBytes 抛 FetchException', () async {
     final HttpFetcher fetcher = HttpFetcher(
       maxBytes: 3,
-      client: MockClient((http.Request request) async =>
-          http.Response('abcdef', 200)),
+      client: MockClient(
+          (http.Request request) async => http.Response('abcdef', 200)),
     );
 
     await expectLater(

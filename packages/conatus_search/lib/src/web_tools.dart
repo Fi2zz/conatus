@@ -2,8 +2,8 @@
 ///
 /// [WebSearchTool] 走 `ctx.search`（provider 回退由 SearchService 负责）；
 /// [FetchUrlTool] 经 [WebFetcher] 抓取正文（缺省裸 http，配了 Firecrawl Key 时
-/// 走 Firecrawl）。二者都是 [ToolRisk.low] 的只读工具，用 [provideWebTools]
-/// 一次性注册到 `ctx.tools`。
+/// 走 Firecrawl，也可显式指定 DeepSeek）。二者都是 [ToolRisk.low] 的只读工具，
+/// 用 [provideWebTools] 一次性注册到 `ctx.tools`。
 library;
 
 import 'package:conatus_core/conatus_core.dart';
@@ -11,7 +11,7 @@ import 'package:conatus_credentials/conatus_credentials.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:http/http.dart' as http;
 import 'fetch/fetcher.dart';
-import 'fetch/firecrawl_fetcher.dart';
+import 'fetch/fetcher_resolver.dart';
 import 'fetch/http_fetcher.dart';
 import 'search.dart';
 import 'search_registry.dart';
@@ -171,8 +171,9 @@ class FetchUrlTool extends Tool {
 
 /// 把 web 工具注册到 `ctx.tools`，返回已注册的工具。
 ///
-/// [search] 缺省取上下文的 `'search'` 服务；[fetcher] 显式给出时优先，
-/// 否则有 `FIRECRAWL_API_KEY` 时用 [FirecrawlFetcher]，都没有则 [HttpFetcher]。
+/// [search] 缺省取上下文的 `'search'` 服务；[fetcher] 显式给出时优先。
+/// [backend] 为 [FetchBackend.auto] 时沿用历史行为：有 `FIRECRAWL_API_KEY`
+/// 用 Firecrawl，否则裸 HTTP；显式指定后端的 Key 缺失时装配期直接失败。
 // REASON: 装配入口的参数聚合是既定形态（调用方是进程级 main / 测试），
 // 逐个拆开反而增加调用方负担。
 List<Tool> provideWebTools(
@@ -181,28 +182,19 @@ List<Tool> provideWebTools(
   WebFetcher? fetcher,
   Credentials? credentials,
   http.Client? client,
+  FetchBackend backend = FetchBackend.auto,
 }) {
   final SearchService service = search ?? ctx.search;
+  final Credentials? resolved =
+      credentials ?? ctx.get<Credentials>('credentials');
   final List<Tool> registered = <Tool>[
     WebSearchTool(search: service),
     FetchUrlTool(
-      fetcher: fetcher ?? _resolveFetcher(ctx, credentials, client),
+      fetcher: fetcher ?? resolveFetcher(resolved, client, backend),
     ),
   ];
   for (final Tool tool in registered) {
     ctx.effect(() => ctx.tools.register(tool));
   }
   return registered;
-}
-
-WebFetcher _resolveFetcher(
-  Context ctx,
-  Credentials? credentials,
-  http.Client? client,
-) {
-  final Credentials? resolved =
-      credentials ?? ctx.get<Credentials>('credentials');
-  final Credential? key = resolved?.get(kFirecrawlCredentialKey);
-  if (key == null) return HttpFetcher(client: client);
-  return FirecrawlFetcher(apiKey: key.value, client: client);
 }

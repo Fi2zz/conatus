@@ -38,7 +38,8 @@ class _StubFetcher implements WebFetcher {
     String url, {
     int maxChars = 20000,
     FetchedFormat format = FetchedFormat.text,
-  }) async => page;
+  }) async =>
+      page;
 }
 
 class _FailingFetcher implements WebFetcher {
@@ -155,8 +156,8 @@ void main() {
 
     test('format=html 原样返回并写入 value', () async {
       final FetchUrlTool tool = FetchUrlTool(
-        client: MockClient((http.Request request) async =>
-            http.Response('<p>Hello</p>', 200)),
+        client: MockClient(
+            (http.Request request) async => http.Response('<p>Hello</p>', 200)),
       );
 
       final ToolResult result = await tool.call(
@@ -263,6 +264,57 @@ void main() {
 
       final List<Tool> registered =
           provideWebTools(ctx, credentials: InMemoryCredentials());
+
+      final FetchUrlTool fetch = registered.whereType<FetchUrlTool>().single;
+      expect(fetch.fetcher, isA<HttpFetcher>());
+    });
+
+    test('backend=deepseek 且配了 Key 时走 DeepSeekFetcher', () {
+      final Context ctx = Context.root();
+      addTearDown(ctx.dispose);
+      provideSearch(ctx);
+      provideTools(ctx);
+
+      final List<Tool> registered = provideWebTools(
+        ctx,
+        credentials: InMemoryCredentials(
+          initial: <String, String>{'DEEPSEEK_API_KEY': 'sk'},
+        ),
+        backend: FetchBackend.deepseek,
+      );
+
+      final FetchUrlTool fetch = registered.whereType<FetchUrlTool>().single;
+      expect(fetch.fetcher, isA<DeepSeekFetcher>());
+    });
+
+    test('显式 backend 缺 Key 时装配期失败，不静默降级', () {
+      final Context ctx = Context.root();
+      addTearDown(ctx.dispose);
+      provideSearch(ctx);
+      provideTools(ctx);
+
+      expect(
+        () => provideWebTools(
+          ctx,
+          credentials: InMemoryCredentials(),
+          backend: FetchBackend.deepseek,
+        ),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('auto 不因 DeepSeek Key 改动抓取后端（DeepSeek 需显式 opt-in）', () {
+      final Context ctx = Context.root();
+      addTearDown(ctx.dispose);
+      provideSearch(ctx);
+      provideTools(ctx);
+
+      final List<Tool> registered = provideWebTools(
+        ctx,
+        credentials: InMemoryCredentials(
+          initial: <String, String>{'DEEPSEEK_API_KEY': 'sk'},
+        ),
+      );
 
       final FetchUrlTool fetch = registered.whereType<FetchUrlTool>().single;
       expect(fetch.fetcher, isA<HttpFetcher>());

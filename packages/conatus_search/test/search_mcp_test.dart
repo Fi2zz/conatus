@@ -45,7 +45,8 @@ void main() {
         }),
       );
 
-      final List<SearchResult> results = await provider.search('dart', limit: 3);
+      final List<SearchResult> results =
+          await provider.search('dart', limit: 3);
 
       expect(captured!.url.toString(), kParallelMcpEndpoint);
       expect(captured!.headers['accept'], contains('text/event-stream'));
@@ -92,8 +93,8 @@ void main() {
 
       await expectLater(
         provider.search('q'),
-        throwsA(isA<SearchException>().having((SearchException e) => '$e',
-            'message', contains('rate limited'))),
+        throwsA(isA<SearchException>().having(
+            (SearchException e) => '$e', 'message', contains('rate limited'))),
       );
     });
 

@@ -42,6 +42,25 @@ class FetchException implements Exception {
   String toString() => 'FetchException: $message';
 }
 
+/// 抓取后端的显式选择。
+///
+/// [auto] 沿用历史行为（有 Firecrawl Key 就用 Firecrawl，否则裸 HTTP）。
+/// 其余取值要求对应的 Key 已配置，缺失时装配期直接失败——静默回退会让人
+/// 以为自己在用付费后端。
+enum FetchBackend {
+  /// 按凭据自动挑选。
+  auto,
+
+  /// 裸 HTTP + 本地去标签。
+  http,
+
+  /// Firecrawl（需 `FIRECRAWL_API_KEY`）。
+  firecrawl,
+
+  /// DeepSeek Fetch（需 `DEEPSEEK_API_KEY`，只产出 markdown）。
+  deepseek,
+}
+
 /// 抓取接缝。
 abstract class WebFetcher {
   /// 抓取 [url]，正文最多 [maxChars] 字符；失败抛 [FetchException]。

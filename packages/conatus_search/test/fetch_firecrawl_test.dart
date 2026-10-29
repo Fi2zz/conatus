@@ -26,7 +26,8 @@ void main() {
       }),
     );
 
-    final FetchedPage page = await fetcher.fetch('https://e.com', format: FetchedFormat.markdown);
+    final FetchedPage page =
+        await fetcher.fetch('https://e.com', format: FetchedFormat.markdown);
 
     expect(page.content, '# 标题\n正文');
     expect(page.format, FetchedFormat.markdown);
@@ -293,7 +294,8 @@ void main() {
           http.Response('{"success": true, "data": {}}', 200)),
     );
 
-    final FetchedPage page = await fetcher.fetch('https://e.com', format: FetchedFormat.markdown);
+    final FetchedPage page =
+        await fetcher.fetch('https://e.com', format: FetchedFormat.markdown);
 
     expect(page.content, '');
     expect(page.format, FetchedFormat.markdown);

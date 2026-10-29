@@ -72,8 +72,7 @@ void _renderNodes(List<Node> nodes, StringBuffer out) {
   }
 }
 
-String _collapse(String text) =>
-    text.replaceAll(RegExp(r'[ \t\r\n]+'), ' ');
+String _collapse(String text) => text.replaceAll(RegExp(r'[ \t\r\n]+'), ' ');
 
 String _clean(String text) {
   final List<String> lines = <String>[];

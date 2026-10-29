@@ -13,9 +13,13 @@
   `FirecrawlFetcher`（配 `FIRECRAWL_API_KEY` 时启用，返回 markdown）。
 - `web_search` 全失败时返回 `SEARCH_UNAVAILABLE` 并给出明确「无法联网」文案与
   未配置源清单；`fetch_url` 失败文案同口径。
+- 新增 `deepseek` 搜索源（`POST /v1/tools/search`，复用 `DEEPSEEK_API_KEY`）与
+  `DeepSeekFetcher` 抓取后端（`POST /v1/tools/fetch`，只产出 markdown）；
+  `FetchBackend` 枚举 + `resolveFetcher` 负责按后端挑选抓取器，显式指定的后端
+  缺 Key 时装配期抛 `ArgumentError`。
 - **破坏性**：`provideSearch` 移除 `exaApiKey`，改为 `order` + `credentials`
   （缺省取上下文的 `'credentials'` 服务）；`provideWebTools` 新增可选
-  `fetcher` / `credentials`。
+  `fetcher` / `credentials` / `backend`。
 
 ## [0.15.0] — 2026-09-15
 

@@ -3,16 +3,16 @@
 conatus 的搜索能力缝：
 
 - `SearchService` + 可插拔 `SearchProvider`，按名字顺序装配、逐个回退：
-  内置 `tavily` / `exa` / `brave` / `parallel` / `exa-mcp` / `duckduckgo`，
-  缺凭据的源自动跳过
+  内置 `tavily` / `exa` / `brave` / `deepseek` / `parallel` / `exa-mcp` /
+  `duckduckgo`，缺凭据的源自动跳过
 - **免 Key 的源有三个**：`parallel`、`exa-mcp`（厂商托管的远程 MCP 端点）与
   `duckduckgo`（HTML 端点）。前两个不需要账号也不读任何凭据，未提供凭据服务
   时也能用
 - 凭据统一经 `conatus_credentials`（`TAVILY_API_KEY` / `EXA_API_KEY` /
-  `BRAVE_API_KEY`），**不直接读环境变量**
+  `BRAVE_API_KEY` / `DEEPSEEK_API_KEY`），**不直接读环境变量**
 - `WebSearchTool` / `FetchUrlTool` 与 `provideWebTools`（注册 `web_search` /
   `fetch_url`）；`fetch_url` 缺省裸 http，配了 `FIRECRAWL_API_KEY` 时改走
-  Firecrawl（返回 markdown）
+  Firecrawl（返回 markdown），也可显式指定 `FetchBackend.deepseek`
 
 ```dart
 import 'package:conatus_credentials/conatus_credentials.dart';
@@ -37,11 +37,14 @@ provideSearch(app,
 | `tavily` | `TAVILY_API_KEY` | Tavily 官方 API |
 | `exa` | `EXA_API_KEY` | Exa 官方 API |
 | `brave` | `BRAVE_API_KEY` | Brave Search API |
+| `deepseek` | `DEEPSEEK_API_KEY` | `POST /v1/tools/search`，与 DeepSeek 模型接口共用 Key；优先用 600~800 字符的 `summary`，逐条截断到 600 字符 |
 | `parallel` | 免 Key | `https://mcp.parallel.ai/mcp` 的 `web_search`，返回 `structuredContent`，解析最稳 |
 | `exa-mcp` | 免 Key | `https://mcp.exa.ai/mcp` 的 `web_search_exa`，结果只有文本，按 `Title:` / `URL:` 切块 |
 | `duckduckgo` | 免 Key | 抓 HTML 端点，上游结构变动时可能解析不到 |
 
 缺省顺序把带 Key 的源排在前面（配额充足时质量更好），免 Key 的源随后兜底。
+`deepseek` 按成功请求计费（每 1000 次 $0.75），且复用已有的模型 Key，所以排在
+其它带 Key 源之后。
 
 两个 MCP 源走 `McpSearchProvider`：**无状态调用**，每次搜索直接 POST 一条
 `tools/call`，不做 `initialize` 握手，也不持有长活连接（`SearchProvider`
@@ -64,6 +67,21 @@ final SearchService search = provideSearch(app);
 
 装配期被跳过的源及原因从 `search.statuses` 读（如 `未提供凭据服务`、
 `缺少 TAVILY_API_KEY`），运行期冷却状态见 `search.allStatuses()`。
+
+## 抓取后端
+
+`fetch_url` 的后端由 `provideWebTools` 的 `backend` 决定：
+
+| `backend` | 行为 |
+|-----------|------|
+| `FetchBackend.auto`（缺省） | 有 `FIRECRAWL_API_KEY` 走 Firecrawl，否则裸 HTTP |
+| `FetchBackend.http` | 强制裸 HTTP + 本地去标签 |
+| `FetchBackend.firecrawl` | 强制 Firecrawl，缺 Key 抛 `ArgumentError` |
+| `FetchBackend.deepseek` | 强制 DeepSeek `POST /v1/tools/fetch`，缺 Key 抛 `ArgumentError` |
+
+显式指定的后端缺 Key 时装配期直接失败——静默换回裸 HTTP 会让人以为自己在用付费
+后端。`DeepSeekFetcher` 只产出 markdown，请求 `text` / `html` 时 `FetchedPage.format`
+仍标注为 `markdown`，不谎报成调用方请求的格式。
 
 ## 自定义源
 

@@ -100,7 +100,8 @@ class SearchService {
   List<SearchSourceStatus> allStatuses() {
     final Map<String, SearchSourceStatus> merged = <String, SearchSourceStatus>{
       for (final SearchSourceStatus status in _statuses) status.name: status,
-      for (final SearchSourceStatus status in runtimeStatuses()) status.name: status,
+      for (final SearchSourceStatus status in runtimeStatuses())
+        status.name: status,
     };
     return merged.values.toList(growable: false);
   }

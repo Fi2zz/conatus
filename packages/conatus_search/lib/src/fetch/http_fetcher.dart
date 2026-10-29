@@ -86,14 +86,12 @@ class HttpFetcher implements WebFetcher {
       FetchedFormat.html => response.body,
       FetchedFormat.markdown =>
         htmlPage ? htmlToMarkdown(response.body) : response.body,
-      FetchedFormat.text =>
-        htmlPage ? stripHtml(response.body) : response.body,
+      FetchedFormat.text => htmlPage ? stripHtml(response.body) : response.body,
     };
     return FetchedPage(
       url: url,
-      content: content.length > maxChars
-          ? content.substring(0, maxChars)
-          : content,
+      content:
+          content.length > maxChars ? content.substring(0, maxChars) : content,
       format: format,
     );
   }

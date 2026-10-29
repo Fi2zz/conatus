@@ -106,14 +106,12 @@ class FirecrawlFetcher implements WebFetcher {
     final String content = switch (format) {
       FetchedFormat.html => html.isEmpty ? markdown : html,
       FetchedFormat.markdown => markdown,
-      FetchedFormat.text =>
-        html.isEmpty ? markdown : stripHtml(html),
+      FetchedFormat.text => html.isEmpty ? markdown : stripHtml(html),
     };
     return FetchedPage(
       url: url,
-      content: content.length > maxChars
-          ? content.substring(0, maxChars)
-          : content,
+      content:
+          content.length > maxChars ? content.substring(0, maxChars) : content,
       format: format,
     );
   }

@@ -33,8 +33,8 @@ final McpSearchProfile kParallelSearchProfile = McpSearchProfile(
 
 /// 把 Parallel 的 `tools/call` 结果解成搜索结果。
 List<SearchResult> decodeParallelResults(Map<String, Object?> result) {
-  final Map<String, Object?> structured = mcpStructuredResult(result) ??
-      const <String, Object?>{};
+  final Map<String, Object?> structured =
+      mcpStructuredResult(result) ?? const <String, Object?>{};
   final Object? raw = structured['results'];
   if (raw is! List) return const <SearchResult>[];
   return <SearchResult>[
