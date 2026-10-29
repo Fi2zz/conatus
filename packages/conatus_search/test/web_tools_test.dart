@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_credentials/conatus_credentials.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
@@ -152,6 +154,24 @@ void main() {
 
       expect(result.content, 'Hello & world');
       expect(result.isError, isFalse);
+    });
+
+    test('没有 charset 头时按 UTF-8 解码中文页面', () async {
+      final FetchUrlTool tool = FetchUrlTool(
+        client: MockClient(
+          (http.Request request) async => http.Response.bytes(
+            utf8.encode('<p>珠海今天多云转晴</p>'),
+            200,
+            headers: <String, String>{'content-type': 'text/html'},
+          ),
+        ),
+      );
+
+      final ToolResult result =
+          await tool.call(_context(<String, Object?>{'url': 'https://e.com'}));
+
+      expect(result.isError, isFalse);
+      expect(result.content, '珠海今天多云转晴');
     });
 
     test('format=html 原样返回并写入 value', () async {

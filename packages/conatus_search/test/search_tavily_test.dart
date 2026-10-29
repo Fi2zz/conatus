@@ -43,6 +43,32 @@ void main() {
     expect(body['search_depth'], 'basic');
   });
 
+  test('没有 charset 头时按 UTF-8 解码中文摘要', () async {
+    final TavilySearchProvider provider = TavilySearchProvider(
+      apiKey: 'k',
+      client: MockClient(
+        (http.Request request) async => http.Response.bytes(
+          utf8.encode(jsonEncode(<String, Object?>{
+            'results': <Object?>[
+              <String, Object?>{
+                'title': '珠海天气',
+                'url': 'https://t.com',
+                'content': '珠海今天多云转晴',
+              },
+            ],
+          })),
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        ),
+      ),
+    );
+
+    final List<SearchResult> results = await provider.search('珠海天气');
+
+    expect(results.single.title, '珠海天气');
+    expect(results.single.snippet, '珠海今天多云转晴');
+  });
+
   test('limit 超过 20 时钳到 20', () async {
     http.Request? captured;
     final TavilySearchProvider provider = TavilySearchProvider(

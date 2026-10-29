@@ -2,7 +2,10 @@
 library;
 
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
+
+import 'http_body.dart';
 import 'search_http.dart';
 import 'search_markup.dart';
 import 'search_types.dart';
@@ -56,7 +59,7 @@ class BraveSearchProvider implements SearchProvider {
     if (response.statusCode != 200) {
       throw SearchException('brave HTTP ${response.statusCode}');
     }
-    final Object? decoded = jsonDecode(response.body);
+    final Object? decoded = jsonDecode(decodeJsonBody(response));
     if (decoded is! Map<String, Object?>) {
       throw const SearchException('brave 返回了非对象 JSON');
     }

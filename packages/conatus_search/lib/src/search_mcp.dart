@@ -13,6 +13,7 @@ library;
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'http_body.dart';
 import 'search_http.dart';
 import 'search_types.dart';
 
@@ -85,7 +86,7 @@ class McpSearchProvider implements SearchProvider {
     if (response.statusCode != 200) {
       throw SearchException('$name HTTP ${response.statusCode}');
     }
-    final List<SearchResult> results = profile.decode(_resultOf(response.body));
+    final List<SearchResult> results = profile.decode(_resultOf(decodeJsonBody(response)));
     // 部分端点（如 Parallel）没有条数参数，只能在此截断。
     return results.take(limit).toList(growable: false);
   }

@@ -11,6 +11,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../deepseek_shared.dart';
+import '../http_body.dart';
 import 'fetcher.dart';
 
 /// 走 DeepSeek `/v1/tools/fetch` 的抓取器。
@@ -47,9 +48,9 @@ class DeepSeekFetcher implements WebFetcher {
     final http.Response response = await _post(url);
     if (response.statusCode != 200) {
       throw FetchException('deepseek HTTP ${response.statusCode}'
-          '${deepSeekErrorDetail(response.body)}');
+          '${deepSeekErrorDetail(decodeJsonBody(response))}');
     }
-    final String content = _readContent(response.body);
+    final String content = _readContent(decodeJsonBody(response));
     return FetchedPage(
       url: url,
       content:

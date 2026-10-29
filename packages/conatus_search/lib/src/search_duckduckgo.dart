@@ -6,6 +6,7 @@
 library;
 
 import 'package:http/http.dart' as http;
+import 'http_body.dart';
 import 'search_http.dart';
 import 'search_markup.dart';
 import 'search_types.dart';
@@ -60,7 +61,7 @@ class DuckDuckGoSearchProvider implements SearchProvider {
     if (response.statusCode != 200) {
       throw SearchException('duckduckgo HTTP ${response.statusCode}');
     }
-    return parseDuckDuckGoHtml(response.body, limit: limit);
+    return parseDuckDuckGoHtml(decodeHtmlBody(response), limit: limit);
   }
 }
 

@@ -9,7 +9,10 @@ library;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:http/http.dart' as http;
+
+import '../http_body.dart';
 import '../kimi_shared.dart';
 import 'fetcher.dart';
 
@@ -48,9 +51,9 @@ class KimiFetcher implements WebFetcher {
     final http.Response response = await _post(url);
     if (response.statusCode != 200) {
       throw FetchException('kimi HTTP ${response.statusCode}'
-          '${kimiErrorDetail(response.body)}');
+          '${kimiErrorDetail(decodeJsonBody(response))}');
     }
-    final String content = _readContent(response.body);
+    final String content = _readContent(decodeJsonBody(response));
     return FetchedPage(
       url: url,
       content:

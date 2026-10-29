@@ -7,8 +7,11 @@
 library;
 
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
+
 import 'deepseek_shared.dart';
+import 'http_body.dart';
 import 'search_http.dart';
 import 'search_types.dart';
 
@@ -59,9 +62,9 @@ class DeepSeekSearchProvider implements SearchProvider {
     );
     if (response.statusCode != 200) {
       throw SearchException('deepseek HTTP ${response.statusCode}'
-          '${deepSeekErrorDetail(response.body)}');
+          '${deepSeekErrorDetail(decodeJsonBody(response))}');
     }
-    final Object? decoded = decodeDeepSeekJson(response.body);
+    final Object? decoded = decodeDeepSeekJson(decodeJsonBody(response));
     if (decoded is! Map<String, Object?>) {
       throw const SearchException('deepseek 返回了非对象 JSON');
     }

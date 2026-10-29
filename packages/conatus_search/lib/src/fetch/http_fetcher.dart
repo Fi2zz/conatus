@@ -4,6 +4,7 @@ library;
 import 'dart:async';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import '../http_body.dart';
 import 'fetcher.dart';
 import 'html_markdown.dart';
 
@@ -79,14 +80,14 @@ class HttpFetcher implements WebFetcher {
       throw FetchException('响应体超过 $maxBytes 字节上限');
     }
     final String contentType = response.headers['content-type'] ?? '';
+    final String body = decodeHtmlBody(response);
     final bool htmlPage = contentType.contains('html') ||
-        response.body.contains('<html') ||
-        response.body.contains('<p');
+        body.contains('<html') ||
+        body.contains('<p');
     final String content = switch (format) {
-      FetchedFormat.html => response.body,
-      FetchedFormat.markdown =>
-        htmlPage ? htmlToMarkdown(response.body) : response.body,
-      FetchedFormat.text => htmlPage ? stripHtml(response.body) : response.body,
+      FetchedFormat.html => body,
+      FetchedFormat.markdown => htmlPage ? htmlToMarkdown(body) : body,
+      FetchedFormat.text => htmlPage ? stripHtml(body) : body,
     };
     return FetchedPage(
       url: url,

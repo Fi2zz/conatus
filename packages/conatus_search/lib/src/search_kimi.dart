@@ -6,7 +6,10 @@
 library;
 
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
+
+import 'http_body.dart';
 import 'kimi_shared.dart';
 import 'search_http.dart';
 import 'search_types.dart';
@@ -63,9 +66,9 @@ class KimiSearchProvider implements SearchProvider {
     );
     if (response.statusCode != 200) {
       throw SearchException('kimi HTTP ${response.statusCode}'
-          '${kimiErrorDetail(response.body)}');
+          '${kimiErrorDetail(decodeJsonBody(response))}');
     }
-    final Object? decoded = decodeKimiJson(response.body);
+    final Object? decoded = decodeKimiJson(decodeJsonBody(response));
     if (decoded is! Map<String, Object?>) {
       throw const SearchException('kimi 返回了非对象 JSON');
     }

@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import '../http_body.dart';
 import 'fetcher.dart';
 import 'http_fetcher.dart';
 
@@ -47,7 +48,7 @@ class FirecrawlFetcher implements WebFetcher {
     if (response.statusCode != 200) {
       throw FetchException('Firecrawl HTTP ${response.statusCode}');
     }
-    return _parsePage(url, response.body, maxChars, format);
+    return _parsePage(url, decodeJsonBody(response), maxChars, format);
   }
 
   void _validateUrl(String url) {
