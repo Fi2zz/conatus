@@ -17,7 +17,7 @@ HarnessManifest _manifest() => const HarnessManifest(
         PromptSectionSpec(name: 'guide', text: '先读后写。', order: 5),
         PromptSectionSpec(name: 'verify', text: '结束前复核。'),
       ],
-      allowedTools: <String>{'shell', 'read_file'},
+      allowedTools: <String>{'bash', 'read'},
       forbiddenTools: <String>{'rm'},
       metadata: <String, Object?>{'source': 'manual', 'score': 0.8},
     );
@@ -39,7 +39,7 @@ void main() {
   test('集合序列化为排序后的数组', () {
     final Map<String, Object?> json = _manifest().toJson();
 
-    expect(json['allowedTools'], <String>['read_file', 'shell']);
+    expect(json['allowedTools'], <String>['bash', 'read']);
     expect(json['forbiddenTools'], <String>['rm']);
   });
 
@@ -67,7 +67,7 @@ void main() {
           'strictAfter': 4,
           'finalizeAfter': 8,
           'strictEvery': 2,
-          'finalizeAllowed': <String>['read_file'],
+          'finalizeAllowed': <String>['read'],
         },
       },
     });
@@ -77,7 +77,16 @@ void main() {
     expect(parsed.metadata, isEmpty);
     expect(parsed.allowedTools, isNull);
     expect(parsed.profile.budget.finalizeAfter, 8);
-    expect(parsed.profile.budget.finalizeAllowed, <String>{'read_file'});
+    expect(parsed.profile.budget.finalizeAllowed, <String>{'read'});
+  });
+
+  test('缺省 finalizeAllowed 使用 OpenCode 工具名', () {
+    final HarnessManifest parsed = HarnessManifest.fromJson(<String, Object?>{
+      'name': 'slim',
+      'profile': <String, Object?>{'name': 'lean'},
+    });
+
+    expect(parsed.profile.budget.finalizeAllowed, <String>{'read'});
   });
 
   test('profile 往返保留推理强度与全部预算阈值', () {

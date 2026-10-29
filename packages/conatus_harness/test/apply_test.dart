@@ -30,11 +30,11 @@ Context _context() {
   provideTools(ctx);
   provideSystemPrompt(ctx);
   ctx.tools.fn(
-    'shell',
+    'bash',
     handler: (ToolContext c) async => ToolResult.success('shell-ok'),
   );
   ctx.tools.fn(
-    'read_file',
+    'read',
     handler: (ToolContext c) async => ToolResult.success('read-ok'),
   );
   ctx.tools.fn(
@@ -57,7 +57,7 @@ void main() {
     expect(ctx.get<HarnessManifest>('harness')?.name, 'test-harness');
     expect(ctx.get<ToolBudget>('toolBudget'), isNotNull);
     expect(
-      (await ctx.tools.call(const ToolCall(name: 'shell'))).content,
+      (await ctx.tools.call(const ToolCall(name: 'bash'))).content,
       contains('经济阶段'),
     );
   });
@@ -74,19 +74,19 @@ void main() {
         isNot(contains('harness-guide')));
     expect(ctx.get<HarnessManifest>('harness'), isNull);
     expect(ctx.get<ToolBudget>('toolBudget'), isNull);
-    expect((await ctx.tools.call(const ToolCall(name: 'shell'))).content,
+    expect((await ctx.tools.call(const ToolCall(name: 'bash'))).content,
         'shell-ok');
   });
 
   test('白名单拒绝名单外工具，放行名单内工具', () async {
     final Context ctx = _context();
     addTearDown(ctx.dispose);
-    applyHarness(ctx, _manifest(allowed: <String>{'read_file'}));
+    applyHarness(ctx, _manifest(allowed: <String>{'read'}));
 
     final ToolResult denied =
-        await ctx.tools.call(const ToolCall(name: 'shell'));
+        await ctx.tools.call(const ToolCall(name: 'bash'));
     final ToolResult allowed =
-        await ctx.tools.call(const ToolCall(name: 'read_file'));
+        await ctx.tools.call(const ToolCall(name: 'read'));
 
     expect(denied.isError, isTrue);
     expect(denied.error?.code, 'TOOL_NOT_IN_HARNESS');
@@ -99,7 +99,7 @@ void main() {
     applyHarness(
       ctx,
       _manifest(
-        allowed: <String>{'rm', 'read_file'},
+        allowed: <String>{'rm', 'read'},
         forbidden: <String>{'rm'},
       ),
     );
@@ -140,7 +140,7 @@ void main() {
     final Context ctx = Context.root();
     addTearDown(ctx.dispose);
     provideTools(ctx);
-    ctx.tools.fn('shell',
+    ctx.tools.fn('bash',
         handler: (ToolContext c) async => ToolResult.success('ok'));
 
     applyHarness(
@@ -148,11 +148,11 @@ void main() {
       const HarnessManifest(
         name: 'tools-only',
         profile: _profile,
-        allowedTools: <String>{'shell'},
+        allowedTools: <String>{'bash'},
       ),
     );
 
     expect(
-        (await ctx.tools.call(const ToolCall(name: 'shell'))).isError, isFalse);
+        (await ctx.tools.call(const ToolCall(name: 'bash'))).isError, isFalse);
   });
 }

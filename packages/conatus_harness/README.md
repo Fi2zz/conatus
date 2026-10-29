@@ -23,7 +23,7 @@ final manifest = HarnessManifest(
   sections: const <PromptSectionSpec>[
     PromptSectionSpec(name: 'guide', text: '先读后写；结束前复核。'),
   ],
-  allowedTools: const <String>{'read_file', 'shell'},
+  allowedTools: const <String>{'read', 'bash'},
   forbiddenTools: const <String>{'rm'},
 );
 

@@ -121,7 +121,7 @@ ExecutionProfile _profileFromJson(Map<String, Object?> json) {
       strictEvery: _intOf(budget['strictEvery'], 8),
       finalizeAllowed: budget.containsKey('finalizeAllowed')
           ? _setOf(budget['finalizeAllowed'])
-          : const <String>{'read_file'},
+          : const <String>{'read'},
     ),
   );
 }

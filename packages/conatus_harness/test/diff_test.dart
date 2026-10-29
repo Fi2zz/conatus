@@ -13,7 +13,7 @@ HarnessManifest _base() => const HarnessManifest(
         PromptSectionSpec(name: 'guide', text: '先读后写。'),
         PromptSectionSpec(name: 'verify', text: '结束前复核。'),
       ],
-      allowedTools: <String>{'read_file', 'shell'},
+      allowedTools: <String>{'read', 'bash'},
       forbiddenTools: <String>{'rm'},
     );
 
@@ -77,11 +77,11 @@ void main() {
 
     expect(
       diffHarness(open, _base()),
-      contains('allowedTools: null → [read_file, shell]'),
+      contains('allowedTools: null → [bash, read]'),
     );
     expect(
       diffHarness(_base(), open),
-      contains('allowedTools: [read_file, shell] → null'),
+      contains('allowedTools: [bash, read] → null'),
     );
   });
 
