@@ -113,6 +113,36 @@ void main() {
       expect(diagnostics, hasLength(1));
     });
 
+    test('通知收到 202 无正文：视为已接受，不抛错', () async {
+      // 规范要求通知（无 id）得到 202/204 且无正文。曾把所有非 200 一律当
+      // 错误，导致标准 Streamable HTTP server 在握手第二步
+      // `notifications/initialized` 就直接失败。
+      final TransportWatch<HttpTransport> watch =
+          _boot(_FakeServer('', status: 202));
+      await watch.transport.connect();
+
+      await watch.transport.send(
+        McpMessage.notification(method: 'notifications/initialized'),
+      );
+      await pumpEventQueue();
+
+      expect(watch.messages, isEmpty);
+      expect(watch.failures, isEmpty);
+    });
+
+    test('请求收到 202：抛 http-status（请求必须拿到正文）', () async {
+      // 反之，请求拿到 202 意味着服务端不会回响应；静默忽略会让调用方一直
+      // 等到超时，必须立刻失败。
+      final TransportWatch<HttpTransport> watch =
+          _boot(_FakeServer('', status: 202));
+      await watch.transport.connect();
+
+      await expectLater(
+        watch.transport.send(McpMessage.request(id: 1, method: 'tools/list')),
+        throwsA(mcpFailure('http-status')),
+      );
+    });
+
     test('非 200：抛 http-status，且不当作断连', () async {
       final TransportWatch<HttpTransport> watch =
           _boot(_FakeServer('boom', status: 500));

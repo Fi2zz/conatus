@@ -116,12 +116,20 @@ abstract class McpHttpTransport implements McpTransport {
 
   /// POST 一条 JSON-RPC 消息到 [target]。
   ///
-  /// 非 200 抛 [McpException]（`http-status`）而非往 [messages] 灌错误：
-  /// 一次 HTTP 失败不该判定整个会话断连，由调用方按次收敛。401 先尝试刷新
-  /// 一次令牌并重试；仍 401 抛 `needs_auth`。
+  /// 状态码语义按 Streamable HTTP 规范区分：
+  ///
+  /// * **200** — 正常，正文是单条 JSON 或 SSE 流；
+  /// * **202 / 204** — **通知**（无 `id`）的标准回应：服务端接受但无正文。
+  ///   这类消息本来就不期待响应，不是错误；
+  /// * 其余（含**请求**收到 202/204）抛 [McpException]（`http-status`）——请求
+  ///   必须拿到响应正文，静默空返回会让调用方一直等到超时。
+  ///
+  /// 抛异常而非往 [messages] 灌错误：一次 HTTP 失败不该判定整个会话断连，
+  /// 由调用方按次收敛。401 先尝试刷新一次令牌并重试；仍 401 抛 `needs_auth`。
   Future<void> postJson(Uri target, McpMessage message) async {
     final http.Response response =
         await _http.post(target, jsonEncode(message.toJson()));
+    if (_acceptedWithoutBody(response.statusCode, message)) return;
     if (response.statusCode != 200) {
       throw McpException(
         'http-status',
@@ -130,6 +138,12 @@ abstract class McpHttpTransport implements McpTransport {
     }
     await deliverPayload(response.body, sse: _eventStream(response));
   }
+
+  /// 该状态码是否是本消息的「接受但无正文」回应。
+  ///
+  /// 只对通知成立：请求拿到 202 意味着服务端不会回响应，属于协议违例。
+  bool _acceptedWithoutBody(int statusCode, McpMessage message) =>
+      (statusCode == 202 || statusCode == 204) && message.notification;
 
   /// 对 [target] 发起 `Accept: text/event-stream` 的 GET 长连接。
   ///
