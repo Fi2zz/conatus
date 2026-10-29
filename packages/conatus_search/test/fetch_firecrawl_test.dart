@@ -38,6 +38,27 @@ void main() {
     expect(body['formats'], <String>['markdown']);
   });
 
+  test('format=text 请求 html 并剥离标签', () async {
+    http.Request? captured;
+    final FirecrawlFetcher fetcher = FirecrawlFetcher(
+      apiKey: 'k',
+      client: MockClient((http.Request request) async {
+        captured = request;
+        return http.Response(
+          '{"success": true, "data": {"html": "<p>Hello</p>", "markdown": "Hello"}}',
+          200,
+        );
+      }),
+    );
+
+    final FetchedPage page = await fetcher.fetch('https://e.com');
+
+    expect(page.content, 'Hello');
+    final Map<String, Object?> body =
+        jsonDecode(captured!.body) as Map<String, Object?>;
+    expect(body['formats'], <String>['html', 'markdown']);
+  });
+
   test('按 maxChars 截断 markdown', () async {
     final FirecrawlFetcher fetcher = FirecrawlFetcher(
       apiKey: 'k',

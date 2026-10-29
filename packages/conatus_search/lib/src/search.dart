@@ -100,6 +100,15 @@ class SearchService {
     throw SearchException('所有搜索 provider 都失败：${errors.join('；')}');
   }
 
+  /// 装配期状态 + 运行时 provider 状态（后者覆盖同名项）。
+  List<SearchSourceStatus> allStatuses() {
+    final Map<String, SearchSourceStatus> merged = <String, SearchSourceStatus>{
+      for (final SearchSourceStatus status in _statuses) status.name: status,
+      for (final SearchSourceStatus status in runtimeStatuses()) status.name: status,
+    };
+    return merged.values.toList(growable: false);
+  }
+
   /// 当前 provider 的运行状态（含冷却）。
   List<SearchSourceStatus> runtimeStatuses() => <SearchSourceStatus>[
         for (final SearchProvider provider in _providers)

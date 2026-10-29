@@ -70,9 +70,11 @@ class FirecrawlFetcher implements WebFetcher {
             },
             body: jsonEncode(<String, Object?>{
               'url': url,
-              'formats': <String>[
-                format == FetchedFormat.html ? 'html' : 'markdown',
-              ],
+              'formats': switch (format) {
+                FetchedFormat.html => <String>['html'],
+                FetchedFormat.text => <String>['html', 'markdown'],
+                FetchedFormat.markdown => <String>['markdown'],
+              },
             }),
           )
           .timeout(timeout);

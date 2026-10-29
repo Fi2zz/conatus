@@ -16,6 +16,7 @@ dependencies:
   conatus_core: {path: ../conatus_core}
   conatus_credentials: {path: ../conatus_credentials}
   conatus_foundation: {path: ../conatus_foundation}
+  html: ^0.15.7
   http: ^1.2.0
 
 dev_dependencies:

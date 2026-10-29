@@ -1,42 +1,86 @@
-/// 轻量 HTML → Markdown 转换：覆盖标题、段落、链接、列表、粗斜体、代码。
+/// HTML → Markdown：基于 html 包做结构化转换（标题、段落、链接、列表、代码）。
 library;
+
+import 'package:html/dom.dart';
+import 'package:html/parser.dart' as html_parser;
 
 /// 把 HTML 转成可读 Markdown；不追求完整 HTML5 语义。
 String htmlToMarkdown(String html) {
-  String out = html
-      .replaceAll(RegExp(r'<script[\s\S]*?</script>', caseSensitive: false), '')
-      .replaceAll(RegExp(r'<style[\s\S]*?</style>', caseSensitive: false), '');
-  for (int level = 1; level <= 6; level++) {
-    final String hashes = '#' * level;
-    out = out.replaceAllMapped(
-      RegExp('<h$level[^>]*>([\\s\\S]*?)</h$level>', caseSensitive: false),
-      (Match match) => '\n\n$hashes ${match.group(1)!.trim()}\n\n',
-    );
+  final DocumentFragment fragment = html_parser.parseFragment(html);
+  final StringBuffer buffer = StringBuffer();
+  _renderNodes(fragment.nodes, buffer);
+  return _clean(buffer.toString());
+}
+
+void _renderNodes(List<Node> nodes, StringBuffer out) {
+  for (final Node node in nodes) {
+    if (node is Text) {
+      out.write(_collapse(node.text));
+      continue;
+    }
+    if (node is! Element) continue;
+    final String tag = node.localName ?? '';
+    switch (tag) {
+      case 'script' || 'style' || 'noscript':
+        break;
+      case 'br':
+        out.write('\n');
+      case 'h1' || 'h2' || 'h3' || 'h4' || 'h5' || 'h6':
+        final int level = int.parse(tag.substring(1));
+        out.write('\n\n${'#' * level} ');
+        _renderNodes(node.nodes, out);
+        out.write('\n\n');
+      case 'p' || 'div' || 'section' || 'article' || 'header' || 'footer':
+        out.write('\n');
+        _renderNodes(node.nodes, out);
+        out.write('\n');
+      case 'ul' || 'ol':
+        out.write('\n');
+        _renderNodes(node.nodes, out);
+        out.write('\n');
+      case 'li':
+        out.write('\n- ');
+        _renderNodes(node.nodes, out);
+      case 'a':
+        out.write('[');
+        _renderNodes(node.nodes, out);
+        final String href = node.attributes['href'] ?? '';
+        out.write(href.isEmpty ? ']' : ']($href)');
+      case 'strong' || 'b':
+        out.write('**');
+        _renderNodes(node.nodes, out);
+        out.write('**');
+      case 'em' || 'i':
+        out.write('*');
+        _renderNodes(node.nodes, out);
+        out.write('*');
+      case 'code':
+        out.write('`');
+        out.write(_collapse(node.text));
+        out.write('`');
+      case 'pre':
+        out.write('\n```\n');
+        out.write(node.text.trimRight());
+        out.write('\n```\n');
+      case 'img':
+        final String alt = node.attributes['alt'] ?? '';
+        final String src = node.attributes['src'] ?? '';
+        if (src.isNotEmpty) out.write('![$alt]($src)');
+      default:
+        _renderNodes(node.nodes, out);
+    }
   }
-  out = out
-      .replaceAllMapped(
-        RegExp(
-          r'''<a[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)</a>''',
-          caseSensitive: false,
-        ),
-        (Match match) => '[${match.group(2)!.trim()}](${match.group(1)})',
-      )
-      .replaceAll(RegExp(r'<(strong|b)[^>]*>([\s\S]*?)</\1>', caseSensitive: false), r'**$2**')
-      .replaceAll(RegExp(r'<(em|i)[^>]*>([\s\S]*?)</\1>', caseSensitive: false), r'*$2*')
-      .replaceAll(RegExp(r'<code[^>]*>([\s\S]*?)</code>', caseSensitive: false), r'`$1`')
-      .replaceAll(RegExp(r'<li[^>]*>', caseSensitive: false), '\n- ')
-      .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
-      .replaceAll(RegExp(r'</(p|div|section|article|li|ul|ol|tr)>', caseSensitive: false), '\n')
-      .replaceAll(RegExp(r'<[^>]+>'), '')
-      .replaceAll('&amp;', '&')
-      .replaceAll('&lt;', '<')
-      .replaceAll('&gt;', '>')
-      .replaceAll('&quot;', '"')
-      .replaceAll('&#39;', "'")
-      .replaceAll('&nbsp;', ' ')
-      .replaceAll(RegExp(r'[ \t]+'), ' ')
-      .replaceAll(RegExp(r'\n[ \t]+'), '\n')
-      .replaceAll(RegExp(r'\n{3,}'), '\n\n')
-      .trim();
-  return out;
+}
+
+String _collapse(String text) =>
+    text.replaceAll(RegExp(r'[ \t\r\n]+'), ' ');
+
+String _clean(String text) {
+  final List<String> lines = <String>[];
+  for (final String raw in text.split('\n')) {
+    final String line = raw.trimRight();
+    if (line.isEmpty && (lines.isEmpty || lines.last.isEmpty)) continue;
+    lines.add(line);
+  }
+  return lines.join('\n').trim();
 }
