@@ -501,10 +501,14 @@ await provideMcp(app, <McpServerConfig>[
 ### `search` — 搜索能力缝 + web 工具
 
 服务键 `'search'`（`ctx.search`）。多个 `SearchProvider` 按名字顺序回退：内置
-`tavily` / `exa` / `brave` / `duckduckgo`（免 Key），缺凭据的源自动跳过；凭据统一
-经 `conatus_credentials` 解析。`provideWebTools` 把 `web_search` / `fetch_url`
-两个只读工具注册进 `ctx.tools`，`fetch_url` 在有 `FIRECRAWL_API_KEY` 时改走
-Firecrawl（返回 markdown）。
+`tavily` / `exa` / `brave` / `parallel` / `exa-mcp` / `duckduckgo`，缺凭据的源
+自动跳过；凭据统一经 `conatus_credentials` 解析。
+
+其中 `parallel`、`exa-mcp`、`duckduckgo` 三个源**完全免 Key**：前两个直接调厂商
+托管的远程 MCP 端点（`https://mcp.parallel.ai/mcp`、`https://mcp.exa.ai/mcp`）的
+`tools/call`，无状态、不握手，不提供 `'credentials'` 服务时也能用。`provideWebTools`
+把 `web_search` / `fetch_url` 两个只读工具注册进 `ctx.tools`，`fetch_url` 在有
+`FIRECRAWL_API_KEY` 时改走 Firecrawl（返回 markdown）。
 
 ```dart
 final credentials = provideCredentials(app);

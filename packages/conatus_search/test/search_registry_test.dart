@@ -60,15 +60,47 @@ void main() {
     expect(set.statuses.single.available, isTrue);
   });
 
-  test('默认顺序是 tavily → exa → brave → duckduckgo', () {
+  test('无凭据服务时免 Key 源（含 MCP 源）照样装配', () {
+    final SearchProviderSet set = buildSearchProviders(
+      order: <String>['tavily', 'parallel', 'exa-mcp', 'duckduckgo'],
+    );
+
     expect(
-        kDefaultSearchOrder, <String>['tavily', 'exa', 'brave', 'duckduckgo']);
+      set.providers.map((SearchProvider p) => p.name),
+      <String>['parallel', 'exa-mcp', 'duckduckgo'],
+    );
+    expect(
+      set.statuses.first.reason,
+      '未提供凭据服务',
+    );
   });
 
-  test('内置表覆盖四个源，duckduckgo 免 Key', () {
-    expect(kSearchProviderSpecs.keys.toSet(),
-        <String>{'tavily', 'exa', 'brave', 'duckduckgo'});
-    expect(kSearchProviderSpecs['duckduckgo']!.credentialKey, '');
+  test('默认顺序把免 Key 源排在带 Key 源之后', () {
+    expect(
+      kDefaultSearchOrder,
+      <String>[
+        'tavily',
+        'exa',
+        'brave',
+        'parallel',
+        'exa-mcp',
+        'duckduckgo',
+      ],
+    );
+  });
+
+  test('内置表覆盖六个源，免 Key 的三个 credentialKey 为空', () {
+    expect(kSearchProviderSpecs.keys.toSet(), <String>{
+      'tavily',
+      'exa',
+      'brave',
+      'duckduckgo',
+      'parallel',
+      'exa-mcp',
+    });
     expect(kSearchProviderSpecs['tavily']!.credentialKey, 'TAVILY_API_KEY');
+    for (final String name in <String>['duckduckgo', 'parallel', 'exa-mcp']) {
+      expect(kSearchProviderSpecs[name]!.credentialKey, '', reason: name);
+    }
   });
 }

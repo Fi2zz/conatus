@@ -9,7 +9,28 @@ export 'src/search_brave.dart' show BraveSearchProvider, kBraveCredentialKey;
 export 'src/search_duckduckgo.dart'
     show DuckDuckGoSearchProvider, parseDuckDuckGoHtml;
 export 'src/search_exa.dart' show ExaSearchProvider, kExaCredentialKey;
+export 'src/search_exa_mcp.dart'
+    show
+        decodeExaMcpResults,
+        kExaMcpEndpoint,
+        kExaMcpSearchProfile,
+        kExaMcpSearchTool,
+        kExaMcpSnippetLimit;
 export 'src/search_http.dart' show sendWithTimeout;
+export 'src/search_mcp.dart'
+    show
+        McpSearchProfile,
+        McpSearchProvider,
+        decodeMcpResponseBody,
+        mcpResultText,
+        mcpStructuredResult;
+export 'src/search_parallel.dart'
+    show
+        decodeParallelResults,
+        kParallelMcpEndpoint,
+        kParallelSearchProfile,
+        kParallelSearchTool,
+        kParallelSnippetLimit;
 export 'src/search_registry.dart'
     show
         SearchProviderDeps,

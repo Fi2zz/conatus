@@ -90,13 +90,13 @@ void main() {
   });
 
   group('provideSearch / ctx.search', () {
-    test('无凭据服务时只装配免 Key 的 DuckDuckGo', () {
+    test('无凭据服务时只装配免 Key 的源', () {
       final Context ctx = Context.root();
       addTearDown(ctx.dispose);
       final SearchService service = provideSearch(ctx);
 
       expect(service.providers.map((SearchProvider p) => p.name),
-          <String>['duckduckgo']);
+          <String>['parallel', 'exa-mcp', 'duckduckgo']);
       expect(identical(ctx.search, service), isTrue);
       expect(
         service.statuses
@@ -106,7 +106,7 @@ void main() {
       );
     });
 
-    test('无凭据且 order 不含 duckduckgo 时无可用 provider', () {
+    test('无凭据且 order 只含带 Key 源时无可用 provider', () {
       final Context ctx = Context.root();
       addTearDown(ctx.dispose);
       final SearchService service =
@@ -130,7 +130,7 @@ void main() {
       );
 
       expect(service.providers.map((SearchProvider p) => p.name),
-          <String>['exa', 'duckduckgo']);
+          <String>['exa', 'parallel', 'exa-mcp', 'duckduckgo']);
       expect(
         service.statuses
             .firstWhere((SearchSourceStatus s) => s.name == 'tavily')
@@ -151,7 +151,7 @@ void main() {
       final SearchService service = provideSearch(ctx);
 
       expect(service.providers.map((SearchProvider p) => p.name),
-          <String>['brave', 'duckduckgo']);
+          <String>['brave', 'parallel', 'exa-mcp', 'duckduckgo']);
     });
 
     test('order 覆盖默认顺序', () {

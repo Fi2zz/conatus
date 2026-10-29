@@ -6,19 +6,18 @@ import 'package:http/http.dart' as http;
 import 'search_brave.dart';
 import 'search_duckduckgo.dart';
 import 'search_exa.dart';
+import 'search_exa_mcp.dart';
+import 'search_mcp.dart';
+import 'search_parallel.dart';
 import 'search_tavily.dart';
 import 'search_types.dart';
 
-/// provider 构造所需的依赖。
+/// provider 构造所需的依赖（凭据由 [buildSearchProviders] 解析后单独传入）。
 class SearchProviderDeps {
   const SearchProviderDeps({
-    required this.credentials,
     this.client,
     this.timeout = const Duration(seconds: 15),
   });
-
-  /// 凭据来源（Key 的唯一来源）。
-  final Credentials credentials;
 
   /// HTTP 客户端（测试注入）；缺省由各 provider 自建。
   final http.Client? client;
@@ -68,6 +67,16 @@ const Map<String, SearchProviderSpec> kSearchProviderSpecs =
     credentialKey: '',
     create: _createDuckDuckGo,
   ),
+  'parallel': SearchProviderSpec(
+    name: 'parallel',
+    credentialKey: '',
+    create: _createParallel,
+  ),
+  'exa-mcp': SearchProviderSpec(
+    name: 'exa-mcp',
+    credentialKey: '',
+    create: _createExaMcp,
+  ),
 };
 
 SearchProvider _createTavily(String apiKey, SearchProviderDeps deps) =>
@@ -93,6 +102,20 @@ SearchProvider _createBrave(String apiKey, SearchProviderDeps deps) =>
 
 SearchProvider _createDuckDuckGo(String apiKey, SearchProviderDeps deps) =>
     DuckDuckGoSearchProvider(client: deps.client, timeout: deps.timeout);
+
+SearchProvider _createParallel(String apiKey, SearchProviderDeps deps) =>
+    McpSearchProvider(
+      profile: kParallelSearchProfile,
+      client: deps.client,
+      timeout: deps.timeout,
+    );
+
+SearchProvider _createExaMcp(String apiKey, SearchProviderDeps deps) =>
+    McpSearchProvider(
+      profile: kExaMcpSearchProfile,
+      client: deps.client,
+      timeout: deps.timeout,
+    );
 
 /// 装配期状态：某个源是否可用及原因。
 class SearchSourceStatus {
@@ -128,17 +151,20 @@ const List<String> kDefaultSearchOrder = <String>[
   'tavily',
   'exa',
   'brave',
+  'parallel',
+  'exa-mcp',
   'duckduckgo',
 ];
 
 /// 按 [order] 构造可用 provider；缺 Key 或名字未知的源跳过并记入 statuses。
+///
+/// [credentials] 为空时只装配免 Key 的源，缺凭据的源标注为「未提供凭据服务」。
 SearchProviderSet buildSearchProviders({
   required List<String> order,
-  required Credentials credentials,
+  Credentials? credentials,
   http.Client? client,
 }) {
-  final SearchProviderDeps deps =
-      SearchProviderDeps(credentials: credentials, client: client);
+  final SearchProviderDeps deps = SearchProviderDeps(client: client);
   final List<SearchProvider> providers = <SearchProvider>[];
   final List<SearchSourceStatus> statuses = <SearchSourceStatus>[];
   for (final String name in order) {
@@ -151,17 +177,21 @@ SearchProviderSet buildSearchProviders({
       ));
       continue;
     }
-    final Credential? credential =
-        spec.credentialKey.isEmpty ? null : credentials.get(spec.credentialKey);
-    if (spec.credentialKey.isNotEmpty && credential == null) {
+    if (spec.credentialKey.isEmpty) {
+      providers.add(spec.create('', deps));
+      statuses.add(SearchSourceStatus(name: name, available: true));
+      continue;
+    }
+    final Credential? credential = credentials?.get(spec.credentialKey);
+    if (credential == null) {
       statuses.add(SearchSourceStatus(
         name: name,
         available: false,
-        reason: '缺少 ${spec.credentialKey}',
+        reason: credentials == null ? '未提供凭据服务' : '缺少 ${spec.credentialKey}',
       ));
       continue;
     }
-    providers.add(spec.create(credential?.value ?? '', deps));
+    providers.add(spec.create(credential.value, deps));
     statuses.add(SearchSourceStatus(name: name, available: true));
   }
   return SearchProviderSet(providers: providers, statuses: statuses);

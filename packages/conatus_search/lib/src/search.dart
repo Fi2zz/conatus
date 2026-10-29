@@ -9,7 +9,6 @@ library;
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_credentials/conatus_credentials.dart';
 import 'package:http/http.dart' as http;
-import 'search_duckduckgo.dart';
 import 'search_registry.dart';
 import 'search_types.dart';
 
@@ -82,9 +81,6 @@ class SearchService {
     if (candidates.isEmpty) {
       throw const SearchException('没有可用的搜索 provider');
     }
-    if (candidates.isEmpty) {
-      throw const SearchException('没有可用的搜索 provider');
-    }
     final List<String> errors = <String>[];
     for (final SearchProvider candidate in candidates) {
       try {
@@ -142,7 +138,8 @@ extension SearchContext on Context {
 /// - 显式 [providers] → 按序注册这些实例，忽略 [order]，`statuses` 为空；
 /// - 传入现成的 [search] → 不追加任何 provider；
 /// - 否则按 [order] 构造：[credentials] 缺省取上下文已提供的 `'credentials'`
-///   服务，两者都没有时只装配免 Key 的 DuckDuckGo。
+///   服务；两者都没有时只装配免 Key 的源（`duckduckgo` / `parallel` /
+///   `exa-mcp`）。
 // REASON: 装配入口的参数聚合是既定形态（调用方是进程级 main / 测试），
 // 逐个拆开反而增加调用方负担。
 SearchService provideSearch(
@@ -192,35 +189,11 @@ SearchProviderSet _resolveSearchProviders({
   }
   final Credentials? resolved =
       credentials ?? ctx.get<Credentials>('credentials');
-  if (resolved == null) {
-    return _resolveKeylessProviders(order, client);
-  }
+  // 无凭据服务时只装配免 Key 的源（duckduckgo / parallel / exa-mcp 等），
+  // 与有凭据时走同一条装配循环，避免两套实现漂移。
   return buildSearchProviders(
     order: order,
     credentials: resolved,
     client: client,
   );
-}
-
-// REASON: 无凭据回退按 order 装配（只注册免 Key 的 duckduckgo），
-// 抽为 helper 守住 _resolveSearchProviders 的函数体行数约束。
-SearchProviderSet _resolveKeylessProviders(
-  List<String> order,
-  http.Client? client,
-) {
-  final List<SearchProvider> providers = <SearchProvider>[];
-  final List<SearchSourceStatus> statuses = <SearchSourceStatus>[];
-  for (final String name in order) {
-    if (name == 'duckduckgo') {
-      providers.add(DuckDuckGoSearchProvider(client: client));
-      statuses.add(SearchSourceStatus(name: name, available: true));
-    } else {
-      statuses.add(SearchSourceStatus(
-        name: name,
-        available: false,
-        reason: '未提供凭据服务',
-      ));
-    }
-  }
-  return SearchProviderSet(providers: providers, statuses: statuses);
 }
