@@ -65,6 +65,33 @@ ToolRegistry _timeTools({bool failing = false}) {
 }
 
 void main() {
+  test('压缩摘要为空时 fail-open，保留原历史继续本轮', () async {
+    final Session session = Session(id: 's1');
+    session.append(kUserMessageEvent, data: <String, Object?>{'text': '旧问题'});
+    for (int i = 0; i < 5; i++) {
+      session.append(kAssistantMessageEvent,
+          data: <String, Object?>{'text': '旧回答$i'});
+    }
+    final _ScriptedProvider provider = _ScriptedProvider(<LlmResult>[
+      _text(''),
+      _text('新回答'),
+    ]);
+    final AgentLoop loop = AgentLoop(
+      llm: provider,
+      tools: _timeTools(),
+      session: session,
+      compactor: Compactor(keepRecent: 1),
+    );
+
+    final AgentTurn turn = await loop.run('新问题');
+
+    expect(turn.reply, '新回答');
+    expect(
+      provider.calls.last.map((LlmMessage m) => m.content).join('\n'),
+      contains('旧问题'),
+    );
+  });
+
   group('AgentLoop — 收口', () {
     test('纯文本回复：单步、无工具、schema 已下发', () async {
       final _ScriptedProvider provider =

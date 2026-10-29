@@ -110,6 +110,22 @@ void main() {
       expect(compactor.summaryOf('s1'), 'v2');
     });
 
+    test('摘要为空时拒绝提交并保留旧摘要', () async {
+      final Compactor compactor = Compactor(keepRecent: 1);
+      final Session session = _session(3);
+      await compactor.compactIfNeeded(
+          session, (_, __) async => const CompactionSummary('旧摘要'));
+
+      await expectLater(
+        compactor.compactIfNeeded(
+            session, (_, __) async => const CompactionSummary('   ')),
+        throwsStateError,
+      );
+
+      expect(compactor.summaryOf('s1'), '旧摘要');
+      expect(session.events.last.type, kCompactionEndEvent);
+    });
+
     test('汇总器抛错时摘要记忆不更新、end 记录错误', () async {
       final Compactor compactor = Compactor(keepRecent: 1);
       final Session session = _session(3);

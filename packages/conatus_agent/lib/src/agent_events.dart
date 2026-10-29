@@ -160,11 +160,18 @@ Future<int> compactSession({
   required int historyStart,
 }) async {
   if (compactor == null || session == null) return historyStart;
-  final CompactionResult? result = await compactor.compactIfNeeded(
-    session,
-    (List<SessionEvent> events, String previous) =>
-        summarizeEvents(llm, events, previous),
-  );
+  final CompactionResult? result;
+  try {
+    result = await compactor.compactIfNeeded(
+      session,
+      (List<SessionEvent> events, String previous) =>
+          summarizeEvents(llm, events, previous),
+    );
+  } catch (_) {
+    // 压缩是优化不是正确性前提：摘要失败/为空时保留原历史继续本轮，
+    // 否则 historyStart 前进而摘要为空，模型会突然丢掉全部上下文。
+    return historyStart;
+  }
   // 折叠掉的是日志开头的一段，因此窗口起点就是折叠条数（安全切点可能比预算
   // 切点更靠前，不能再用 keepRecent 反推）。
   return result?.compacted ?? historyStart;

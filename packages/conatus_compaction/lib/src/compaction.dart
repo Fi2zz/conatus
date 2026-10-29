@@ -86,6 +86,9 @@ class Compactor implements CompactionEngine {
       CompactionFold(events: folded, previous: txn.previous, kept: txn.kept),
       summarize,
     );
+    if (summary.text.trim().isEmpty) {
+      throw StateError('压缩摘要为空，拒绝提交本次压缩');
+    }
     final List<int> shadowed = <int>[
       for (final SessionEvent event in folded) event.seq,
     ];
