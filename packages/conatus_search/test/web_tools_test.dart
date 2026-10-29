@@ -287,20 +287,62 @@ void main() {
       expect(fetch.fetcher, isA<DeepSeekFetcher>());
     });
 
+    test('backend=kimi 且配了 Key 时走 KimiFetcher', () {
+      final Context ctx = Context.root();
+      addTearDown(ctx.dispose);
+      provideSearch(ctx);
+      provideTools(ctx);
+
+      final List<Tool> registered = provideWebTools(
+        ctx,
+        credentials: InMemoryCredentials(
+          initial: <String, String>{'MOONSHOT_API_KEY': 'sk'},
+        ),
+        backend: FetchBackend.kimi,
+      );
+
+      final FetchUrlTool fetch = registered.whereType<FetchUrlTool>().single;
+      expect(fetch.fetcher, isA<KimiFetcher>());
+    });
+
     test('显式 backend 缺 Key 时装配期失败，不静默降级', () {
       final Context ctx = Context.root();
       addTearDown(ctx.dispose);
       provideSearch(ctx);
       provideTools(ctx);
 
-      expect(
-        () => provideWebTools(
-          ctx,
-          credentials: InMemoryCredentials(),
-          backend: FetchBackend.deepseek,
+      for (final FetchBackend backend in <FetchBackend>[
+        FetchBackend.deepseek,
+        FetchBackend.kimi,
+        FetchBackend.firecrawl,
+      ]) {
+        expect(
+          () => provideWebTools(
+            ctx,
+            credentials: InMemoryCredentials(),
+            backend: backend,
+          ),
+          throwsA(isA<ArgumentError>()),
+          reason: backend.name,
+        );
+      }
+    });
+
+    test('auto 不因 Kimi Key 改动抓取后端（Kimi 需显式 opt-in）', () {
+      final Context ctx = Context.root();
+      addTearDown(ctx.dispose);
+      provideSearch(ctx);
+      provideTools(ctx);
+
+      final List<Tool> registered = provideWebTools(
+        ctx,
+        credentials: InMemoryCredentials(
+          initial: <String, String>{'MOONSHOT_API_KEY': 'sk'},
         ),
-        throwsA(isA<ArgumentError>()),
       );
+
+      final FetchUrlTool fetch = registered.whereType<FetchUrlTool>().single;
+      expect(fetch.fetcher, isA<HttpFetcher>());
     });
 
     test('auto 不因 DeepSeek Key 改动抓取后端（DeepSeek 需显式 opt-in）', () {

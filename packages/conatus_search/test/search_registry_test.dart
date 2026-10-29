@@ -83,6 +83,7 @@ void main() {
         'exa',
         'brave',
         'deepseek',
+        'kimi',
         'parallel',
         'exa-mcp',
         'duckduckgo',
@@ -90,18 +91,20 @@ void main() {
     );
   });
 
-  test('内置表覆盖七个源，免 Key 的三个 credentialKey 为空', () {
+  test('内置表覆盖八个源，免 Key 的三个 credentialKey 为空', () {
     expect(kSearchProviderSpecs.keys.toSet(), <String>{
       'tavily',
       'exa',
       'brave',
       'deepseek',
+      'kimi',
       'duckduckgo',
       'parallel',
       'exa-mcp',
     });
     expect(kSearchProviderSpecs['tavily']!.credentialKey, 'TAVILY_API_KEY');
     expect(kSearchProviderSpecs['deepseek']!.credentialKey, 'DEEPSEEK_API_KEY');
+    expect(kSearchProviderSpecs['kimi']!.credentialKey, 'MOONSHOT_API_KEY');
     for (final String name in <String>['duckduckgo', 'parallel', 'exa-mcp']) {
       expect(kSearchProviderSpecs[name]!.credentialKey, '', reason: name);
     }
@@ -128,5 +131,30 @@ void main() {
 
     expect(set.providers, isEmpty);
     expect(set.statuses.single.reason, '缺少 DEEPSEEK_API_KEY');
+  });
+
+  test('Kimi 复用 MOONSHOT_API_KEY，装配后带上客户端超时下限', () {
+    final SearchProviderSet set = buildSearchProviders(
+      order: <String>['kimi'],
+      credentials: InMemoryCredentials(
+        initial: <String, String>{'MOONSHOT_API_KEY': 'sk'},
+      ),
+    );
+
+    final KimiSearchProvider provider =
+        set.providers.single as KimiSearchProvider;
+    expect(provider.name, 'kimi');
+    expect(provider.apiKey, 'sk');
+    expect(provider.timeout, const Duration(seconds: 20));
+  });
+
+  test('缺 MOONSHOT_API_KEY 时跳过并给出键名', () {
+    final SearchProviderSet set = buildSearchProviders(
+      order: <String>['kimi'],
+      credentials: InMemoryCredentials(),
+    );
+
+    expect(set.providers, isEmpty);
+    expect(set.statuses.single.reason, '缺少 MOONSHOT_API_KEY');
   });
 }

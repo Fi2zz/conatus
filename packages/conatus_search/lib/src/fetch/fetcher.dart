@@ -59,6 +59,9 @@ enum FetchBackend {
 
   /// DeepSeek Fetch（需 `DEEPSEEK_API_KEY`，只产出 markdown）。
   deepseek,
+
+  /// Kimi 网页抓取（需 `MOONSHOT_API_KEY`，只产出 markdown）。
+  kimi,
 }
 
 /// 抓取接缝。

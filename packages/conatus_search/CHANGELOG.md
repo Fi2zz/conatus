@@ -17,6 +17,10 @@
   `DeepSeekFetcher` 抓取后端（`POST /v1/tools/fetch`，只产出 markdown）；
   `FetchBackend` 枚举 + `resolveFetcher` 负责按后端挑选抓取器，显式指定的后端
   缺 Key 时装配期抛 `ArgumentError`。
+- 新增 `kimi` 搜索源（Kimi/Moonshot Basic `POST /v1/tools/search`，复用
+  `MOONSHOT_API_KEY`）与 `KimiFetcher` 抓取后端（`POST /v1/tools/fetch`，
+  正文取 `markdown` 字段）；`FetchBackend` 增加 `kimi`。OpenAI 兼容错误体的解析
+  抽到 `openai_compat.dart`，DeepSeek / Kimi 共用，不再各写一份。
 - **破坏性**：`provideSearch` 移除 `exaApiKey`，改为 `order` + `credentials`
   （缺省取上下文的 `'credentials'` 服务）；`provideWebTools` 新增可选
   `fetcher` / `credentials` / `backend`。

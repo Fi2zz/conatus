@@ -501,22 +501,24 @@ await provideMcp(app, <McpServerConfig>[
 ### `search` — 搜索能力缝 + web 工具
 
 服务键 `'search'`（`ctx.search`）。多个 `SearchProvider` 按名字顺序回退：内置
-`tavily` / `exa` / `brave` / `deepseek` / `parallel` / `exa-mcp` / `duckduckgo`，缺凭据的源
-自动跳过；凭据统一经 `conatus_credentials` 解析。
+`tavily` / `exa` / `brave` / `deepseek` / `kimi` / `parallel` / `exa-mcp` /
+`duckduckgo`，缺凭据的源自动跳过；凭据统一经 `conatus_credentials` 解析。
 
 其中 `parallel`、`exa-mcp`、`duckduckgo` 三个源**完全免 Key**：前两个直接调厂商
 托管的远程 MCP 端点（`https://mcp.parallel.ai/mcp`、`https://mcp.exa.ai/mcp`）的
 `tools/call`，无状态、不握手，不提供 `'credentials'` 服务时也能用。
 
 `deepseek` 复用模型接口的 `DEEPSEEK_API_KEY`（Bearer，`POST /v1/tools/search`），
-已经把 DeepSeek 配成 LLM 的用户不需要额外申请凭据；它按成功请求计费，因此排在
-其它带 Key 源之后。同目录下的 `DeepSeekFetcher`（`POST /v1/tools/fetch`）是可选抓取
-后端，需显式传 `backend: FetchBackend.deepseek` 才启用。
+`kimi` 复用模型的 `MOONSHOT_API_KEY`（Bearer，Kimi 联网搜索 Basic
+`POST /v1/tools/search`），两者都是已经把对应厂商配成 LLM 的用户不必再申请搜索
+凭据；它们按成功请求计费，因此排在其它带 Key 源之后。同目录下的
+`DeepSeekFetcher` / `KimiFetcher`（`POST /v1/tools/fetch`）是可选抓取后端，需显式传
+`backend: FetchBackend.deepseek` / `FetchBackend.kimi` 才启用。
 
 `provideWebTools` 把 `web_search` / `fetch_url` 两个只读工具注册进 `ctx.tools`，
 `fetch_url` 的后端由 `backend` 决定：缺省 `FetchBackend.auto`（有 `FIRECRAWL_API_KEY`
-走 Firecrawl，否则裸 HTTP），也可显式指定 `http` / `firecrawl` / `deepseek`——显式
-指定却缺对应 Key 时装配期直接抛 `ArgumentError`，不静默降级。
+走 Firecrawl，否则裸 HTTP），也可显式指定 `http` / `firecrawl` / `deepseek` / `kimi`——
+显式指定却缺对应 Key 时装配期直接抛 `ArgumentError`，不静默降级。
 
 ```dart
 final credentials = provideCredentials(app);
@@ -1558,8 +1560,8 @@ root.provide('x', 1);
 | `provideSearch(ctx, {order, credentials, providers, search})` / `ctx.search` | 提供 `'search'` / 快捷访问；按 `order` 装配，缺凭据的源跳过 |
 | `register(SearchProvider) → Disposer` / `providers` / `get(name)` | provider 注册与查找 |
 | `search(query, {limit, provider}) → Future<List<SearchResult>>` | 顺序回退查询 |
-| `TavilySearchProvider({apiKey, client, endpoint})` / `BraveSearchProvider({apiKey, client, endpoint})` / `DuckDuckGoSearchProvider({client, endpoint})` / `ExaSearchProvider({apiKey, client, endpoint})` / `DeepSeekSearchProvider({apiKey, client, endpoint})` / `SearchService({statuses})` | 内置 provider（名字见 `kSearchProviderSpecs`；`deepseek` 复用 `DEEPSEEK_API_KEY`）/ 装配状态（哪些源可用、哪些被跳过及原因） |
-| `WebSearchTool({search, defaultLimit})` / `FetchUrlTool({fetcher, client, maxChars})` / `WebFetcher`（`HttpFetcher` / `FirecrawlFetcher` / `DeepSeekFetcher`） / `FetchBackend` / `provideWebTools(ctx, {search, fetcher, credentials, client, backend})` | web_search / fetch_url 工具与抓取后端（`auto` 沿用 Firecrawl 或裸 HTTP；`deepseek` 需显式指定，返回 markdown） |
+| `TavilySearchProvider({apiKey, client, endpoint})` / `BraveSearchProvider({apiKey, client, endpoint})` / `DuckDuckGoSearchProvider({client, endpoint})` / `ExaSearchProvider({apiKey, client, endpoint})` / `DeepSeekSearchProvider({apiKey, client, endpoint})` / `KimiSearchProvider({apiKey, client, endpoint})` / `SearchService({statuses})` | 内置 provider（名字见 `kSearchProviderSpecs`；`deepseek` 复用 `DEEPSEEK_API_KEY`、`kimi` 复用 `MOONSHOT_API_KEY`）/ 装配状态（哪些源可用、哪些被跳过及原因） |
+| `WebSearchTool({search, defaultLimit})` / `FetchUrlTool({fetcher, client, maxChars})` / `WebFetcher`（`HttpFetcher` / `FirecrawlFetcher` / `DeepSeekFetcher` / `KimiFetcher`） / `FetchBackend` / `provideWebTools(ctx, {search, fetcher, credentials, client, backend})` | web_search / fetch_url 工具与抓取后端（`auto` 沿用 Firecrawl 或裸 HTTP；`deepseek` / `kimi` 需显式指定，返回 markdown） |
 
 ### `AsrService`（`asr`）
 

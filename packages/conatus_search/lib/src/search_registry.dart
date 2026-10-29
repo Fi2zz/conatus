@@ -4,11 +4,13 @@ library;
 import 'package:conatus_credentials/conatus_credentials.dart';
 import 'package:http/http.dart' as http;
 import 'deepseek_shared.dart';
+import 'kimi_shared.dart';
 import 'search_brave.dart';
 import 'search_deepseek.dart';
 import 'search_duckduckgo.dart';
 import 'search_exa.dart';
 import 'search_exa_mcp.dart';
+import 'search_kimi.dart';
 import 'search_mcp.dart';
 import 'search_parallel.dart';
 import 'search_tavily.dart';
@@ -69,6 +71,11 @@ const Map<String, SearchProviderSpec> kSearchProviderSpecs =
     credentialKey: kDeepSeekCredentialKey,
     create: _createDeepSeek,
   ),
+  'kimi': SearchProviderSpec(
+    name: 'kimi',
+    credentialKey: kKimiCredentialKey,
+    create: _createKimi,
+  ),
   'duckduckgo': SearchProviderSpec(
     name: 'duckduckgo',
     credentialKey: '',
@@ -112,6 +119,16 @@ SearchProvider _createDeepSeek(String apiKey, SearchProviderDeps deps) =>
       apiKey: apiKey,
       client: deps.client,
       // DeepSeek 检索惯常比单次网页请求慢，装配期给 20s 而不是通用 15s。
+      timeout: deps.timeout > const Duration(seconds: 20)
+          ? deps.timeout
+          : const Duration(seconds: 20),
+    );
+
+SearchProvider _createKimi(String apiKey, SearchProviderDeps deps) =>
+    KimiSearchProvider(
+      apiKey: apiKey,
+      client: deps.client,
+      // 与 DeepSeek 同口径：检索比单次网页请求慢，装配期至少给 20s。
       timeout: deps.timeout > const Duration(seconds: 20)
           ? deps.timeout
           : const Duration(seconds: 20),
@@ -164,11 +181,15 @@ class SearchProviderSet {
 }
 
 /// 缺省搜索源顺序。
+///
+/// 带 Key 的源在前（配额充足时质量更稳），免 Key 的源兜底；`deepseek` /
+/// `kimi` 按成功请求计费，排在带 Key 源的末尾，不抢默认位置。
 const List<String> kDefaultSearchOrder = <String>[
   'tavily',
   'exa',
   'brave',
   'deepseek',
+  'kimi',
   'parallel',
   'exa-mcp',
   'duckduckgo',

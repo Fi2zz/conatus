@@ -13,6 +13,15 @@ export 'src/fetch/firecrawl_fetcher.dart'
     show FirecrawlFetcher, kFirecrawlCredentialKey;
 export 'src/fetch/html_markdown.dart' show htmlToMarkdown;
 export 'src/fetch/http_fetcher.dart' show HttpFetcher, stripHtml;
+export 'src/fetch/kimi_fetcher.dart' show KimiFetcher;
+export 'src/kimi_shared.dart'
+    show
+        decodeKimiJson,
+        kKimiBaseUrl,
+        kKimiCredentialKey,
+        kimiErrorDetail,
+        kimiHeaders;
+export 'src/openai_compat.dart' show decodeJsonBody, openAiCompatErrorDetail;
 export 'src/search.dart' show SearchContext, SearchService, provideSearch;
 export 'src/search_brave.dart' show BraveSearchProvider, kBraveCredentialKey;
 export 'src/search_deepseek.dart'
@@ -28,6 +37,12 @@ export 'src/search_exa_mcp.dart'
         kExaMcpSearchTool,
         kExaMcpSnippetLimit;
 export 'src/search_http.dart' show sendWithTimeout;
+export 'src/search_kimi.dart'
+    show
+        KimiSearchProvider,
+        kKimiSearchMaxCount,
+        kKimiSearchMaxTimeoutSeconds,
+        kKimiSnippetLimit;
 export 'src/search_mcp.dart'
     show
         McpSearchProfile,
