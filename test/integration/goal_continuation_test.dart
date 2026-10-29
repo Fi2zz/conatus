@@ -28,7 +28,7 @@ void main() {
       );
       addTearDown(h.dispose);
 
-      // goal 完成路径走自动批准，避免中途 ask_user 提问。
+      // goal 完成路径走自动批准，避免中途 question 提问。
       provideGoal(h.app, session: h.session, approval: AutoApproval(true));
       provideTaskCenter(h.app, session: h.session);
 

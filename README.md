@@ -53,7 +53,7 @@ make clean      # 删除 packages/conatus_code/dist
 | [`conatus_foundation`](packages/conatus_foundation) | 基础设施插件：timer / logger / loader / tools / shell / fs / session / session-log / system-prompt / memory / database / ask-user | `conatus_core` |
 | [`conatus_credentials`](packages/conatus_credentials) | 凭据能力缝：环境变量 / 文件 / 内存 / Vault KV v2 / AWS Secrets Manager | `conatus_core`、`http` |
 | [`conatus_llm`](packages/conatus_llm) | 大模型接入（豆包 / DeepSeek，chat 与 responses 两种形态） | `conatus_core`、`conatus_credentials`、`http` |
-| [`conatus_search`](packages/conatus_search) | 搜索能力缝 + `web_search` / `fetch_url` | `conatus_core`、`conatus_credentials`、`conatus_foundation`、`http` |
+| [`conatus_search`](packages/conatus_search) | 搜索能力缝 + `websearch` / `webfetch` | `conatus_core`、`conatus_credentials`、`conatus_foundation`、`http` |
 | [`conatus_skill`](packages/conatus_skill) | 技能加载：发现 `SKILL.md` 指令集、目录注入 system prompt、`skill` 工具按需取正文 | `conatus_core`、`conatus_foundation`、`yaml` |
 | [`conatus_asr`](packages/conatus_asr) | ASR 能力缝（豆包/火山流式识别）+ `transcribe_audio` + 可替换音频源 | `conatus_core`、`conatus_foundation` |
 | [`conatus_tts`](packages/conatus_tts) | TTS 能力缝（豆包/火山语音合成）+ 可替换音频输出接口 | `conatus_core`、`http` |
@@ -139,7 +139,7 @@ conatus_ontology ──▶ conatus_agent、conatus_llm、conatus_foundation
 - 🔐 **凭据管理**：`credentials`（统一凭据契约 + 五种来源：环境变量 / 内存 / 文件 / Vault KV v2 / AWS Secrets Manager）——`get` / `require` / `validate` 同步读内存快照，远端来源用 `refresh()` 拉取并可定时轮换，对外只出现 `masked`
 - 🗂️ **会话与上下文**：`session`（事件日志 + 仓库 + JSONL 持久化）、`session-log`（多会话只追加日志：fork / replay / 轨迹重建，附「模型可见即已记录」不变式）、`schedule`（会话本地持久提醒：创建 / 列出 / 取消，重启后自动重建）、`cron`（定时任务：at / every / daily / cron 规则调度 + 运行历史持久化 + cron_* 管理工具）、`system-prompt`（prompt 段装配 + 动态上下文）、`time-context`（日粒度日期锚点）、`compaction`（压缩能力缝：滚动摘要 + `compaction/*` 日志事件）、`memory`（长记忆库 + 显式记住/遗忘能力与工具）
 - 🗄️ **持久化**：`database`（KV 存储 hub + 可插拔后端 + JSON 本地实现）
-- 🤖 **Agent Loop**：`agent`（会话事件 + prompt 装配 + 压缩 + 记忆 + 工具闭环）、`tool-result-eviction`（大结果落盘）、`plan`（结构化计划）、`sub-agent`（`spawn_agent` 隔离委托）、`reflection`（工具后自省重试）
+- 🤖 **Agent Loop**：`agent`（会话事件 + prompt 装配 + 压缩 + 记忆 + 工具闭环）、`tool-result-eviction`（大结果落盘）、`plan`（结构化计划）、`sub-agent`（`task` 隔离委托）、`reflection`（工具后自省重试）
 - 🔌 **MCP 生态**：`mcp`（MCP 客户端：stdio / HTTP / SSE 传输 + 握手与工具发现），外部 server 的工具以 `server__tool` 接入同一张工具表，风险缺省 `high` 走审批
 - 🗜️ **分层压缩与缓存度量**：`content-classifier`（内容分类器能力缝）、`layered-compaction`（按类别分层折叠：工具结果压成指针、用户偏好留原文）、`context-cache`（可缓存前缀指纹 + 命中遥测）
 - 🔭 **产品化**：`telemetry`（事件导出 + 埋点）、`evaluation`（用例评估 + 基线对比）、`approval`（高危工具审批）、`skill`（技能沉淀）、`skill-catalog`（技能加载：发现 `SKILL.md` 指令集 + 目录注入 + `skill` 工具）、`recovery`（会话快照恢复）
@@ -477,7 +477,7 @@ await provideMcp(app, <McpServerConfig>[
     url: 'https://mcp.example.com/mcp',
     headers: <String, String>{'Authorization': r'Bearer ${REMOTE_TOKEN}'},
   ),
-], credentials: credentials, aliases: <String, String>{'read_file': 'fs__read_file'});
+], credentials: credentials, aliases: <String, String>{'read': 'fs__read_file'});
 ```
 
 - 三种传输 `McpTransportType.stdio` / `.http` / `.sse`，对应 `StdioTransport` /
@@ -515,8 +515,8 @@ await provideMcp(app, <McpServerConfig>[
 `DeepSeekFetcher` / `KimiFetcher`（`POST /v1/tools/fetch`）是可选抓取后端，需显式传
 `backend: FetchBackend.deepseek` / `FetchBackend.kimi` 才启用。
 
-`provideWebTools` 把 `web_search` / `fetch_url` 两个只读工具注册进 `ctx.tools`，
-`fetch_url` 的后端由 `backend` 决定：缺省 `FetchBackend.auto`（有 `FIRECRAWL_API_KEY`
+`provideWebTools` 把 `websearch` / `webfetch` 两个只读工具注册进 `ctx.tools`，
+`webfetch` 的后端由 `backend` 决定：缺省 `FetchBackend.auto`（有 `FIRECRAWL_API_KEY`
 走 Firecrawl，否则裸 HTTP），也可显式指定 `http` / `firecrawl` / `deepseek` / `kimi`——
 显式指定却缺对应 Key 时装配期直接抛 `ArgumentError`，不静默降级。
 
@@ -598,12 +598,12 @@ await fs.editText(target, const FsEditRequest(oldString: 'hello', newString: 'hi
 
 - 写入守卫：`FsCreateIfAbsent`（已存在 → `FS_NOT_OBSERVED`）/ `FsReplaceIfVersion`（版本不符 → `FS_STALE_VERSION`）；
 - 错误统一由 `FsError` 携带 `FsErrorCode`（`FS_NOT_FOUND` / `FS_NOT_TEXT` / `FS_AMBIGUOUS_EDIT` …），便于上层按码分支；
-- `provideFsTools(app)`（`conatus_code` 的 `lib/fs_tools.dart` 入口）注册 `read_file` / `write_file` / `edit_file` / `rg` / `glob` 把 fs 暴露给模型；`provideToolResultEviction` 落盘的大结果即由 `read_file` 读回。
+- `provideFsTools(app)`（`conatus_code` 的 `lib/fs_tools.dart` 入口）注册 `read` / `write` / `edit` / `grep` / `glob` 把 fs 暴露给模型；`provideToolResultEviction` 落盘的大结果即由 `read` 读回。
 
 ### `tool-result-eviction` — 大结果落盘
 
 超阈值的工具结果写入临时文件，上下文只留「前 N 字符 + `...(省略 N 字符)...` +
-后 N 字符 + 路径」，模型按路径用 `read_file` 读回。失败结果不驱逐；临时文件随
+后 N 字符 + 路径」，模型按路径用 `read` 读回。失败结果不驱逐；临时文件随
 上下文释放清理。
 
 ```dart
@@ -623,16 +623,16 @@ final agent = provideAgentLoop(app, session: session, planning: true);
 
 ### `sub-agent` — 子 Agent 委托
 
-`spawn_agent` 是一个普通工具：调用时在宿主上下文下派生隔离子上下文，创建独立的
+`task` 是一个普通工具：调用时在宿主上下文下派生隔离子上下文，创建独立的
 `Session` 与受限 `ToolRegistry`，跑独立的 `AgentLoop`，只把结论回传。宿主释放时
 在途子 Agent 一并终止。
 
 ```dart
-provideSpawnAgent(app, defaultTools: <String>['web_search', 'fetch_url']);
-// 或逐次指定白名单：spawn_agent(task: '…', tools: ['get_time'], max_rounds: 5)
+provideSpawnAgent(app, defaultTools: <String>['websearch', 'webfetch']);
+// 或逐次指定白名单：task(task: '…', tools: ['get_time'], max_rounds: 5)
 ```
 
-- 默认白名单 = 主注册表里非 `high` 风险、且非 `spawn_agent` 自身的工具；
+- 默认白名单 = 主注册表里非 `high` 风险、且非 `task` 自身的工具；
 - 返回 `{status, output, rounds, tool_calls}`（`value`），正文是结论简报。
 
 ### `reflection` — 自省与重试
@@ -686,7 +686,7 @@ final profile = await selector?.select(task);
 
 `TokenUsage` 同时认 `prompt_tokens`/`input_tokens` 两种键名；`CostAccumulator`
 提供 `cost`（可空）、`unknownRateCalls` 与 `costOfPass(successes)`。
-`ToolBudgetPolicy` 的 `finalizeAllowed` 默认只放行 `read_file`，收口拒绝返回
+`ToolBudgetPolicy` 的 `finalizeAllowed` 默认只放行 `read`，收口拒绝返回
 `TOOL_BUDGET_EXHAUSTED` 且计入调用数。
 
 三档选型是纯函数：`paretoFrontier` 剔除被支配者，`selectRepresentatives` 按
@@ -725,7 +725,7 @@ const EvalCase(id: 'time', input: '现在几点', checks: <EvalCheck>[
   OutputContains('12:00'),
   OutputMatches(r'1\d:\d\d'),
   ToolUse('get_time'),
-  ToolUse('web_search', required: false),
+  ToolUse('websearch', required: false),
   RoundsWithin(4),
 ]);
 ```
@@ -1248,7 +1248,7 @@ provideAlerting(app,
 
 ### `browser_use` — 浏览器操作（`conatus_browser_use`）
 
-`web_search` 只返回搜索摘要、`fetch_url` 只返回文本，都是**只读的**；本包补上
+`websearch` 只返回搜索摘要、`webfetch` 只返回文本，都是**只读的**；本包补上
 **交互能力**（填表单、点按钮、翻页、等待异步加载）。工具由 Provider 拥有，注册进
 `ctx.tools`，模型可直接调用。
 
@@ -1561,7 +1561,7 @@ root.provide('x', 1);
 | `register(SearchProvider) → Disposer` / `providers` / `get(name)` | provider 注册与查找 |
 | `search(query, {limit, provider}) → Future<List<SearchResult>>` | 顺序回退查询 |
 | `TavilySearchProvider({apiKey, client, endpoint})` / `BraveSearchProvider({apiKey, client, endpoint})` / `DuckDuckGoSearchProvider({client, endpoint})` / `ExaSearchProvider({apiKey, client, endpoint})` / `DeepSeekSearchProvider({apiKey, client, endpoint})` / `KimiSearchProvider({apiKey, client, endpoint})` / `SearchService({statuses})` | 内置 provider（名字见 `kSearchProviderSpecs`；`deepseek` 复用 `DEEPSEEK_API_KEY`、`kimi` 复用 `MOONSHOT_API_KEY`）/ 装配状态（哪些源可用、哪些被跳过及原因） |
-| `WebSearchTool({search, defaultLimit})` / `FetchUrlTool({fetcher, client, maxChars})` / `WebFetcher`（`HttpFetcher` / `FirecrawlFetcher` / `DeepSeekFetcher` / `KimiFetcher`） / `FetchBackend` / `provideWebTools(ctx, {search, fetcher, credentials, client, backend})` | web_search / fetch_url 工具与抓取后端（`auto` 沿用 Firecrawl 或裸 HTTP；`deepseek` / `kimi` 需显式指定，返回 markdown） |
+| `WebSearchTool({search, defaultLimit})` / `FetchUrlTool({fetcher, client, maxChars})` / `WebFetcher`（`HttpFetcher` / `FirecrawlFetcher` / `DeepSeekFetcher` / `KimiFetcher`） / `FetchBackend` / `provideWebTools(ctx, {search, fetcher, credentials, client, backend})` | websearch / webfetch 工具与抓取后端（`auto` 沿用 Firecrawl 或裸 HTTP；`deepseek` / `kimi` 需显式指定，返回 markdown） |
 
 ### `AsrService`（`asr`）
 
@@ -1766,8 +1766,8 @@ root.provide('x', 1);
 
 | 成员 | 说明 |
 |------|------|
-| `provideSpawnAgent(ctx, {host, llm, tools, defaultTools, maxRounds, subAgentPrompt})` | 注册 `spawn_agent` |
-| `SpawnAgentTool`（`spawn_agent`：`task` / `tools` / `max_rounds`） | 隔离子 Agent 委托 |
+| `provideSpawnAgent(ctx, {host, llm, tools, defaultTools, maxRounds, subAgentPrompt})` | 注册 `task` |
+| `SpawnAgentTool`（`task`：`task` / `tools` / `max_rounds`） | 隔离子 Agent 委托 |
 | `SubAgentResult({status, output, rounds, toolCalls})` | 委托结局 |
 | `provideReflection(ctx, {reflector, llm, strategy, options, maxRetries})` | 提供 `'reflection'` |
 | `Reflector({llm, strategy, options, maxRetries})` / `shouldReflect` / `reflect` | 反思器 |

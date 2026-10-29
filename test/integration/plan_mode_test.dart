@@ -3,7 +3,7 @@
 /// 链路：plan_mode → approval → agent。
 /// 进入 Plan Mode（模拟 `/plan` 命令 → [PlanMode.enter]）后，`plan:policy` 注入
 /// system prompt；只读工具放行、`riskLevel >= medium` 的工具被
-/// `PLAN_MODE_BLOCKED` 拦截；`exit_plan_mode` 提交计划走 ask_user 审批，批准后
+/// `PLAN_MODE_BLOCKED` 拦截；`exit_plan_mode` 提交计划走 question 审批，批准后
 /// Plan Mode 退出，执行阶段的写操作不再被拦截。
 library;
 
@@ -22,7 +22,7 @@ void main() {
     () async {
       final TestHarness h = await TestHarness.create(
         llmScript: <LlmResult>[
-          callTool('c1', 'web_search', <String, Object?>{'query': '北京到上海 高铁'}),
+          callTool('c1', 'websearch', <String, Object?>{'query': '北京到上海 高铁'}),
           callTool('c2', 'shell', <String, Object?>{'command': 'ls'}),
           callTool('c3', 'exit_plan_mode', <String, Object?>{
             'goal': '查高铁车次',
@@ -70,7 +70,7 @@ void main() {
       planMode.enter();
       expect(planMode.state, PlanModeState.active);
 
-      // 跑 Agent；中途 exit_plan_mode 会经 ask_user 提问，等待后投递批准。
+      // 跑 Agent；中途 exit_plan_mode 会经 question 提问，等待后投递批准。
       final Future<AgentTurn> running = h.agent.run('查一下高铁车次并订票');
       await h.waitForOutput('是否允许执行');
       h.type('可以');
@@ -86,7 +86,7 @@ void main() {
       );
       expect(blocked.result.error?.code, 'PLAN_MODE_BLOCKED');
 
-      // 3) exit_plan_mode 触发 plan.submitted，审批经 ask_user 完成。
+      // 3) exit_plan_mode 触发 plan.submitted，审批经 question 完成。
       h.expectEvent('plan.entered');
       h.expectEvent('plan.submitted');
       h.expectEvent('plan.exited');
@@ -111,7 +111,7 @@ void main() {
       // 6) 收口并输出计划。
       expect(turn.reply, '完成');
       expect(turn.steps.map((AgentStep s) => s.call.name), <String>[
-        'web_search',
+        'websearch',
         'shell',
         'exit_plan_mode',
         'shell',

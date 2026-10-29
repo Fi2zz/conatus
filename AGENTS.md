@@ -48,7 +48,7 @@ Agent 能力。
 | | `conatus_foundation` | 基础设施：timer / logger / loader / tools / shell / fs / session / session-log / system-prompt / memory / database / ask-user |
 | | `conatus_credentials` | 凭据能力缝：env / 内存 / 文件 / Vault KV v2 / AWS Secrets Manager |
 | | `conatus_llm` | 大模型接入（豆包 / DeepSeek，chat 与 responses 两种形态，FallbackLlm 回退链） |
-| | `conatus_search` | 搜索能力缝 + `web_search` / `fetch_url` |
+| | `conatus_search` | 搜索能力缝 + `websearch` / `webfetch` |
 | | `conatus_skill` | 技能加载：发现 `SKILL.md` 指令集、目录注入、`skill` 工具 |
 | | `conatus_asr` / `conatus_tts` | 语音识别 / 合成能力缝 |
 | | `conatus_mcp` | MCP 客户端：stdio / HTTP / SSE 传输 + 工具接入 |

@@ -132,7 +132,7 @@ class McpRegistry {
     return binding == null ? <_McpBinding>[] : <_McpBinding>[binding];
   }
 
-  /// 给已注册的全名工具登记一个短别名（如 `read_file` → `fs__read_file`）。
+  /// 给已注册的全名工具登记一个短别名（如 `read` → `fs__read_file`）。
   ///
   /// 目标工具不存在抛 [StateError]；短名与已有工具撞车由
   /// [ToolRegistry.register] 抛 [StateError]。

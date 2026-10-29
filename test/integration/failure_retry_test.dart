@@ -19,10 +19,10 @@ void main() {
     () async {
       final TestHarness h = await TestHarness.create(
         llmScript: <LlmResult>[
-          callTool('c1', 'web_search', <String, Object?>{'query': '不存在的 API'}),
+          callTool('c1', 'websearch', <String, Object?>{'query': '不存在的 API'}),
           text('{"decision":"retry"}'),
           text('{"decision":"replan"}'),
-          callTool('c3', 'web_search', <String, Object?>{
+          callTool('c3', 'websearch', <String, Object?>{
             'query': 'conatus 集成测试',
           }),
           text('这个任务试了几次都不行，要换个方法吗？'),
@@ -69,7 +69,7 @@ void main() {
       // 2) Reflection 驱动了重试：原始调用 + 换词调用进 steps（重试在反射器
       //    内部完成，不重复记录），搜索实际执行 3 次。
       expect(
-        turn.steps.where((AgentStep s) => s.call.name == 'web_search'),
+        turn.steps.where((AgentStep s) => s.call.name == 'websearch'),
         hasLength(2),
       );
 

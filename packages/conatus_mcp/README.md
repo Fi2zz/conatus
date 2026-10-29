@@ -46,7 +46,7 @@ await provideMcp(app, <McpServerConfig>[
     headers: <String, String>{'Authorization': r'Bearer ${REMOTE_TOKEN}'},
   ),
 ], credentials: credentials, aliases: <String, String>{
-  'read_file': 'fs__read_file',
+  'read': 'fs__read_file',
 });
 ```
 

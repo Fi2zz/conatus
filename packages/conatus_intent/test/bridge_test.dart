@@ -30,7 +30,7 @@ void main() {
           SkillIntentBridge(router: router, llm: llm);
 
       final Intent? candidate =
-          await bridge.propose(_skill('check_env', <String>['web_search']));
+          await bridge.propose(_skill('check_env', <String>['websearch']));
 
       expect(candidate, isNotNull);
       expect(candidate!.name, 'skill_check_env');
@@ -49,11 +49,11 @@ void main() {
       final FakeLlm llm = FakeLlm(<String>[_skillJson]);
 
       await SkillIntentBridge(router: router, llm: llm)
-          .propose(_skill('check_env', <String>['web_search', 'read_file']));
+          .propose(_skill('check_env', <String>['websearch', 'read']));
 
       expect(
         llm.requests.single.last.content,
-        contains('web_search → read_file'),
+        contains('websearch → read'),
       );
     });
 
@@ -64,7 +64,7 @@ void main() {
 
       final Intent? candidate =
           await SkillIntentBridge(router: router, llm: llm)
-              .propose(_skill('check_env', <String>['web_search']));
+              .propose(_skill('check_env', <String>['websearch']));
 
       expect(candidate, isNull);
     });
@@ -77,9 +77,9 @@ void main() {
           SkillIntentBridge(router: router, llm: llm);
 
       final Intent accepted =
-          (await bridge.propose(_skill('check_env', <String>['web_search'])))!;
+          (await bridge.propose(_skill('check_env', <String>['websearch'])))!;
       final Intent rejected =
-          (await bridge.propose(_skill('other', <String>['web_search'])))!;
+          (await bridge.propose(_skill('other', <String>['websearch'])))!;
 
       bridge.reject(rejected);
       expect(bridge.pending, <Intent>[accepted]);
@@ -102,7 +102,7 @@ void main() {
       ));
 
       final Intent candidate =
-          (await bridge.propose(_skill('check_env', <String>['web_search'])))!;
+          (await bridge.propose(_skill('check_env', <String>['websearch'])))!;
 
       expect(
         () => bridge.confirm(candidate),
@@ -116,12 +116,12 @@ void main() {
     ToolRegistry tools() {
       final ToolRegistry registry = ToolRegistry();
       registry.fn(
-        'web_search',
+        'websearch',
         description: '联网搜索',
         handler: (ToolContext ctx) async => ToolResult.success('ok'),
       );
       registry.fn(
-        'read_file',
+        'read',
         description: '读文件',
         handler: (ToolContext ctx) async => ToolResult.success('ok'),
       );
@@ -136,10 +136,10 @@ void main() {
 
       expect(
         intents.map((Intent i) => i.name),
-        <String>['tool_web_search', 'tool_read_file'],
+        <String>['tool_websearch', 'tool_read'],
       );
       expect(intents.first.description, '联网搜索');
-      expect((intents.first.action as ToolAction).tool, 'web_search');
+      expect((intents.first.action as ToolAction).tool, 'websearch');
     });
 
     test('only 限定生成范围', () async {
@@ -148,9 +148,9 @@ void main() {
       final List<Intent> intents = await ToolIntentGenerator(
         tools: tools(),
         llm: llm,
-      ).generate(only: <String>['read_file']);
+      ).generate(only: <String>['read']);
 
-      expect(intents.single.name, 'tool_read_file');
+      expect(intents.single.name, 'tool_read');
       expect(llm.requests, hasLength(1));
     });
 

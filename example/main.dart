@@ -39,11 +39,11 @@ Future<void> main() async {
   provideTelemetry(app, telemetry: ConsoleTelemetry());
   instrumentTools(app);
 
-  // fs 能力缝 + read_file 工具 + 大结果驱逐（超阈值落盘，模型按路径读回）。
+  // fs 能力缝 + read 工具 + 大结果驱逐（超阈值落盘，模型按路径读回）。
   provideFileSystemLocal(app);
   app.effect(
     () => app.tools.fn(
-      'read_file',
+      'read',
       description: '读取文件内容',
       params: <ParamSpec>[
         ParamSpec.string('path', required: true, description: '文件路径'),
@@ -91,8 +91,8 @@ Future<void> main() async {
   // 工具失败时自省并重试（默认 onError）。
   provideReflection(app);
 
-  // 子 Agent 委托：spawn_agent 在隔离上下文里用白名单工具跑独立循环。
-  provideSpawnAgent(app, defaultTools: <String>['get_time', 'read_file']);
+  // 子 Agent 委托：task 在隔离上下文里用白名单工具跑独立循环。
+  provideSpawnAgent(app, defaultTools: <String>['get_time', 'read']);
 
   final SessionStore sessions = provideSessions(app);
   final Session session = sessions.create(id: 'cli');
@@ -110,7 +110,7 @@ Future<void> main() async {
   provideMemoryRecorder(app); // 记忆写入策略：一轮结束后按规则保留
   provideCompaction(app);
 
-  // ── ask_user：把 stdin 每一行投递给最早等待中的提问 ────────────
+  // ── question：把 stdin 每一行投递给最早等待中的提问 ────────────
   final CliAskUser ask = CliAskUser();
   provideAskUser(app, askUser: ask);
   final StreamSubscription<String> inputSub = stdin

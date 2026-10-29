@@ -104,7 +104,7 @@ void main() {
         'assistant',
         '',
         toolCalls: <LlmToolCall>[
-          LlmToolCall(id: 'call_1', name: 'read_file'),
+          LlmToolCall(id: 'call_1', name: 'read'),
         ],
       ),
       LlmMessage(

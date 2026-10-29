@@ -12,8 +12,8 @@
 // 运行：
 //   dart run example/voice_plan_mode.dart
 //
-// 输入 "exit" 结束。每条任务都先进入 plan mode：模型只能调用 web_search /
-// ask_user 等只读工具（web_search 走 DuckDuckGo，免 API Key），提交计划后
+// 输入 "exit" 结束。每条任务都先进入 plan mode：模型只能调用 websearch /
+// question 等只读工具（websearch 走 DuckDuckGo，免 API Key），提交计划后
 // 音箱会播报「我打算分 N 步完成：…。可以吗？」——说「可以」即执行，
 // 说「不用查天气了」之类则修订计划。Plan Mode 下调用有副作用的工具会被
 // PLAN_MODE_BLOCKED 拦截（见 providePlanMode 的中间件）。
@@ -66,7 +66,7 @@ Future<void> main() async {
   final SessionStore sessions = provideSessions(app);
   final Session session = sessions.create(id: 'voice');
 
-  // ask_user 文本提问（与语音审批是两条独立交互路径）。
+  // question 文本提问（与语音审批是两条独立交互路径）。
   final CliAskUser ask = CliAskUser();
   provideAskUser(app, askUser: ask);
   final StreamSubscription<String> inputSub = stdin

@@ -1,9 +1,9 @@
 /// 场景一：终端订票。
 ///
-/// 链路：ask_user → llm → browser_use → approval。
+/// 链路：question → llm → browser_use → approval。
 /// 用户用自然语言发起订票，Agent 经浏览器工具导航、读快照并给出车次候选；
 /// 用户确认后提交表单（`browser_submit`，high risk）被 approval 拦截，经
-/// ask_user 审批放行后完成下单。
+/// question 审批放行后完成下单。
 library;
 
 import 'package:conatus/conatus.dart';

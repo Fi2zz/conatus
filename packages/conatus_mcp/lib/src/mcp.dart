@@ -44,7 +44,7 @@ extension McpContext on Context {
 /// 随上下文释放自动断开全部连接并注销工具（见 [McpRegistry.close]）。
 ///
 /// [aliases] 是「短名 → 已注册全名」的映射，如
-/// `{'read_file': 'fs__read_file'}`；目标工具不存在时抛 [StateError]。
+/// `{'read': 'fs__read_file'}`；目标工具不存在时抛 [StateError]。
 ///
 /// [credentials] 用于解析 [McpServerConfig.env] / [McpServerConfig.headers]
 /// 里的 `${KEY}` 占位符；缺省时占位符原样保留（见

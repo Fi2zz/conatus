@@ -24,7 +24,7 @@ event: content_block_delta
 data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"我先读文件"}}
 
 event: content_block_start
-data: {"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"toolu_1","name":"read_file","input":{}}}
+data: {"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"toolu_1","name":"read","input":{}}}
 
 event: content_block_delta
 data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"{\\"path\\":"}}
@@ -102,13 +102,13 @@ void main() {
         ..._messages,
         const LlmMessage('assistant', '', toolCalls: <LlmToolCall>[
           LlmToolCall(
-              id: 'toolu_0', name: 'read_file', arguments: '{"path":"b.txt"}'),
+              id: 'toolu_0', name: 'read', arguments: '{"path":"b.txt"}'),
         ]),
         const LlmMessage('tool', '文件内容', toolCallId: 'toolu_0'),
       ],
       tools: <Map<String, dynamic>>[
         <String, dynamic>{
-          'name': 'read_file',
+          'name': 'read',
           'description': '读文件',
           'parameters': <String, dynamic>{'type': 'object'},
         },
@@ -145,7 +145,7 @@ void main() {
     expect(resultBlock['tool_use_id'], 'toolu_0');
 
     expect(result.content, '我先读文件');
-    expect(result.toolCalls.single.name, 'read_file');
+    expect(result.toolCalls.single.name, 'read');
     expect(result.toolCalls.single.arguments, '{"path":"a.txt"}');
     expect(result.usage['input_tokens'], 12);
     expect(result.usage['output_tokens'], 7);
@@ -165,7 +165,7 @@ void main() {
       <LlmMessage>[
         const LlmMessage('user', '读图'),
         const LlmMessage('assistant', '', toolCalls: <LlmToolCall>[
-          LlmToolCall(id: 'toolu_0', name: 'read_file'),
+          LlmToolCall(id: 'toolu_0', name: 'read'),
         ]),
         const LlmMessage(
           'tool',
@@ -207,7 +207,7 @@ void main() {
       <LlmMessage>[
         const LlmMessage('user', '读 PDF'),
         const LlmMessage('assistant', '', toolCalls: <LlmToolCall>[
-          LlmToolCall(id: 'toolu_0', name: 'read_file'),
+          LlmToolCall(id: 'toolu_0', name: 'read'),
         ]),
         const LlmMessage(
           'tool',

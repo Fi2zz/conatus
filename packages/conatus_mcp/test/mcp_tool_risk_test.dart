@@ -7,7 +7,7 @@ McpTool _tool({
   String? riskLevel,
 }) =>
     McpTool(
-      name: 'read_file',
+      name: 'read',
       annotations: annotations,
       riskLevel: riskLevel,
     );
