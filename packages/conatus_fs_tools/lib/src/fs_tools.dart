@@ -6,6 +6,9 @@ import 'edit_file.dart';
 import 'glob_tool.dart';
 import 'list_files.dart';
 import 'read_file.dart';
+import 'ripgrep_binary.dart';
+import 'ripgrep_runner.dart';
+import 'ripgrep_tool.dart';
 import 'write_file.dart';
 
 /// 遍历 / 列举时默认跳过的目录（按 basename）。
@@ -25,6 +28,8 @@ class FsToolOptions {
     this.fs,
     this.tools,
     this.shell,
+    this.ripgrep,
+    this.runner,
     this.eviction,
     this.defaultReadLimit = 2000,
     this.maxReadChars = 200000,
@@ -41,10 +46,19 @@ class FsToolOptions {
   /// 工具注册表；缺省取 `ctx.tools`。
   final ToolRegistry? tools;
 
-  /// 子进程执行接缝；供后续接入的搜索工具使用。
+  /// 子进程执行接缝；缺省取上下文里的 `'shell'` 服务。
   final ShellExecutor? shell;
 
-  /// 大结果落盘策略；供后续接入的搜索工具使用。
+  /// ripgrep 二进制；缺省调用 [RipgrepBinary.discover] 探测系统 / 打包 rg。
+  final RipgrepBinary? ripgrep;
+
+  /// ripgrep 执行接缝；缺省在有 `shell` 时用 [ShellRipgrepRunner]。
+  ///
+  /// 桌面端 / Windows 应注入 [ProcessRipgrepRunner]（或自定义 runner），
+  /// 以免命令串经过 POSIX shell 引号解析。
+  final RipgrepRunner? runner;
+
+  /// 大结果落盘策略；供搜索工具使用。
   final ToolResultEviction? eviction;
 
   /// `read` 默认读取行数。
@@ -98,6 +112,19 @@ List<Tool> provideFsTools(
   }
   if (options.enableSearch) {
     registered.add(GlobTool(fs: resolvedFs, skipDirs: options.skipDirs));
+    final ShellExecutor? shell =
+        options.shell ?? ctx.get<ShellExecutor>('shell');
+    final RipgrepRunner? runner =
+        options.runner ?? (shell == null ? null : ShellRipgrepRunner(shell));
+    final RipgrepBinary? binary = options.ripgrep ?? RipgrepBinary.discover();
+    if (runner != null && binary != null) {
+      registered.add(RipgrepTool(
+        runner: runner,
+        binary: binary,
+        eviction: options.eviction,
+        limits: RipgrepLimits(defaultLimit: options.rgLimit),
+      ));
+    }
   }
   for (final Tool tool in registered) {
     ctx.effect(() => registry.register(tool));

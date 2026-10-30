@@ -5,6 +5,8 @@ import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_fs_tools/conatus_fs_tools.dart';
 import 'package:test/test.dart';
 
+import 'support/fake_shell.dart';
+
 void main() {
   late Directory dir;
   late LocalFileSystem fs;
@@ -35,6 +37,40 @@ void main() {
       expect(tools.names, containsAll(<String>['list', 'glob']));
       ctx.dispose();
       expect(tools.names, isEmpty);
+    });
+
+    test('有 shell 且注入 ripgrep → 注册 grep', () {
+      final Context ctx = Context.root();
+      provideFileSystemLocal(ctx, fs: fs);
+      final ToolRegistry tools = provideTools(ctx);
+      final FakeShellExecutor shell = FakeShellExecutor();
+
+      final List<Tool> registered = provideFsTools(ctx,
+          options: FsToolOptions(
+            shell: shell,
+            ripgrep:
+                const RipgrepBinary(path: 'rg', source: RipgrepSource.system),
+          ));
+
+      expect(registered.map((Tool t) => t.name), contains('grep'));
+      expect(tools.names, contains('grep'));
+      ctx.dispose();
+      expect(tools.names, isEmpty);
+    });
+
+    test('注入 runner 且注入 ripgrep（无 shell）→ 注册 grep', () {
+      final Context ctx = Context.root();
+      provideFileSystemLocal(ctx, fs: fs);
+      provideTools(ctx);
+
+      final List<Tool> registered = provideFsTools(ctx,
+          options: const FsToolOptions(
+            runner: ProcessRipgrepRunner(),
+            ripgrep: RipgrepBinary(path: 'rg', source: RipgrepSource.system),
+          ));
+
+      expect(registered.map((Tool t) => t.name), contains('grep'));
+      ctx.dispose();
     });
 
     test('enableSearch=false → 不注册 glob', () {

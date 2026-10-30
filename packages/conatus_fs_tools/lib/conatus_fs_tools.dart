@@ -11,4 +11,12 @@ export 'src/glob_tool.dart' show GlobTool;
 export 'src/list_files.dart' show ListFilesTool, ListLimits;
 export 'src/preview.dart' show buildApprovalPreview, kPreviewMaxChars;
 export 'src/read_file.dart' show ReadFileTool;
+export 'src/ripgrep_binary.dart' show RipgrepBinary, RipgrepSource;
+export 'src/ripgrep_runner.dart'
+    show
+        ProcessRipgrepRunner,
+        RipgrepRunResult,
+        RipgrepRunner,
+        ShellRipgrepRunner;
+export 'src/ripgrep_tool.dart' show RipgrepLimits, RipgrepTool;
 export 'src/write_file.dart' show WriteFileTool, WriteMode;
