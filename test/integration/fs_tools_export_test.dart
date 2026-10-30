@@ -36,6 +36,17 @@ void main() {
       protectedRoots: const <String>[],
     );
     expect(guard, isA<ReadOnlyPathGuard>());
+    expect(
+      tools.names,
+      containsAll(<String>[
+        'read',
+        'write',
+        'edit',
+        'list',
+        'glob',
+        'apply_patch',
+      ]),
+    );
     ctx.dispose();
     expect(tools.names, isEmpty);
   });
