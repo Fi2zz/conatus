@@ -1,0 +1,23 @@
+name: conatus_diff
+description: >-
+  conatus 的文本差异内核：统一 diff 生成 / 解析、行级 LCS、hunk 应用。
+version: 0.16.0
+repository: https://github.com/Fi2zz/conatus
+issue_tracker: https://github.com/Fi2zz/conatus/issues
+publish_to: none
+
+environment:
+  sdk: ^3.6.0
+
+resolution: workspace
+
+dependencies: {}
+
+dev_dependencies:
+  lints: ^4.0.0
+  test: ^1.25.0
+
+topics:
+  - diff
+  - text
+  - patch
