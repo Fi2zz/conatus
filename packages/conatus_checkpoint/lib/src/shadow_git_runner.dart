@@ -101,8 +101,8 @@ class ProcessGitRunner implements GitRunner {
         '--git-dir=$gitDir',
         '--work-tree=$workTree',
         // 身份固定：宿主的 user.name/user.email 缺失不该让快照失败。
-        '-c', 'user.email=nava@localhost',
-        '-c', 'user.name=nava',
+        '-c', 'user.email=conatus@localhost',
+        '-c', 'user.name=conatus',
         // 不跑宿主配置的 hook / 签名：快照必须无外部依赖地成功。
         '-c', 'commit.gpgsign=false',
         '-c', 'core.hooksPath=/dev/null',
@@ -135,9 +135,9 @@ class ProcessGitRunner implements GitRunner {
         '--git-dir=$gitDir',
         '--work-tree=$workTree',
         '-c',
-        'user.email=nava@localhost',
+        'user.email=conatus@localhost',
         '-c',
-        'user.name=nava',
+        'user.name=conatus',
         '-c',
         'commit.gpgsign=false',
         '-c',

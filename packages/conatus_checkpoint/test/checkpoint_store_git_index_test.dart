@@ -35,6 +35,18 @@ void main() {
     expect(f.store.turnsOf('s1'), isEmpty);
   });
 
+  test('clearSession 不留下 refs/checkpoints 孤儿引用', () async {
+    if (!_gitOk) return;
+    final ShadowFixture f = createShadowFixture();
+    f.write('a.txt', 'v0');
+    await f.store.snapshot('s1', 0);
+    await f.store.snapshot('s1', 1);
+    expect(f.refsOf('s1'), isNotEmpty);
+
+    await f.store.clearSession('s1');
+    expect(f.refsOf('s1'), isEmpty);
+  });
+
   test('两个会话各自独立的时间线', () async {
     if (!_gitOk) return;
     final ShadowFixture f = createShadowFixture();

@@ -90,6 +90,15 @@ class ShadowFixture {
         'checkpoints/$sessionId/$turn',
       ]).trim();
 
+  /// 该会话 `refs/checkpoints/<session>` 下的全部引用（逐行，无匹配为空）。
+  List<String> refsOf(String sessionId) => <String>[
+        for (final String line in shadowGit(<String>[
+          'for-each-ref',
+          'refs/checkpoints/$sessionId',
+        ]).split('\n'))
+          if (line.isNotEmpty) line,
+      ];
+
   /// 影子仓库对象库的总字节（loose + pack）。
   int objectStoreBytes() {
     final String out = shadowGit(<String>['count-objects', '-v']);

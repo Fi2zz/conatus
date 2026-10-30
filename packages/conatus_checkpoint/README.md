@@ -34,22 +34,25 @@ dependencies:
 import 'package:conatus_checkpoint/conatus_checkpoint.dart';
 
 // 按后端选择 + 环境探测造存储：auto 有 git 走影子仓库，否则退回归档。
-final CheckpointStore store = await openCheckpointStore(
-  options: const CheckpointOptions(
-    keep: 5,
-    backend: CheckpointBackend.auto,
-    policy: CheckpointPolicy(
-      readOnlyPrefixes: <String>['.app'],
-      excludedPrefixes: <String>['dist'],
-    ),
+// 一份 options 同时喂给工厂与管理器（管理器只读 enabled，其余字段供工厂用）。
+const CheckpointOptions options = CheckpointOptions(
+  keep: 5,
+  backend: CheckpointBackend.auto,
+  policy: CheckpointPolicy(
+    readOnlyPrefixes: <String>['.app'],
+    excludedPrefixes: <String>['dist'],
   ),
+);
+
+final CheckpointStore store = await openCheckpointStore(
+  options: options,
   root: '/path/to/workspace',
   projectDir: '/path/to/workspace/.app-data',
 );
 
 final CheckpointManager manager = CheckpointManager(
   store: store,
-  options: const CheckpointOptions(keep: 5),
+  options: options,
 );
 
 await manager.bind('session-id');   // 接管已有时间线，无历史时写 turn 0

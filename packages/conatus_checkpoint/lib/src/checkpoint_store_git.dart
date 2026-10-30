@@ -116,6 +116,13 @@ class GitShadowStore implements CheckpointStore {
     final List<ShadowCheckpointRef> refs = _refs(sessionId);
     for (final ShadowCheckpointRef ref in refs) {
       await _gitObj(<String>['tag', '-d', _tag(sessionId, ref.turn)]);
+      // refs 与 tag 是两条独立引用，prune 两边都删；这里漏掉就会留下
+      // `refs/checkpoints/<session>/<turn>` 孤儿引用（索引已清，无从回收）。
+      await _gitObj(<String>[
+        'update-ref',
+        '-d',
+        'refs/checkpoints/$sessionId/${ref.turn}',
+      ]);
     }
     // 索引连同它独占的提交一起清；对象留着（可能被别的会话/轮次引用，
     // 清了要重写可达性，收益不抵风险）。

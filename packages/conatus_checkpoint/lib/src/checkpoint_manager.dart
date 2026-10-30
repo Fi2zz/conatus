@@ -15,6 +15,9 @@ import 'checkpoint_timeline.dart';
 import 'checkpoint_types.dart';
 
 /// 每会话检查点管理器。
+// REASON: 本类是包内唯一的编排面，把轮次绑定 / 回滚 / 差异读取都放在同一
+// 对象上——这些方法共享 [_timeline] 的串行链与代数计数。拆成多个只做透传的
+// 子对象只会把内部状态暴露出去，回归面反而变大。
 class CheckpointManager {
   CheckpointManager({
     required CheckpointStore store,

@@ -133,6 +133,9 @@ Future<(Set<String>, int, int)> _restoreDelta(
 }
 
 /// 旧版目录树检查点恢复（逐文件 gz/明文回退）。
+// REASON: 旧格式分支与新格式路径共用同一套「写回 / 删除」判据（`_restorable`
+// + `ensurePathsRestorable` + `_deleteExtras`）；拆函数就得把目标态集合与
+// 计数器的传递契约复制一份，两条路径一旦漂移就会重现「按残缺清单删文件」。
 Future<CheckpointRestore> _restoreLegacy(
   ArchiveCheckpointStore store,
   String sessionId,
