@@ -7,9 +7,9 @@
 
 本仓库是一个 [pub workspace](https://dart.dev/tools/pub/workspaces) monorepo。
 **根包 `conatus` 是伞包（umbrella）**：自身不含实现，统一再导出 `packages/` 下的
-全部 28 个模块包，因此 `import 'package:conatus/conatus.dart';` 是完整公开 API；也可以
+全部 29 个模块包，因此 `import 'package:conatus/conatus.dart';` 是完整公开 API；也可以
 只依赖某个模块包（如 `conatus_core`、`conatus_agent`），以获得更小的依赖面。
-其中 13 个**实验性包**（API 可能随时变更）同样随伞包导出，生产环境依赖前
+其中 14 个**实验性包**（API 可能随时变更）同样随伞包导出，生产环境依赖前
 见下方「实验性包」小节与各包 README。
 
 `packages/conatus_code` 是独立的**子模块**（[Fi2zz/conatus_code](https://github.com/Fi2zz/conatus_code)）：
@@ -65,9 +65,9 @@ make clean      # 删除 packages/conatus_code/dist
 | [`conatus_tasks`](packages/conatus_tasks) | 任务中心（Task Center）：Agent Loop / sub-agent / shell / schedule 运行时任务追踪（任务树 + `task/changed` 持久化 + `list_tasks` / `cancel_task` 工具） | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_schedule` |
 | [`conatus_rag`](packages/conatus_rag) | 会话原文的 RAG 检索内核：切分 / 嵌入 / 索引 + 租户可见性过滤的稠密检索（Raw-RAG，非知识平台） | `conatus_core`、`conatus_foundation`、`http` |
 
-> 文本 TUI、文件系统工具与编码工具原为 `conatus_tui` / `conatus_fs_tools` /
-> `conatus_coding` 三个包，现已并入 `conatus_code` 子模块：其 `lib/tui.dart` /
-> `lib/fs_tools.dart` / `lib/coding.dart` 即对应入口。
+> 文本 TUI 与编码工具留在 `conatus_code` 子模块（`lib/tui.dart` /
+> `lib/coding.dart`），文件工具回到独立包 `conatus_fs_tools`（nava 的
+> `lib/fs_tools.dart` 为兼容旧入口的再导出）。
 
 ### 实验性包（随伞包导出；API 可能破坏性变更，生产慎用）
 
@@ -79,6 +79,7 @@ make clean      # 删除 packages/conatus_code/dist
 | `conatus_context` | 上下文压缩：工具结果按内容类型结构化压缩 + CCR 可逆取回（`context_retrieve` / `context_stats`） | `conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_context/README.md) |
 | `conatus_diff` | 文本差异内核：统一 diff 生成 / 解析、行级 LCS、hunk 应用 | — | [README](packages/conatus_diff/README.md) |
 | `conatus_doc` | 文档补丁引擎：人机双写故事层数据内核（只追加补丁序列 + supersede + fold + 游标 + 依赖图失锚） | `conatus_core`、`conatus_foundation` | [README](packages/conatus_doc/README.md) |
+| `conatus_fs_tools` | 文件工具：`read` / `write` / `edit` / `list` / `glob` + `provideFsTools` 装配 | `conatus_core`、`conatus_diff`、`conatus_foundation`、`glob` | [README](packages/conatus_fs_tools/README.md) |
 | `conatus_harness` | 可版本化 harness 制品：manifest（档位 + 指令段 + 工具边界）JSON 往返、Context 子树装配与回滚、人可读 diff | `conatus_agent`、`conatus_core`、`conatus_foundation` | [README](packages/conatus_harness/README.md) |
 | `conatus_intent` | 意图路由：正则 + 向量本地匹配，命中走确定性动作，未命中落回 Agent Loop | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_intent/README.md) |
 | `conatus_memory` | 记忆写入策略：一轮结束后按规则决定是否保留（寒暄 / 短回复 / 近重复 / 截断），经 `AgentLoop.addTurnTracker` 挂载 | `conatus_agent`、`conatus_core`、`conatus_foundation` | [README](packages/conatus_memory/README.md) |
@@ -145,14 +146,14 @@ conatus_ontology ──▶ conatus_agent、conatus_llm、conatus_foundation
 - 🗜️ **分层压缩与缓存度量**：`content-classifier`（内容分类器能力缝）、`layered-compaction`（按类别分层折叠：工具结果压成指针、用户偏好留原文）、`context-cache`（可缓存前缀指纹 + 命中遥测）
 - 🔭 **产品化**：`telemetry`（事件导出 + 埋点）、`evaluation`（用例评估 + 基线对比）、`approval`（高危工具审批）、`skill`（技能沉淀）、`skill-catalog`（技能加载：发现 `SKILL.md` 指令集 + 目录注入 + `skill` 工具）、`recovery`（会话快照恢复）
 - 🕹️ **实验性能力包**（API 可能破坏性变更）：`alerting`（订阅遥测按规则主动告警）、`browser_use` / `computer_use`（经 MCP 驱动浏览器与本地桌面）、`doc`（人机双写文档补丁引擎：只追加补丁序列 + supersede + fold + 游标）、`team`（多智能体协作：任务板 + 成员运行时）、`workflow`（把协作沉淀为声明式流程资产）、`observability`（span 语义 + 从 Session Log 派生 trace）、`ontology`（自进化本体层：Term / Mapping / Constraint / Evidence）
-- ✅ **完整测试覆盖**：28 个模块包 + 根包与集成测试，CI 全量执行
+- ✅ **完整测试覆盖**：29 个模块包 + 根包与集成测试，CI 全量执行
 
 ---
 
 ## 安装
 
-全部 28 个包均为 `publish_to: none`，**不经 pub.dev 分发**（也从未发布过）。
-以 git 源依赖伞包 `conatus`，一次性获得全部 28 个子包——伞包与各子包之间
+全部 29 个包均为 `publish_to: none`，**不经 pub.dev 分发**（也从未发布过）。
+以 git 源依赖伞包 `conatus`，一次性获得全部 29 个子包——伞包与各子包之间
 一律是 path 依赖，随仓库自洽解析，**不需要任何 `dependency_overrides`**：
 
 ```yaml
@@ -1926,7 +1927,7 @@ for d in packages/*/; do (cd "$d" && dart test); done
 
 ## 发版
 
-分发方式为 **git 源**（全部 28 个包 `publish_to: none`，不发布 pub.dev），
+分发方式为 **git 源**（全部 29 个包 `publish_to: none`，不发布 pub.dev），
 版本演进由 git tag 承载：
 
 ```bash

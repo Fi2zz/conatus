@@ -1,7 +1,7 @@
 /// 时空可组合性（Spatiotemporal Composability）编程范式的 Dart 实现。
 ///
 /// 本包是 monorepo 的**伞包（umbrella）**：自身不含实现，单入口再导出全部
-/// 28 个模块包（15 个稳定包 + 13 个实验性包），
+/// 29 个模块包（15 个稳定包 + 14 个实验性包），
 /// 使 `import 'package:conatus/conatus.dart';` 即完整公开 API。
 /// 实验性包 API 可能破坏性变更，生产依赖前见各包 README。
 ///
@@ -35,6 +35,7 @@
 /// * [conatus_computer_use] — 桌面操作（Computer Use）
 /// * [conatus_diff]         — 文本差异内核：统一 diff 生成 / 解析、行级 LCS、hunk 应用
 /// * [conatus_doc]         — 文档补丁引擎（人机双写故事层数据内核）
+/// * [conatus_fs_tools]    — 文件工具：read / write / edit / list / glob + provideFsTools
 /// * [conatus_harness]      — 可版本化 harness 制品（实验性）
 /// * [conatus_intent]       — 意图路由
 /// * [conatus_memory]       — 记忆写入策略能力（保留判定 + 轮次记录）
@@ -57,6 +58,7 @@ export 'package:conatus_cron/conatus_cron.dart';
 export 'package:conatus_diff/conatus_diff.dart';
 export 'package:conatus_doc/conatus_doc.dart';
 export 'package:conatus_foundation/conatus_foundation.dart';
+export 'package:conatus_fs_tools/conatus_fs_tools.dart';
 export 'package:conatus_harness/conatus_harness.dart';
 export 'package:conatus_intent/conatus_intent.dart';
 export 'package:conatus_llm/conatus_llm.dart';
