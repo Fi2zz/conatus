@@ -55,9 +55,10 @@ class ShadowFixture {
     final ProcessResult result = Process.runSync('git', <String>[
       '--git-dir=${store.gitDir}',
       '--work-tree=$root',
-      '-c', 'user.email=nava@localhost',
-      '-c', 'user.name=nava',
-      // 与生产执行器一致：不依赖宿主 git 配置（签名 / hook / identity）。
+      '-c', 'user.email=conatus@localhost',
+      '-c', 'user.name=conatus',
+      // 身份与生产执行器（`ProcessGitRunner`）一致，并同样固定签名 / hook：
+      // 影子提交不得依赖宿主 git 配置。
       '-c', 'commit.gpgsign=false',
       '-c', 'core.hooksPath=/dev/null',
       ...args,
