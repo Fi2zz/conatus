@@ -17,9 +17,12 @@ dependencies:
   conatus_diff:
     git:
       url: https://github.com/Fi2zz/conatus.git
-      ref: v0.17.0        # 建议 pin 到 tag 或 commit SHA，避免 master 漂移
+      ref: master
       path: packages/conatus_diff
 ```
+
+生产使用请把 `ref` pin 到包含 `packages/conatus_diff` 的具体 commit SHA 或 tag
+（`v0.17.0` 早于本包入仓，不可用）。
 
 或经伞包 `import 'package:conatus/conatus.dart';`（随全部模块包一并导出）。
 
