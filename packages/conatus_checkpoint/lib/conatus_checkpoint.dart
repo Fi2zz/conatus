@@ -9,6 +9,8 @@
 ///   与增量交给 git；装配工厂 [openCheckpointStore] 按选项/环境选实现。
 /// * 编排 [CheckpointManager]：轮次计数、串行链、绑定/解绑与 `/rewind`。
 /// * 恢复 [restoreArchiveCheckpoint]：base 铺底 + 差量覆盖 + 删多余（rsync）。
+/// * `/diff` 数据源 [DiffSource] / [WorkingDiff]：工作区 git 差异与按轮
+///   检查点差异；排除面复用检查点策略（[CheckpointManager.showsDiffPath]）。
 library;
 
 export 'src/checkpoint_archive.dart'
@@ -66,6 +68,8 @@ export 'src/checkpoint_types.dart'
         CheckpointManifest,
         CheckpointRestore,
         CheckpointRewindResult;
+export 'src/diff_source.dart' show DiffSource, kDiffNoTurnNotice;
 export 'src/global_git_ignore.dart' show resolveGlobalGitIgnore;
 export 'src/shadow_git_runner.dart'
     show GitResult, GitRunner, ProcessGitRunner, UnavailableGitRunner;
+export 'src/working_diff.dart' show WorkingDiff;
