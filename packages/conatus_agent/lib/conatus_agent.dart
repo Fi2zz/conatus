@@ -1,3 +1,8 @@
+export 'package:conatus_foundation/conatus_foundation.dart'
+    show
+        ToolResultEviction,
+        kDefaultToolResultPreview,
+        kDefaultToolResultThreshold;
 export 'src/agent_cancel.dart' show AgentCancel, AgentCancelled;
 export 'src/agent_events.dart'
     show
@@ -293,9 +298,4 @@ export 'src/telemetry_llm.dart' show TelemetryLlmProvider;
 export 'src/tool_budget_hooks.dart'
     show ToolBudget, provideToolBudget, toolBudgetMiddleware;
 export 'src/tool_budget_policy.dart' show ToolBudgetPolicy, ToolBudgetStage;
-export 'src/tool_result_eviction.dart'
-    show
-        ToolResultEviction,
-        kDefaultToolResultPreview,
-        kDefaultToolResultThreshold,
-        provideToolResultEviction;
+export 'src/tool_result_eviction.dart' show provideToolResultEviction;

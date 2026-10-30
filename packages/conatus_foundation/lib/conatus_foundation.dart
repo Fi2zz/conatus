@@ -95,6 +95,11 @@ export 'src/time_context.dart'
 export 'src/timer.dart' show Debounced, Throttled, TimerContext;
 export 'src/tool_fn.dart' show ToolFn;
 export 'src/tool_groups.dart' show ToolGroups;
+export 'src/tool_result_eviction.dart'
+    show
+        ToolResultEviction,
+        kDefaultToolResultPreview,
+        kDefaultToolResultThreshold;
 export 'src/tools.dart'
     show
         ParamSpec,
