@@ -68,7 +68,8 @@ class LocalFileSystem implements FileSystem {
   Future<void> remove(FsTarget target) => _removeTarget(target);
 
   @override
-  Future<Uint8List> readBytes(FsTarget target) => File(target.targetKey).readAsBytes();
+  Future<Uint8List> readBytes(FsTarget target) =>
+      File(target.targetKey).readAsBytes();
 }
 
 /// 提供本地文件系统为 `'fs'` 服务；[fs] 用于注入自定义实现。
