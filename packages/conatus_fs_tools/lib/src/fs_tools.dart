@@ -25,6 +25,7 @@ const Set<String> kDefaultSkipDirs = <String>{
 };
 
 /// [provideFsTools] 的装配选项。
+// REASON: FsToolOptions 是故意把所有可选装配项收进一个对象，避免 provideFsTools 超过参数上限。
 class FsToolOptions {
   const FsToolOptions({
     this.fs,
@@ -54,11 +55,15 @@ class FsToolOptions {
   /// ripgrep 二进制；缺省调用 [RipgrepBinary.discover] 探测系统 / 打包 rg。
   final RipgrepBinary? ripgrep;
 
-  /// ripgrep 执行接缝；缺省按平台选择：
+  /// ripgrep 执行接缝；缺省按以下优先级选择：
   ///
-  /// - Windows：用 [ProcessRipgrepRunner] 直接起本地进程（Windows 无 POSIX
-  ///   单引号语义，经 shell 拼命令会坏）；要跑远程 shell 必须显式注入 runner。
-  /// - 其它平台：有 `'shell'` 服务时用 [ShellRipgrepRunner]，没有则不注册 `grep`。
+  /// 1. 显式 [shell]（即 [FsToolOptions.shell]）永远优先 → [ShellRipgrepRunner]，
+  ///    Windows 也不例外（便于接远程 shell）。
+  /// 2. Windows 且无显式 shell → [ProcessRipgrepRunner] 直接起本地进程
+  ///    （Windows 无 POSIX 单引号语义，经 shell 拼命令会坏）。
+  /// 3. 其它平台且无显式 shell → 上下文里的 `'shell'` 服务存在时用
+  ///    [ShellRipgrepRunner]。
+  /// 4. 都没有则不注册 `grep`。
   ///
   /// 桌面端也可显式注入 [ProcessRipgrepRunner]（或自定义 runner）以避免命令
   /// 串经过 POSIX shell 引号解析。
@@ -118,10 +123,10 @@ List<Tool> provideFsTools(
   }
   if (options.enableSearch) {
     registered.add(GlobTool(fs: resolvedFs, skipDirs: options.skipDirs));
-    final ShellExecutor? shell =
-        options.shell ?? ctx.get<ShellExecutor>('shell');
-    final RipgrepRunner? runner = options.runner ?? _defaultRunner(shell);
-    final RipgrepBinary? binary = options.ripgrep ?? RipgrepBinary.discover();
+    final RipgrepRunner? runner = options.runner ??
+        _defaultRunner(options, ctx.get<ShellExecutor>('shell'));
+    final RipgrepBinary? binary =
+        runner == null ? null : (options.ripgrep ?? RipgrepBinary.discover());
     if (runner != null && binary != null) {
       registered.add(RipgrepTool(
         runner: runner,
@@ -137,9 +142,12 @@ List<Tool> provideFsTools(
   return registered;
 }
 
-/// 默认 runner：Windows 直接起本地进程（无 POSIX 单引号语义），其余平台
-/// 走 `'shell'` 接缝；要跑远程 shell 的 Windows 宿主必须显式注入 runner。
-RipgrepRunner? _defaultRunner(ShellExecutor? shell) {
+/// 默认 runner：显式 [FsToolOptions.shell] 永远优先（Windows 也不例外，便于接
+/// 远程 shell）；没有显式 shell 时 Windows 起本地进程（无 POSIX 单引号语义），
+/// 其余平台用上下文里的 `'shell'` 服务，都没有则不注册 `grep`。
+RipgrepRunner? _defaultRunner(FsToolOptions options, ShellExecutor? ambient) {
+  final ShellExecutor? shell = options.shell;
+  if (shell != null) return ShellRipgrepRunner(shell);
   if (Platform.isWindows) return const ProcessRipgrepRunner();
-  return shell == null ? null : ShellRipgrepRunner(shell);
+  return ambient == null ? null : ShellRipgrepRunner(ambient);
 }

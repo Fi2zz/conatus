@@ -21,6 +21,15 @@ class ApplyPatchTool extends Tool {
   String get description => '应用 unified diff 或 OpenCode *** 补丁到文件。';
 
   @override
+  List<ParamSpec> get params => <ParamSpec>[
+        ParamSpec.string(
+          'patch',
+          required: true,
+          description: 'unified diff 或 OpenCode *** 补丁文本',
+        ),
+      ];
+
+  @override
   ToolRisk get riskLevel => ToolRisk.high;
 
   @override

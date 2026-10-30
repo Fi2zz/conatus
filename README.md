@@ -79,7 +79,7 @@ make clean      # 删除 packages/conatus_code/dist
 | `conatus_context` | 上下文压缩：工具结果按内容类型结构化压缩 + CCR 可逆取回（`context_retrieve` / `context_stats`） | `conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_context/README.md) |
 | `conatus_diff` | 文本差异内核：统一 diff 生成 / 解析、行级 LCS、hunk 应用 | — | [README](packages/conatus_diff/README.md) |
 | `conatus_doc` | 文档补丁引擎：人机双写故事层数据内核（只追加补丁序列 + supersede + fold + 游标 + 依赖图失锚） | `conatus_core`、`conatus_foundation` | [README](packages/conatus_doc/README.md) |
-| `conatus_fs_tools` | 文件工具：`read` / `write` / `edit` / `list` / `glob` + `provideFsTools` 装配 | `conatus_core`、`conatus_diff`、`conatus_foundation`、`glob` | [README](packages/conatus_fs_tools/README.md) |
+| `conatus_fs_tools` | 文件工具：`read` / `write` / `edit` / `list` / `glob` / `grep` / `apply_patch` + `provideFsTools` 装配 | `conatus_core`、`conatus_diff`、`conatus_foundation`、`glob` | [README](packages/conatus_fs_tools/README.md) |
 | `conatus_harness` | 可版本化 harness 制品：manifest（档位 + 指令段 + 工具边界）JSON 往返、Context 子树装配与回滚、人可读 diff | `conatus_agent`、`conatus_core`、`conatus_foundation` | [README](packages/conatus_harness/README.md) |
 | `conatus_intent` | 意图路由：正则 + 向量本地匹配，命中走确定性动作，未命中落回 Agent Loop | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_intent/README.md) |
 | `conatus_memory` | 记忆写入策略：一轮结束后按规则决定是否保留（寒暄 / 短回复 / 近重复 / 截断），经 `AgentLoop.addTurnTracker` 挂载 | `conatus_agent`、`conatus_core`、`conatus_foundation` | [README](packages/conatus_memory/README.md) |
@@ -600,7 +600,7 @@ await fs.editText(target, const FsEditRequest(oldString: 'hello', newString: 'hi
 
 - 写入守卫：`FsCreateIfAbsent`（已存在 → `FS_NOT_OBSERVED`）/ `FsReplaceIfVersion`（版本不符 → `FS_STALE_VERSION`）；
 - 错误统一由 `FsError` 携带 `FsErrorCode`（`FS_NOT_FOUND` / `FS_NOT_TEXT` / `FS_AMBIGUOUS_EDIT` …），便于上层按码分支；
-- `provideFsTools(app)`（`conatus_code` 的 `lib/fs_tools.dart` 入口）注册 `read` / `write` / `edit` / `grep` / `glob` 把 fs 暴露给模型；`provideToolResultEviction` 落盘的大结果即由 `read` 读回。
+- `provideFsTools(app)`（`conatus_code` 的 `lib/fs_tools.dart` 入口）注册 `read` / `write` / `edit` / `list` / `glob` / `grep` / `apply_patch` 把 fs 暴露给模型（`grep` 需 runner + ripgrep，`apply_patch` 由宿主显式开启）；`provideToolResultEviction` 落盘的大结果即由 `read` 读回。
 
 ### `tool-result-eviction` — 大结果落盘
 
@@ -1223,11 +1223,11 @@ final hits = await rag.retrieve(RetrievalRequest(
 
 ## 实验性能力包
 
-以下 13 个包是实验性包（随伞包一并导出，也可只 import 各自包入口，如
+以下 14 个包是实验性包（随伞包一并导出，也可只 import 各自包入口，如
 `import 'package:conatus_alerting/conatus_alerting.dart';`）。API 可能在没有
 major 版本号变更的情况下发生破坏性改动，请勿在生产环境依赖。
-`ontology`（自进化本体层）、`doc`（人机双写文档补丁引擎）与 `diff`
-（文本差异内核）无独立小节，见各自包 README。
+`ontology`（自进化本体层）、`doc`（人机双写文档补丁引擎）、`diff`
+（文本差异内核）与 `fs_tools`（文件工具）无独立小节，见各自包 README。
 
 ### `alerting` — 主动告警（`conatus_alerting`）
 

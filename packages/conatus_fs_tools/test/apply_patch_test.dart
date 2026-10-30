@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 import 'package:conatus_fs_tools/conatus_fs_tools.dart';
 import 'package:test/test.dart';
@@ -313,6 +314,18 @@ void main() {
       expect(result.isError, isTrue);
       expect(File('${dir.path}/a.txt').readAsStringSync(), 'A\n');
       expect(File('${dir.path}/b.txt').readAsStringSync(), 'b\n');
+    });
+
+    test('注册后的 schema 暴露必填 patch 参数', () {
+      final Context ctx = Context.root();
+      provideFileSystemLocal(ctx, fs: LocalFileSystem(cwd: dir.path));
+      final ToolRegistry tools = provideTools(ctx);
+      provideFsTools(ctx, options: const FsToolOptions(enablePatch: true));
+      final Map<String, Object?> schema = tools.get('apply_patch')!.toSchema();
+      final Map<String, Object?> parameters =
+          schema['parameters']! as Map<String, Object?>;
+      expect(parameters['required'], contains('patch'));
+      ctx.dispose();
     });
   });
 }

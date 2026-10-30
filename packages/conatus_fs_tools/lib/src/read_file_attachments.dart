@@ -94,7 +94,7 @@ class ReadFileAttachments {
   }
 
   ToolResult _tooLarge(String path, String label) =>
-      _error('FS_TOO_LARGE', '$label 超过 20 MiB："$path"');
+      _error('FS_TOO_LARGE', '$label超过 20 MiB："$path"');
 
   String _basename(String path) {
     final int slash = path.lastIndexOf(RegExp(r'[/\\]'));

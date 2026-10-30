@@ -2,8 +2,10 @@
 
 conatus 的**文件工具包**：`read` / `write` / `edit` / `list` / `glob` 五个默认工具、
 条件注册的 `grep`（有 runner 与 ripgrep 二进制时）、可选的 `apply_patch` 与审批差异
-预览，以及 `provideFsTools` 装配入口。工具走宿主提供的 `FileSystem` 能力缝，因此同一
-套实现可跑在本地磁盘、只读闸门或远程沙箱之上。
+预览，以及 `provideFsTools` 装配入口。工具走宿主提供的 `FileSystem` 能力缝：本地
+`FileSystem`（含只读闸门装饰器）可直接复用；远程沙箱后端需自行提供
+`FileSystem` / `RipgrepRunner` 实现，且可能不支持 `glob` / `list` 用到的
+`lstat(targetKey)` 符号链接判定（退化为跟随链接或直接报错）。
 
 > ⚠️ **实验性**：API 可能在没有 major 版本变更的情况下破坏性调整，勿在生产依赖。
 
@@ -31,7 +33,7 @@ dependencies:
 | `read` | `path`、`offset`、`limit`、`with_line_numbers` | 读文本（分页 + 行号，单行超 2000 字符截断）；目录返回非递归列举；图片 / PDF 作为附件返回 |
 | `write` | `path`、`content`、`mode`、`expected_version` | `create` 要求文件不存在，`overwrite` 覆盖，`append` 追加；结果带 unified diff |
 | `edit` | `path`、`old_string`、`new_string`、`replace_all`、`expected_version` | 默认要求唯一匹配，多处匹配返回 `FS_AMBIGUOUS_EDIT` |
-| `list` | `path`、`depth`、`limit` | 按深度展开目录，目录以 `/` 结尾 |
+| `list` | `path`、`depth`、`limit` | 按深度展开目录，目录以 `/` 结尾，不跟随符号链接目录 |
 | `glob` | `pattern`、`path`、`limit` | 按 glob 模式发现文件，不跟随符号链接目录 |
 | `grep` | `pattern`、`path`、`type`、`context`、`limit`、`files_only` | 调用原生 ripgrep；`pattern` / `path` 总在 `--` 之后，不会被当成 flag。需要 `FsToolOptions.runner`（或 `shell`）与 ripgrep 二进制 |
 | `apply_patch` | `patch` | 应用 unified diff 或 OpenCode / Codex `***` 补丁；默认**不注册**，经 `FsToolOptions.enablePatch: true` 开启；高风险（`ToolRisk.high`）工具，审批由宿主决定 |
@@ -65,9 +67,9 @@ void main() {
 | 字段 | 默认值 | 说明 |
 |------|--------|------|
 | `fs` / `tools` | `null` | 覆盖 `'fs'` / `'tools'` 服务（子上下文或测试注入） |
-| `shell` | `null` | 子进程执行接缝；提供时缺省用它构造 `ShellRipgrepRunner` |
-| `ripgrep` | `null` | ripgrep 二进制；缺省调用 `RipgrepBinary.discover()` 探测系统 / 打包 rg |
-| `runner` | `null` | ripgrep 执行接缝；缺省 Windows 用 `ProcessRipgrepRunner`（不经 shell 引号），其它平台在有 `shell` 时用 `ShellRipgrepRunner` |
+| `shell` | `null` | 子进程执行接缝；显式提供时缺省用它构造 `ShellRipgrepRunner`（Windows 也优先） |
+| `ripgrep` | `null` | ripgrep 二进制；缺省调用 `RipgrepBinary.discover()` 探测系统 / 打包 rg（仅在决定注册 `grep` 时探测） |
+| `runner` | `null` | ripgrep 执行接缝；缺省按优先级：显式 `shell` → `ShellRipgrepRunner`（跨平台）；Windows 无显式 shell → `ProcessRipgrepRunner`；其它平台无显式 shell → 上下文的 `'shell'` → `ShellRipgrepRunner`；都没有则不注册 `grep` |
 | `eviction` | `null` | 大结果落盘策略；`grep` 结果超上限时使用 |
 | `defaultReadLimit` | `2000` | `read` 默认读取行数 |
 | `maxReadChars` | `200000` | `read` 返回文本的最大字符数 |
@@ -98,6 +100,10 @@ provideFsTools(
 - **审批**：`write` / `edit` 风险等级为 `medium`，`apply_patch` 为 `high`（默认不
   注册，开启与否由宿主决定）；是否要求人工审批由宿主的 `ctx.tools.guardRisk(...)`
   与审批链决定。审批浮层可用 `buildApprovalPreview` 按工具参数实时计算差异预览。
+- **Windows runner 优先级**：显式 `FsToolOptions.shell` 永远优先，Windows 也用
+  `ShellRipgrepRunner`（便于接远程 shell）；没有显式 shell 时 Windows 用本地
+  `ProcessRipgrepRunner`（不经过 POSIX 引号解析），其它平台才回落到上下文的
+  `'shell'` 服务；两者都没有则不注册 `grep`。
 - **产品目录**：`.nava` / `.opencode` 这类私有目录的跳过与只读规则由产品自己追加，
   本包不内置。
 

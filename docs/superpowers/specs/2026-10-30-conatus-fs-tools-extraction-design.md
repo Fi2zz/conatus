@@ -80,6 +80,7 @@ fs jail、审批、TUI）留在子模块。
 
 - 工具名与参数不变：`read` / `write` / `edit` / `list` / `glob` / `grep` /
   `apply_patch`。
+- 文件工具： glob / list 不再跟随符号链接目录（避免越出工作区）；依赖该行为的调用方需显式解析链接。
 - `conatus_code/lib/fs_tools.dart` 继续导出工具与 `provideFsTools`；新增
   `FsToolOptions`，旧调用点改为 `options:` 形式。
 - `provideFsTools` 默认新增 `list`（低风险、原由 `provideCodeTools` 注册）；

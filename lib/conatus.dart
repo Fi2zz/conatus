@@ -35,7 +35,8 @@
 /// * [conatus_computer_use] — 桌面操作（Computer Use）
 /// * [conatus_diff]         — 文本差异内核：统一 diff 生成 / 解析、行级 LCS、hunk 应用
 /// * [conatus_doc]         — 文档补丁引擎（人机双写故事层数据内核）
-/// * [conatus_fs_tools]    — 文件工具：read / write / edit / list / glob + provideFsTools
+/// * [conatus_fs_tools]    — 文件工具：read / write / edit / list / glob /
+///                          grep / apply_patch + provideFsTools 装配
 /// * [conatus_harness]      — 可版本化 harness 制品（实验性）
 /// * [conatus_intent]       — 意图路由
 /// * [conatus_memory]       — 记忆写入策略能力（保留判定 + 轮次记录）

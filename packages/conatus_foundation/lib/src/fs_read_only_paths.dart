@@ -9,7 +9,7 @@ import 'dart:io';
 /// 段级「相同或子孙」判定：`foo-backup` 不算 `foo`。
 ///
 /// macOS / Windows 默认文件系统大小写不敏感，统一按小写比较——
-/// `.OPENCODE/x` 在 APFS 上就是 `.opencode/x`，不能放过。代价是
+/// `.CONFIG/x` 在 APFS 上就是 `.config/x`，不能放过。代价是
 /// 大小写敏感卷上会略微多拒，可接受。
 bool underReadOnlyRoot(String path, String root) {
   if (path.isEmpty || root.isEmpty) return false;

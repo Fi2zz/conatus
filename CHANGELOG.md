@@ -6,9 +6,11 @@
 
 新增实验性包 conatus_diff：统一 diff 生成/解析/应用，零依赖。
 
-新增实验性包 conatus_fs_tools：`read` / `write` / `edit` / `list` / `glob`
-文件工具与 `provideFsTools` 装配；`.nava` / `.opencode` 策略仍留在
-`conatus_code`。
+新增实验性包 conatus_fs_tools：`read` / `write` / `edit` / `list` / `glob` /
+`grep` / `apply_patch` 文件工具与 `provideFsTools` 装配；`.nava` / `.opencode`
+策略仍留在 `conatus_code`。
+
+文件工具： glob / list 不再跟随符号链接目录（避免越出工作区）；依赖该行为的调用方需显式解析链接。
 
 **破坏性：工具标识与权限动作统一为 OpenCode 命名**（不保留旧名别名）：
 
