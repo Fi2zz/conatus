@@ -1522,3 +1522,20 @@ git push
 
 - 父仓新增包不影响现有消费者；若子模块迁移失败，保留 `lib/fs_tools.dart` 的 re-export，把内部 import 切回旧文件即可，删文件放在最后一步。
 - 子模块 pin ref 后若发现回归，回退 `packages/conatus_code` 的 gitlink 与 `pubspec.yaml` ref 到上一个 SHA，重新构建二进制。
+
+## 已知遗留（不属于本计划范围）
+
+- `workspace-integration` CI job（从仓库根跑 `dart test packages/conatus_code`）会命中 14 个
+  pre-existing 的 LSP cwd 相对路径失败：`test/lsp/lsp_client_test.dart`（7）、
+  `test/lsp/lsp_manager_test.dart`（3）、`test/lsp/lsp_navigation_test.dart`（2），以及同一根因
+  波及的 `test/tui/tui_lsp_command_test.dart`（2）。fixture 路径基于 `Directory.current.path`，
+  从根目录跑时解析成 `<repo>/test/lsp/fixtures/fake_lsp_server.dart`，找不到子模块内的
+  `packages/conatus_code/test/lsp/fixtures/fake_lsp_server.dart`。
+- 两条既有 TUI 失败与本次提取无关：`test/tui/tui_commands_test.dart`（输入 `/` 打开全部命令、
+  前缀过滤收窄——`settings` 命令期望）与 `test/tui/tui_controller_test.dart`（ctrl+o 展开 /
+  收起最近一条工具结果，即 ctrl+o 折叠）。
+- 修法二选一：让 LSP 测试基于包根解析 fixture（不依赖 `Directory.current`），或把 CI 的这一步
+  改成 `(cd packages/conatus_code && dart test)`——在包目录内这 14 条全绿。需另立任务处理，
+  不在本计划内；本计划只保证父仓各包与子模块「包目录内」测试全绿。
+- 推送顺序（两仓提交已在本地完成，尚未推送）：先父仓 `5912828`，再子模块 `bda536f`，最后父仓
+  gitlink `0d4a14d`。

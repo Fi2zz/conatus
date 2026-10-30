@@ -1,7 +1,7 @@
 # conatus_fs_tools 提取设计
 
 日期：2026-10-30
-状态：待实施
+状态：已实施（本地验证，待推送）
 范围：父仓 `packages/conatus_diff`、`packages/conatus_fs_tools`、`packages/conatus_foundation`；
 子模块 `packages/conatus_code`；桌面端消费方
 
