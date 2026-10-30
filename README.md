@@ -75,7 +75,7 @@ make clean      # 删除 packages/conatus_code/dist
 |----|------|------|------|
 | `conatus_alerting` | 告警：订阅遥测事件流，声明式规则判定后主动通知 | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_tts`、`http` | [README](packages/conatus_alerting/README.md) |
 | `conatus_browser_use` | 浏览器操作：经 MCP 接 Playwright / Chrome DevTools，检查与交互网页 | `conatus_agent`、`conatus_core`、`conatus_credentials`、`conatus_foundation`、`conatus_mcp`、`conatus_tasks` | [README](packages/conatus_browser_use/README.md) |
-| `conatus_checkpoint` | 工作区检查点内核：每轮快照 / rsync 式恢复 / 按轮差异读取（归档后端；排除面由 `CheckpointPolicy` 注入） | `conatus_diff`、`conatus_foundation`、`crypto` | [README](packages/conatus_checkpoint/README.md) |
+| `conatus_checkpoint` | 工作区检查点内核：每轮快照 / rsync 式恢复 / 按轮差异读取（归档 + 影子 git 双后端；排除面由 `CheckpointPolicy` 注入） | `conatus_diff`、`conatus_foundation`、`crypto` | [README](packages/conatus_checkpoint/README.md) |
 | `conatus_computer_use` | 桌面操作：经 MCP 接 Cua Driver，截屏 / 鼠标 / 键盘 | `conatus_agent`、`conatus_core`、`conatus_credentials`、`conatus_foundation`、`conatus_mcp`、`conatus_tasks` | [README](packages/conatus_computer_use/README.md) |
 | `conatus_context` | 上下文压缩：工具结果按内容类型结构化压缩 + CCR 可逆取回（`context_retrieve` / `context_stats`） | `conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_context/README.md) |
 | `conatus_diff` | 文本差异内核：统一 diff 生成 / 解析、行级 LCS、hunk 应用 | — | [README](packages/conatus_diff/README.md) |
@@ -118,9 +118,9 @@ conatus_workflow ────▶ conatus_team、conatus_tasks、conatus_foundati
 conatus_ontology ──▶ conatus_agent、conatus_llm、conatus_foundation
 ```
 
-（`conatus_core` 为所有包的公共底座，各行从略。）后 10 行是实验性包：只被上层装配
-依赖，稳定包不反向依赖它们（`conatus_agent` / `conatus_mcp` / `conatus_tasks` 都
-不知道它们的存在）。
+（`conatus_core` 为所有包的公共底座，各行从略；部分实验性包未在图中展开。）
+图中的实验性包只被上层装配依赖，稳定包不反向依赖它们（`conatus_agent` /
+`conatus_mcp` / `conatus_tasks` 都不知道它们的存在）。
 
 用于构建**可动态加载、卸载、热替换**的插件化系统。核心解决两个正交维度的问题：
 
@@ -1292,7 +1292,9 @@ provideComputerUse(app,
 「改坏了能回到上一轮」的内核：每轮把工作区拍成快照（turn 0 全量 + 后续差量），
 `/rewind` 式恢复按 rsync 语义把工作区还原到目标轮，`/diff` 可按轮读取内容与
 文件级变化。磁盘布局与旧实现一致（`<projectDir>/checkpoints/...`），旧检查点
-仍可读、可恢复。
+仍可读、可恢复。存储后端两种：`ArchiveCheckpointStore`（自研 gzip 归档，零外部
+依赖）与 `GitShadowStore`（独立影子 git 仓库）；`openCheckpointStore(options: ...)`
+按 `CheckpointBackend` 与环境选实现（`auto` 有 git 用影子仓库，否则归档）。
 
 ```dart
 final CheckpointManager manager = CheckpointManager(
