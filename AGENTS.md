@@ -27,7 +27,7 @@ Agent 能力。
 也可只依赖某个模块包以缩小依赖面。
 
 ```
-├── pubspec.yaml            # 伞包；workspace: packages/* + products/*（glob，SDK ^3.11.0 起支持）
+├── pubspec.yaml            # 伞包；workspace: packages/* + 纯 Dart 产品（显式列，SDK ^3.11.0 起）
 ├── lib/conatus.dart        # 伞包入口：只 re-export，不写实现
 ├── packages/               # 30 个目录（见下方分类）
 ├── products/               # 消费 conatus 的产品（submodule，不进伞包，见下方 products/ 一节）
@@ -64,20 +64,30 @@ Agent 能力。
 依赖方向自上而下无环：`conatus` → `conatus_agent` → `conatus_llm` / `conatus_foundation` /
 `conatus_compaction` → `conatus_core`（公共底座）。稳定包不反向依赖实验性包。
 
-### products/（产品层，1 个目录：submodule）
+### products/（产品层，2 个目录：submodule）
 
 | 目录 | 仓库 | 说明 |
 |------|------|------|
-| `conatus_work` | github.com/Fi2zz/conatus_work | 基于 conatus 的产品层骨架；只依赖伞包 `conatus` |
+| `conatus_work` | github.com/Fi2zz/conatus_work | 基于 conatus 的产品层骨架；只依赖伞包 `conatus`；纯 Dart，workspace 成员 |
+| `conatus_viva` | github.com/Fi2zz/conatus_viva | 图片 / 视频生成工具（Flutter 桌面壳 + React 前端 + 内嵌 HTTP server，包名 `flutter_wanxiang`）；只依赖伞包 `conatus`（pubspec 以 tag 钉版）；**Flutter 包，不是 workspace 成员** |
 
 **判据**：会被人 `import 'package:conatus_xxx'` 的放 `packages/`（进伞包、进根依赖清单、
 版本冻结）；只 `import conatus` 的放 `products/`。产品**不进伞包 re-export、不进根包
 `dependencies`、版本独立**。产品里长出来的能力等第二个消费方出现，才上移成
 `packages/` 模块。
 
-产品同为 workspace 成员（`products/*` glob），因此：`dart analyze` 在根会连带分析产品
-（产品 lint 卡根 CI 是刻意耦合）；`dart pub get` 前必须跑过 `tool/setup_code_filter.sh`，
-否则产品的 `resolution: workspace` 仍是注释态、根解析直接失败。
+产品分两类：
+
+- **纯 Dart 产品**（`conatus_work`）是 workspace 成员：`dart analyze` 在根会连带分析
+  （产品 lint 卡根 CI 是刻意耦合）；`dart pub get` 前必须跑过 `tool/setup_code_filter.sh`，
+  否则产品的 `resolution: workspace` 仍是注释态、根解析直接失败。
+- **Flutter 产品**（`conatus_viva`）不进 workspace：它依赖 Flutter SDK、自带 SDK 约束，
+  混进根 workspace 会让纯 Dart 的 `dart pub get` 直接解析失败（根包不能有 Flutter SDK
+  依赖）。因此在根 `pubspec.yaml` 里**显式只列纯 Dart 产品**（不用 `products/*` glob），
+  该产品的依赖在自己的 `products/conatus_viva/` 下用 `flutter pub get` 独立解析；本仓库
+  内做本地联动时用 `dependency_overrides: conatus: {path: ../..}`。
+  `tool/setup_code_filter.sh` 与 CI 的产品循环都按 pubspec 里的 `resolution: workspace`
+  标记筛成员，非成员自动跳过。
 
 ## 3. 技术栈与依赖约束
 
@@ -96,7 +106,9 @@ dart analyze                                   # 全仓静态检查（CI 用 --f
 dart format .                                  # 格式化
 dart test                                      # 伞包自身测试（根 test/）
 for d in packages/*/; do (cd "$d" && dart test); done   # 按包跑测试（pub 暂不支持一次跑完 workspace）
-for d in products/*/; do (cd "$d" && dart test); done   # 产品层测试（submodule，需先跑 filter）
+# 产品测试：只跑 workspace 成员（需先跑 filter）；Flutter 产品 conatus_viva 被筛掉，
+# 另在自身目录 `flutter pub get && flutter test`
+for d in products/*/; do grep -q '^resolution: workspace$' "$d/pubspec.yaml" 2>/dev/null || continue; (cd "$d" && dart test); done
 dart test test/integration/ --reporter=expanded # 集成测试（CI 单独跑）
 ```
 
@@ -185,10 +197,12 @@ filter 的作用：checkout 时恢复 `pubspec.yaml` 的 `resolution: workspace`
   过的组合一致。父仓更新并推送后，在子模块下跑
   `bash tool/pin_conatus_refs.sh` 刷新（默认钉 conatus `origin/master` 最新），
   通过测试后提交并推送子模块、同步父仓 gitlink。
-- **产品子模块（`products/*`）目前只有单条伞包 `conatus` 依赖**，同样由各自仓库的
-  `tool/pin_conatus_refs.sh` 钉版（脚本在子模块内，独立 clone 也能用）。等产品代码
-  开始直接 `import 'package:conatus_xxx/...'` 时，按 conatus_code 的实证形态补「显式
-  直接依赖 + `dependency_overrides`」，不要简化（见第 10 节）。
+- **产品子模块（`products/*`）目前只有单条伞包 `conatus` 依赖**：纯 Dart 产品
+  （`conatus_work`）由自己仓库的 `tool/pin_conatus_refs.sh` 把 ref 钉到 commit（脚本在
+  子模块内，独立 clone 也能用）；Flutter 产品（`conatus_viva`）的 pubspec 按 **git tag**
+  钉版（当前 `v0.17.0`），不靠脚本刷新——升级时手动改 tag 并在该仓库跑 `flutter test`。
+  等产品代码开始直接 `import 'package:conatus_xxx/...'` 时，按 conatus_code 的实证形态
+  补「显式直接依赖 + `dependency_overrides`」，不要简化（见第 10 节）。
 
 ### 版本管理
 
@@ -246,8 +260,11 @@ filter 的作用：checkout 时恢复 `pubspec.yaml` 的 `resolution: workspace`
   见 docs/superpowers/specs/2026-09-26-conatus-git-source-distribution-design.md。
 - `conatus_ontology` 已进伞包与 README 表格（0.16.0 起）；自述实验性，勿在生产依赖。
   改它之前先读其 README 与 `docs/superpowers/` 相关 spec。
-- 未拉取子模块时 `dart pub get` 照常工作（glob 自动跳过无 pubspec.yaml 的目录）；
-  拉取后根包 dev 依赖 `conatus_code` 解析到本地成员。
+- workspace 成员目录必须在位：pub 3.12 对「零匹配的 glob」和「缺失的显式成员路径」
+  都直接报错，因此未拉取子模块的 clone 要先
+  `git submodule update --init products/conatus_work`（或 `--recursive` 克隆）才能
+  `dart pub get`；拉取后根包 dev 依赖 `conatus_code` 解析到本地成员。
+  Flutter 产品 `products/conatus_viva` 不在 workspace 里，拉不拉都不影响根解析。
 - 实验性包 API 可能在无 major 版本号变更的情况下破坏性变更，勿在生产依赖。
 - `conatus_rag` 是可选能力包，不进入 `conatus_agent` 的依赖闭包，接线由宿主完成
   （经 `provideAgentLoop` 的 `evidence` 参数，或直接调用 `RagService`）。

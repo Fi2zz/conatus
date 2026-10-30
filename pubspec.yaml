@@ -13,15 +13,21 @@ publish_to: none
 environment:
   sdk: ^3.11.0
 
-# glob 只纳入含 pubspec.yaml 的子目录，因此未拉取 submodule（packages/conatus_code、
-# products/*）的 clone 也能正常 `dart pub get`。glob 语法需要语言版本 3.11 起。
+# packages/* 是 glob、只纳入含 pubspec.yaml 的子目录，因此未拉取 conatus_code 的 clone
+# 也能正常 `dart pub get`；products/conatus_work 是显式成员，未拉取时 pub 会报成员缺失，
+# 先 `git submodule update --init products/conatus_work`（pub 3.12 对零匹配 glob 同样报错）。
+# glob 语法需要语言版本 3.11 起。
 #
 # packages/ = 可被 import 的模块包（进伞包 re-export）；products/ = 消费 conatus 的
-# 产品（不进伞包、不进本包依赖清单，独立版本）。产品同样是 workspace 成员，靠
-# tool/setup_code_filter.sh 把 `resolution: workspace` 恢复成生效态。
+# 产品（不进伞包、不进本包依赖清单，独立版本）。纯 Dart 产品同样是 workspace 成员，
+# 靠 tool/setup_code_filter.sh 把 `resolution: workspace` 恢复成生效态。
+#
+# 产品逐个列出、不用 products/* glob：Flutter 产品（conatus_viva）依赖 Flutter SDK、
+# 有自己的 SDK 约束，进 workspace 会让根 `dart pub get` 直接解析失败（本仓库是纯
+# Dart，不含 Flutter SDK 依赖），因此只在 products/ 下以 submodule 存在、独立解析。
 workspace:
   - packages/*
-  - products/*
+  - products/conatus_work
 
 # 全部 29 个子包（15 稳定 + 14 实验性）以 path 依赖纳入：本包经 git 源被消费时，
 # pub 随仓库一次性解析安装全部子包；子包之间的相互依赖同为 path，整条链自洽。

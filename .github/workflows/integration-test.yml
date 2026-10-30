@@ -70,12 +70,15 @@ jobs:
       - name: 子模块（conatus_code）测试
         run: dart test packages/conatus_code
 
-      # 产品层：products/* 以 submodule 挂载、同为 workspace 成员。没有 pubspec.yaml
-      # 的目录跳过（未初始化子模块 / 空目录）。
+      # 产品层：products/* 以 submodule 挂载。只有 workspace 成员（pubspec 带
+      # `resolution: workspace`，由上面的 setup_code_filter.sh 恢复为生效态）才在
+      # workspace 里；Flutter 产品（products/conatus_viva）不进来，跳过。
+      # 没有 pubspec.yaml 的目录也跳过（未初始化子模块 / 空目录）。
       - name: 产品子模块（products/*）测试
         run: |
           for d in products/*/; do
             [ -f "$d/pubspec.yaml" ] || continue
+            grep -q '^resolution: workspace$' "$d/pubspec.yaml" || continue
             (cd "$d" && dart test)
           done
 

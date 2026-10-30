@@ -7,6 +7,13 @@ analyzer:
     strict-raw-types: true
   errors:
     todo: ignore
+  # Flutter 产品（products/conatus_viva）不是 workspace 成员：根解析里没有它的
+  # package_config（它自己的依赖用 flutter pub get 在自身目录解析），纳入根分析只会
+  # 得到上千条 unresolved import。它由自己的 analysis_options.yaml + flutter analyze
+  # 把关，根 CI 不覆盖。纯 Dart 产品（products/conatus_work）是 workspace 成员，
+  # 照旧被根分析连带检查。
+  exclude:
+    - products/conatus_viva/**
 
 linter:
   rules:

@@ -51,7 +51,14 @@ for target in packages/conatus_code; do
 done
 
 # 产品子模块逐个装：products/* 是 glob，新增产品无需改这个脚本。
+# 只处理 workspace 成员：pubspec 带 `resolution: workspace` 标记（工作区为生效态、
+# 提交态为注释态）的产品才走 filter；Flutter 产品（conatus_viva）不是 workspace
+# 成员，给它装 filter 只会在它仓库里留下无用的 pubspec_overrides.yaml。
 for target in products/*; do
   [ -d "$target" ] || continue
-  setup_one "$root/$target" || echo "跳过 $target"
+  grep -qE '^(# )?resolution: workspace$' "$root/${target}/pubspec.yaml" 2>/dev/null || {
+    echo "跳过 ${target}（非 workspace 成员）"
+    continue
+  }
+  setup_one "$root/${target}" || echo "跳过 ${target}"
 done

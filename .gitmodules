@@ -6,3 +6,7 @@
 	path = products/conatus_work
 	url = https://github.com/Fi2zz/conatus_work.git
 	ignore = untracked
+[submodule "products/conatus_viva"]
+	path = products/conatus_viva
+	url = https://github.com/Fi2zz/conatus_viva.git
+	ignore = untracked
