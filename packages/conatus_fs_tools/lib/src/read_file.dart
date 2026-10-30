@@ -54,20 +54,24 @@ class ReadFileTool extends Tool {
         return _error('FS_NOT_FOUND', '文件不存在："$path"');
       }
       if (info.type == FsFileType.directory) {
-        return ReadFileDirectory(_fs).read(target, path);
+        return await ReadFileDirectory(_fs).read(target, path);
       }
       if (info.type != FsFileType.file) {
         return _error('FS_NOT_REGULAR_FILE', '不是普通文件："$path"');
       }
       final String? imageMime = ReadFileAttachments.imageMime(path);
       if (imageMime != null) {
-        return ReadFileAttachments(_fs).readImage(target, imageMime, path);
+        return await ReadFileAttachments(_fs)
+            .readImage(target, imageMime, path);
       }
       if (path.toLowerCase().endsWith('.pdf')) {
-        return ReadFileAttachments(_fs).readPdf(target, path);
+        return await ReadFileAttachments(_fs).readPdf(target, path);
       }
-      return ReadFileText(_fs, defaultLimit: defaultLimit, maxChars: maxChars)
-          .read(ctx, target, path, info.version);
+      return await ReadFileText(
+        _fs,
+        defaultLimit: defaultLimit,
+        maxChars: maxChars,
+      ).read(ctx, target, path, info.version);
     } on FsError catch (e) {
       return _error(e.code.code, e.message);
     }

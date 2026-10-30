@@ -25,9 +25,9 @@ class ReadFileAttachments {
     String mimeType,
     String path,
   ) async {
-    final ToolResult? tooLarge = await _checkSize(target, path, '图片');
-    if (tooLarge != null) return tooLarge;
     try {
+      final ToolResult? tooLarge = await _checkSize(target, path, '图片');
+      if (tooLarge != null) return tooLarge;
       final List<int> bytes = await _fs.readBytes(target);
       if (bytes.length > maxAttachmentBytes) {
         return _tooLarge(path, '图片');
@@ -52,9 +52,9 @@ class ReadFileAttachments {
 
   /// 读取 PDF 并作为 [ToolFile] 附件返回（Anthropic / Responses 支持内联）。
   Future<ToolResult> readPdf(FsTarget target, String path) async {
-    final ToolResult? tooLarge = await _checkSize(target, path, 'PDF');
-    if (tooLarge != null) return tooLarge;
     try {
+      final ToolResult? tooLarge = await _checkSize(target, path, 'PDF');
+      if (tooLarge != null) return tooLarge;
       final List<int> bytes = await _fs.readBytes(target);
       if (bytes.length > maxAttachmentBytes) {
         return _tooLarge(path, 'PDF');

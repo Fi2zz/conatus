@@ -166,5 +166,15 @@ void main() {
       expect(result.isError, isTrue);
       expect(result.error?.code, 'FS_TOO_LARGE');
     });
+
+    test('非 UTF-8 文本 → 返回 FS_NOT_TEXT 失败结果', () async {
+      File('${dir.path}/bad.txt').writeAsBytesSync(<int>[0xff, 0xfe, 0xfd]);
+
+      final ToolResult result =
+          await tool.call(_context(<String, Object?>{'path': 'bad.txt'}));
+
+      expect(result.isError, isTrue);
+      expect(result.error?.code, 'FS_NOT_TEXT');
+    });
   });
 }
