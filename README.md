@@ -75,7 +75,7 @@ make clean      # 删除 packages/conatus_code/dist
 |----|------|------|------|
 | `conatus_alerting` | 告警：订阅遥测事件流，声明式规则判定后主动通知 | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_tts`、`http` | [README](packages/conatus_alerting/README.md) |
 | `conatus_browser_use` | 浏览器操作：经 MCP 接 Playwright / Chrome DevTools，检查与交互网页 | `conatus_agent`、`conatus_core`、`conatus_credentials`、`conatus_foundation`、`conatus_mcp`、`conatus_tasks` | [README](packages/conatus_browser_use/README.md) |
-| `conatus_checkpoint` | 工作区检查点内核：每轮快照 / rsync 式恢复 / 按轮差异读取（归档 + 影子 git 双后端；排除面由 `CheckpointPolicy` 注入） | `conatus_diff`、`conatus_foundation`、`crypto` | [README](packages/conatus_checkpoint/README.md) |
+| `conatus_checkpoint` | 工作区检查点内核：每轮快照 / rsync 式恢复 / 按轮差异读取 / undo·redo 编排（`revert.dart` 第二入口）（归档 + 影子 git 双后端；排除面由 `CheckpointPolicy` 注入） | `conatus_diff`、`conatus_foundation`、`crypto` | [README](packages/conatus_checkpoint/README.md) |
 | `conatus_computer_use` | 桌面操作：经 MCP 接 Cua Driver，截屏 / 鼠标 / 键盘 | `conatus_agent`、`conatus_core`、`conatus_credentials`、`conatus_foundation`、`conatus_mcp`、`conatus_tasks` | [README](packages/conatus_computer_use/README.md) |
 | `conatus_context` | 上下文压缩：工具结果按内容类型结构化压缩 + CCR 可逆取回（`context_retrieve` / `context_stats`） | `conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_context/README.md) |
 | `conatus_diff` | 文本差异内核：统一 diff 生成 / 解析、行级 LCS、hunk 应用 | — | [README](packages/conatus_diff/README.md) |
@@ -1308,8 +1308,9 @@ await manager.rewind(1);         // 回到上一轮
 
 排除面由 `CheckpointPolicy` 注入（`ignore` / `excludedPrefixes` /
 `readOnlyPrefixes`）：只读目录既不进快照也不被恢复写回或删除，产品目录名不出现
-在包内。恢复遇到工作区外符号链接时 fail-closed（一个文件都不动）。undo/redo 与
-TUI 命令留在消费方。
+在包内。恢复遇到工作区外符号链接时 fail-closed（一个文件都不动）。undo/redo 编排
+（`/undo` `/redo` 的 `RevertService`）作为**第二入口**在
+`package:conatus_checkpoint/revert.dart` 提供，按需引入；TUI 命令留在消费方。
 详见 [`packages/conatus_checkpoint/README.md`](packages/conatus_checkpoint/README.md)。
 
 ### `team` — 多智能体协作（`conatus_team`）
