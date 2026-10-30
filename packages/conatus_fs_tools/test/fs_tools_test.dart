@@ -49,5 +49,19 @@ void main() {
           <String>['read', 'write', 'edit', 'list']);
       expect(tools.names, isNot(contains('glob')));
     });
+
+    test('enablePatch=true → list 之后注册 apply_patch', () {
+      final Context ctx = Context.root();
+      provideFileSystemLocal(ctx, fs: fs);
+      final ToolRegistry tools = provideTools(ctx);
+
+      final List<Tool> registered =
+          provideFsTools(ctx, options: const FsToolOptions(enablePatch: true));
+
+      expect(registered.map((Tool t) => t.name),
+          containsAllInOrder(<String>['list', 'apply_patch']));
+      expect(tools.names, contains('apply_patch'));
+      ctx.dispose();
+    });
   });
 }

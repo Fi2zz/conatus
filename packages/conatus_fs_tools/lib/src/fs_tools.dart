@@ -1,6 +1,7 @@
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 
+import 'apply_patch.dart';
 import 'edit_file.dart';
 import 'glob_tool.dart';
 import 'list_files.dart';
@@ -30,6 +31,7 @@ class FsToolOptions {
     this.rgLimit = 50,
     this.enableSearch = true,
     this.enableList = true,
+    this.enablePatch = false,
     this.skipDirs = kDefaultSkipDirs,
   });
 
@@ -60,6 +62,9 @@ class FsToolOptions {
   /// 是否注册 `list`。
   final bool enableList;
 
+  /// 是否注册 `apply_patch`（高风险补丁工具，默认关闭，由宿主显式开启）。
+  final bool enablePatch;
+
   /// 遍历 / 列举时跳过的目录（按 basename）。
   final Set<String> skipDirs;
 }
@@ -88,6 +93,9 @@ List<Tool> provideFsTools(
     if (options.enableList)
       ListFilesTool(fs: resolvedFs, skipDirs: options.skipDirs),
   ];
+  if (options.enablePatch) {
+    registered.add(ApplyPatchTool(fs: resolvedFs));
+  }
   if (options.enableSearch) {
     registered.add(GlobTool(fs: resolvedFs, skipDirs: options.skipDirs));
   }

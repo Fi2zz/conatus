@@ -1,8 +1,8 @@
 # conatus_fs_tools
 
-conatus 的**文件工具包**：`read` / `write` / `edit` / `list` / `glob` 五个工具
-与 `provideFsTools` 装配入口。工具走宿主提供的 `FileSystem` 能力缝，因此同一套
-实现可跑在本地磁盘、只读闸门或远程沙箱之上。
+conatus 的**文件工具包**：`read` / `write` / `edit` / `list` / `glob` 五个默认工具、
+可选的 `apply_patch` 与审批差异预览，以及 `provideFsTools` 装配入口。工具走宿主
+提供的 `FileSystem` 能力缝，因此同一套实现可跑在本地磁盘、只读闸门或远程沙箱之上。
 
 > ⚠️ **实验性**：API 可能在没有 major 版本变更的情况下破坏性调整，勿在生产依赖。
 
@@ -32,6 +32,7 @@ dependencies:
 | `edit` | `path`、`old_string`、`new_string`、`replace_all`、`expected_version` | 默认要求唯一匹配，多处匹配返回 `FS_AMBIGUOUS_EDIT` |
 | `list` | `path`、`depth`、`limit` | 按深度展开目录，目录以 `/` 结尾 |
 | `glob` | `pattern`、`path`、`limit` | 按 glob 模式发现文件，不跟随符号链接目录 |
+| `apply_patch` | `patch` | 应用 unified diff 或 OpenCode / Codex `***` 补丁；默认**不注册**，经 `FsToolOptions.enablePatch: true` 开启；高风险（`ToolRisk.high`）工具，审批由宿主决定 |
 
 `read` 的图片 / PDF 附件上限为 **20 MiB**：先 `stat` 读元数据，超限直接返回
 `FS_TOO_LARGE`，不会把整文件读进内存。
@@ -68,6 +69,7 @@ void main() {
 | `rgLimit` | `50` | 搜索类工具默认结果数上限 |
 | `enableSearch` | `true` | 是否注册 `glob` |
 | `enableList` | `true` | 是否注册 `list` |
+| `enablePatch` | `false` | 是否注册 `apply_patch`（高风险补丁工具，由宿主显式开启） |
 | `skipDirs` | `kDefaultSkipDirs` | 遍历 / 列举跳过的目录（按 basename） |
 
 ```dart
@@ -88,8 +90,9 @@ provideFsTools(
   外面再交给 `provideFileSystemLocal`（闸门在 `conatus_foundation`）。
 - **结果溢出**：大结果落盘由宿主的 `ToolResultEviction` 中间件负责；`read` 可直接
   读回落盘文件。
-- **审批**：`write` / `edit` 风险等级为 `medium`，是否要求人工审批由宿主的
-  `ctx.tools.guardRisk(...)` 与审批链决定。
+- **审批**：`write` / `edit` 风险等级为 `medium`，`apply_patch` 为 `high`（默认不
+  注册，开启与否由宿主决定）；是否要求人工审批由宿主的 `ctx.tools.guardRisk(...)`
+  与审批链决定。审批浮层可用 `buildApprovalPreview` 按工具参数实时计算差异预览。
 - **产品目录**：`.nava` / `.opencode` 这类私有目录的跳过与只读规则由产品自己追加，
   本包不内置。
 
