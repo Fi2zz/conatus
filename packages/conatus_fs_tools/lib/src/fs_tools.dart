@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
 
@@ -52,10 +54,14 @@ class FsToolOptions {
   /// ripgrep 二进制；缺省调用 [RipgrepBinary.discover] 探测系统 / 打包 rg。
   final RipgrepBinary? ripgrep;
 
-  /// ripgrep 执行接缝；缺省在有 `shell` 时用 [ShellRipgrepRunner]。
+  /// ripgrep 执行接缝；缺省按平台选择：
   ///
-  /// 桌面端 / Windows 应注入 [ProcessRipgrepRunner]（或自定义 runner），
-  /// 以免命令串经过 POSIX shell 引号解析。
+  /// - Windows：用 [ProcessRipgrepRunner] 直接起本地进程（Windows 无 POSIX
+  ///   单引号语义，经 shell 拼命令会坏）；要跑远程 shell 必须显式注入 runner。
+  /// - 其它平台：有 `'shell'` 服务时用 [ShellRipgrepRunner]，没有则不注册 `grep`。
+  ///
+  /// 桌面端也可显式注入 [ProcessRipgrepRunner]（或自定义 runner）以避免命令
+  /// 串经过 POSIX shell 引号解析。
   final RipgrepRunner? runner;
 
   /// 大结果落盘策略；供搜索工具使用。
@@ -114,8 +120,7 @@ List<Tool> provideFsTools(
     registered.add(GlobTool(fs: resolvedFs, skipDirs: options.skipDirs));
     final ShellExecutor? shell =
         options.shell ?? ctx.get<ShellExecutor>('shell');
-    final RipgrepRunner? runner =
-        options.runner ?? (shell == null ? null : ShellRipgrepRunner(shell));
+    final RipgrepRunner? runner = options.runner ?? _defaultRunner(shell);
     final RipgrepBinary? binary = options.ripgrep ?? RipgrepBinary.discover();
     if (runner != null && binary != null) {
       registered.add(RipgrepTool(
@@ -130,4 +135,11 @@ List<Tool> provideFsTools(
     ctx.effect(() => registry.register(tool));
   }
   return registered;
+}
+
+/// 默认 runner：Windows 直接起本地进程（无 POSIX 单引号语义），其余平台
+/// 走 `'shell'` 接缝；要跑远程 shell 的 Windows 宿主必须显式注入 runner。
+RipgrepRunner? _defaultRunner(ShellExecutor? shell) {
+  if (Platform.isWindows) return const ProcessRipgrepRunner();
+  return shell == null ? null : ShellRipgrepRunner(shell);
 }

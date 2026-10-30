@@ -91,8 +91,13 @@ void main() {
     const ProcessRipgrepRunner runner = ProcessRipgrepRunner();
 
     test('本地 rg 冒烟：输出版本', () async {
-      final ProcessResult probe = Process.runSync('rg', <String>['--version']);
-      if (probe.exitCode != 0) return;
+      final bool rgUsable;
+      try {
+        rgUsable = Process.runSync('rg', <String>['--version']).exitCode == 0;
+      } on ProcessException {
+        return;
+      }
+      if (!rgUsable) return;
 
       final RipgrepRunResult result = await runner.run(
         _rg,

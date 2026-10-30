@@ -67,7 +67,7 @@ void main() {
 | `fs` / `tools` | `null` | 覆盖 `'fs'` / `'tools'` 服务（子上下文或测试注入） |
 | `shell` | `null` | 子进程执行接缝；提供时缺省用它构造 `ShellRipgrepRunner` |
 | `ripgrep` | `null` | ripgrep 二进制；缺省调用 `RipgrepBinary.discover()` 探测系统 / 打包 rg |
-| `runner` | `null` | ripgrep 执行接缝；桌面端 / Windows 注入 `ProcessRipgrepRunner`（不经 shell 引号） |
+| `runner` | `null` | ripgrep 执行接缝；缺省 Windows 用 `ProcessRipgrepRunner`（不经 shell 引号），其它平台在有 `shell` 时用 `ShellRipgrepRunner` |
 | `eviction` | `null` | 大结果落盘策略；`grep` 结果超上限时使用 |
 | `defaultReadLimit` | `2000` | `read` 默认读取行数 |
 | `maxReadChars` | `200000` | `read` 返回文本的最大字符数 |
