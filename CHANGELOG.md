@@ -8,7 +8,12 @@
 
 新增实验性包 conatus_fs_tools：`read` / `write` / `edit` / `list` / `glob` /
 `grep` / `apply_patch` 文件工具与 `provideFsTools` 装配；`.nava` / `.opencode`
-策略仍留在 `conatus_code`。
+策略仍留在 `conatus_code`。`provideFsTools` 改用 `FsToolOptions` options 形式；
+`conatus_code/lib/fs_tools.dart` 保留兼容 re-export。
+
+`conatus_foundation` 新增通用 `ReadOnlyPathGuard` 与 `normalizeReadOnlyPath` /
+`underReadOnlyRoot` / `realPathViaAncestor`；`ToolResultEviction` 类迁入 foundation，
+`provideToolResultEviction` 仍留在 `conatus_agent` 并保持原导出面。
 
 文件工具： glob / list 不再跟随符号链接目录（避免越出工作区）；依赖该行为的调用方需显式解析链接。
 
