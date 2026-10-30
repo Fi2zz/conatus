@@ -14,7 +14,11 @@ git 扩展头（`diff --git` / `new file mode` / `rename from` / 二进制标记
 
 ```yaml
 dependencies:
-  conatus_diff: {git: {url: https://github.com/Fi2zz/conatus}}
+  conatus_diff:
+    git:
+      url: https://github.com/Fi2zz/conatus.git
+      ref: v0.17.0        # 建议 pin 到 tag 或 commit SHA，避免 master 漂移
+      path: packages/conatus_diff
 ```
 
 或经伞包 `import 'package:conatus/conatus.dart';`（随全部模块包一并导出）。
