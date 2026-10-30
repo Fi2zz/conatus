@@ -27,9 +27,10 @@ Agent 能力。
 也可只依赖某个模块包以缩小依赖面。
 
 ```
-├── pubspec.yaml            # 伞包；workspace: packages/*（glob，SDK ^3.11.0 起支持）
+├── pubspec.yaml            # 伞包；workspace: packages/* + products/*（glob，SDK ^3.11.0 起支持）
 ├── lib/conatus.dart        # 伞包入口：只 re-export，不写实现
 ├── packages/               # 28 个目录（见下方分类）
+├── products/               # 消费 conatus 的产品（submodule，不进伞包，见下方 products/ 一节）
 ├── test/                   # 根包测试：integration/（跨包集成）+ integration_e2e_test.dart
 ├── example/                # 演示：main.dart（交互式 Agent，需 API Key）、
 │                           #        demo.dart（离线脚本化模型）、voice_plan_mode.dart
@@ -63,6 +64,21 @@ Agent 能力。
 依赖方向自上而下无环：`conatus` → `conatus_agent` → `conatus_llm` / `conatus_foundation` /
 `conatus_compaction` → `conatus_core`（公共底座）。稳定包不反向依赖实验性包。
 
+### products/（产品层，1 个目录：submodule）
+
+| 目录 | 仓库 | 说明 |
+|------|------|------|
+| `conatus_work` | github.com/Fi2zz/conatus_work | 基于 conatus 的产品层骨架；只依赖伞包 `conatus` |
+
+**判据**：会被人 `import 'package:conatus_xxx'` 的放 `packages/`（进伞包、进根依赖清单、
+版本冻结）；只 `import conatus` 的放 `products/`。产品**不进伞包 re-export、不进根包
+`dependencies`、版本独立**。产品里长出来的能力等第二个消费方出现，才上移成
+`packages/` 模块。
+
+产品同为 workspace 成员（`products/*` glob），因此：`dart analyze` 在根会连带分析产品
+（产品 lint 卡根 CI 是刻意耦合）；`dart pub get` 前必须跑过 `tool/setup_code_filter.sh`，
+否则产品的 `resolution: workspace` 仍是注释态、根解析直接失败。
+
 ## 3. 技术栈与依赖约束
 
 - **Dart SDK**：根包 `^3.11.0`（workspace glob 语法要求），模块包 `^3.6.0` 起；**纯 Dart，不含 Flutter SDK 依赖**，Flutter 项目也可用。
@@ -80,6 +96,7 @@ dart analyze                                   # 全仓静态检查（CI 用 --f
 dart format .                                  # 格式化
 dart test                                      # 伞包自身测试（根 test/）
 for d in packages/*/; do (cd "$d" && dart test); done   # 按包跑测试（pub 暂不支持一次跑完 workspace）
+for d in products/*/; do (cd "$d" && dart test); done   # 产品层测试（submodule，需先跑 filter）
 dart test test/integration/ --reporter=expanded # 集成测试（CI 单独跑）
 ```
 
@@ -150,9 +167,10 @@ Conventional Commits + 中文描述 + scope：`feat(foundation): ...` / `fix(llm
 `chore(code): ...` / `docs(...): ...`。**子模块 conatus_code 的每次更新**在父仓库表现为
 `chore(code): 同步子模块 gitlink（<改动简述>）` 的 gitlink 提交。
 
-### 子模块工作流（开发 conatus_code 时）
+### 子模块工作流（开发 conatus_code / products/* 时）
 
-1. `git submodule update --init` 拉取；2. `bash tool/setup_code_filter.sh`。
+1. `git submodule update --init` 拉取；2. `bash tool/setup_code_filter.sh`
+（默认处理 `packages/conatus_code` 与 `products/*` 全部产品子模块）。
 filter 的作用：checkout 时恢复 `pubspec.yaml` 的 `resolution: workspace`（本地走 workspace、
 依赖解析到本地 `packages/*`），`git add` 时自动注释掉（独立 clone 仍按 git 源解析）；并生成
 `pubspec_overrides.yaml`（已 gitignore）清空 `dependency_overrides`。**不要手动改子模块的
@@ -167,6 +185,10 @@ filter 的作用：checkout 时恢复 `pubspec.yaml` 的 `resolution: workspace`
   过的组合一致。父仓更新并推送后，在子模块下跑
   `bash tool/pin_conatus_refs.sh` 刷新（默认钉 conatus `origin/master` 最新），
   通过测试后提交并推送子模块、同步父仓 gitlink。
+- **产品子模块（`products/*`）目前只有单条伞包 `conatus` 依赖**，同样由各自仓库的
+  `tool/pin_conatus_refs.sh` 钉版（脚本在子模块内，独立 clone 也能用）。等产品代码
+  开始直接 `import 'package:conatus_xxx/...'` 时，按 conatus_code 的实证形态补「显式
+  直接依赖 + `dependency_overrides`」，不要简化（见第 10 节）。
 
 ### 版本管理
 

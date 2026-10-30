@@ -34,7 +34,7 @@ jobs:
       - name: Run integration tests
         run: dart test test/integration/ --reporter=expanded
 
-  # 工作区集成：拉子模块，测 conatus_code 在 **workspace 形态**下的状态。
+  # 工作区集成：拉子模块，测 conatus_code 与 products/* 在 **workspace 形态**下的状态。
   #
   # 为什么要单独一个 job：上面那个 integration-test 不拉子模块
   # （actions/checkout 默认不初始化），所以 conatus_code 那 800+ 个测试在父仓库
@@ -69,6 +69,15 @@ jobs:
 
       - name: 子模块（conatus_code）测试
         run: dart test packages/conatus_code
+
+      # 产品层：products/* 以 submodule 挂载、同为 workspace 成员。没有 pubspec.yaml
+      # 的目录跳过（未初始化子模块 / 空目录）。
+      - name: 产品子模块（products/*）测试
+        run: |
+          for d in products/*/; do
+            [ -f "$d/pubspec.yaml" ] || continue
+            (cd "$d" && dart test)
+          done
 
       # 根集成测试**不在这里跑**：integration-test job（ubuntu）已覆盖
       # （E-1 去重）。本 job 的价值是子模块的 workspace 形态，macOS runner

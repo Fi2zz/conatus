@@ -4,7 +4,7 @@
 # 使本地开发走 workspace、独立 clone 仍按 git 依赖解析。
 #
 # 用法：
-#   bash tool/setup_code_filter.sh                  # 处理 conatus_code（未拉取则跳过）
+#   bash tool/setup_code_filter.sh                  # 处理 conatus_code 与 products/*（未拉取则跳过）
 #   bash tool/setup_code_filter.sh packages/conatus_code # 只处理指定子模块
 set -euo pipefail
 
@@ -47,5 +47,11 @@ if [ $# -gt 0 ]; then
 fi
 
 for target in packages/conatus_code; do
+  setup_one "$root/$target" || echo "跳过 $target"
+done
+
+# 产品子模块逐个装：products/* 是 glob，新增产品无需改这个脚本。
+for target in products/*; do
+  [ -d "$target" ] || continue
   setup_one "$root/$target" || echo "跳过 $target"
 done
