@@ -1,7 +1,6 @@
 /// 敏感文件排除：凭据 / 私钥类文件名与后缀既不进快照、也不被恢复删除。
 ///
-/// 全局 gitignore 的用例（`resolveGlobalGitIgnore` / `GitRunner`）随影子 git
-/// 后端在 Task 3 迁入。
+/// 全局 gitignore 的 git 侧用例见 `checkpoint_global_ignore_test.dart`。
 library;
 
 import 'package:conatus_checkpoint/conatus_checkpoint.dart';

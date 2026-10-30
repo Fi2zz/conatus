@@ -5,6 +5,8 @@
 /// 产品目录；undo/redo 与 TUI 命令留在消费方。
 ///
 /// * 归档后端 [ArchiveCheckpointStore]：自研 gzip 归档，零外部依赖。
+/// * 影子 git 后端 [GitShadowStore]：把工作区提交进独立 git dir，内容寻址
+///   与增量交给 git；装配工厂 [openCheckpointStore] 按选项/环境选实现。
 /// * 编排 [CheckpointManager]：轮次计数、串行链、绑定/解绑与 `/rewind`。
 /// * 恢复 [restoreArchiveCheckpoint]：base 铺底 + 差量覆盖 + 删多余（rsync）。
 library;
@@ -19,6 +21,7 @@ export 'src/checkpoint_archive.dart'
         readCheckpointEntries,
         readCheckpointManifest,
         writeCheckpointArchive;
+export 'src/checkpoint_backend.dart' show openCheckpointStore;
 export 'src/checkpoint_changes.dart' show CheckpointFileChange;
 export 'src/checkpoint_hashes.dart'
     show
@@ -54,6 +57,7 @@ export 'src/checkpoint_scan.dart'
 export 'src/checkpoint_store.dart'
     show CheckpointPathVisibility, CheckpointStore;
 export 'src/checkpoint_store_archive.dart' show ArchiveCheckpointStore;
+export 'src/checkpoint_store_git.dart' show GitShadowStore;
 export 'src/checkpoint_types.dart'
     show
         CheckpointException,
@@ -62,3 +66,6 @@ export 'src/checkpoint_types.dart'
         CheckpointManifest,
         CheckpointRestore,
         CheckpointRewindResult;
+export 'src/global_git_ignore.dart' show resolveGlobalGitIgnore;
+export 'src/shadow_git_runner.dart'
+    show GitResult, GitRunner, ProcessGitRunner, UnavailableGitRunner;
