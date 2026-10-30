@@ -28,6 +28,9 @@ export 'src/fs.dart'
         FsWriteOutcome,
         provideFileSystem;
 export 'src/fs_local.dart' show LocalFileSystem, provideFileSystemLocal;
+export 'src/fs_read_only_guard.dart' show ReadOnlyPathGuard;
+export 'src/fs_read_only_paths.dart'
+    show normalizeReadOnlyPath, realPathViaAncestor, underReadOnlyRoot;
 export 'src/loader.dart'
     show Loader, LoaderEntry, LoaderException, PluginFactory, provideLoader;
 export 'src/logger_console.dart'
