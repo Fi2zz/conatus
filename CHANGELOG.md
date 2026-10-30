@@ -4,6 +4,11 @@
 
 ## [未发布]
 
+新增实验性包 conatus_checkpoint：工作区检查点内核（每轮快照 / rsync 式恢复 /
+按轮差异读取）。归档后端、磁盘布局与恢复语义从 `conatus_code` 迁出保持不变；
+排除面与只读前缀改由 `CheckpointPolicy` 注入，包内不再出现产品目录名。
+`CheckpointManager` 构造改为 `CheckpointOptions`（原 nava 配置类型留在产品侧）。
+
 新增实验性包 conatus_diff：统一 diff 生成/解析/应用，零依赖。
 
 新增实验性包 conatus_fs_tools：`read` / `write` / `edit` / `list` / `glob` /

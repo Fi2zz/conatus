@@ -7,9 +7,9 @@
 
 本仓库是一个 [pub workspace](https://dart.dev/tools/pub/workspaces) monorepo。
 **根包 `conatus` 是伞包（umbrella）**：自身不含实现，统一再导出 `packages/` 下的
-全部 29 个模块包，因此 `import 'package:conatus/conatus.dart';` 是完整公开 API；也可以
+全部 30 个模块包，因此 `import 'package:conatus/conatus.dart';` 是完整公开 API；也可以
 只依赖某个模块包（如 `conatus_core`、`conatus_agent`），以获得更小的依赖面。
-其中 14 个**实验性包**（API 可能随时变更）同样随伞包导出，生产环境依赖前
+其中 15 个**实验性包**（API 可能随时变更）同样随伞包导出，生产环境依赖前
 见下方「实验性包」小节与各包 README。
 
 `packages/conatus_code` 是独立的**子模块**（[Fi2zz/conatus_code](https://github.com/Fi2zz/conatus_code)）：
@@ -75,6 +75,7 @@ make clean      # 删除 packages/conatus_code/dist
 |----|------|------|------|
 | `conatus_alerting` | 告警：订阅遥测事件流，声明式规则判定后主动通知 | `conatus_agent`、`conatus_core`、`conatus_foundation`、`conatus_tts`、`http` | [README](packages/conatus_alerting/README.md) |
 | `conatus_browser_use` | 浏览器操作：经 MCP 接 Playwright / Chrome DevTools，检查与交互网页 | `conatus_agent`、`conatus_core`、`conatus_credentials`、`conatus_foundation`、`conatus_mcp`、`conatus_tasks` | [README](packages/conatus_browser_use/README.md) |
+| `conatus_checkpoint` | 工作区检查点内核：每轮快照 / rsync 式恢复 / 按轮差异读取（归档后端；排除面由 `CheckpointPolicy` 注入） | `conatus_diff`、`conatus_foundation`、`crypto` | [README](packages/conatus_checkpoint/README.md) |
 | `conatus_computer_use` | 桌面操作：经 MCP 接 Cua Driver，截屏 / 鼠标 / 键盘 | `conatus_agent`、`conatus_core`、`conatus_credentials`、`conatus_foundation`、`conatus_mcp`、`conatus_tasks` | [README](packages/conatus_computer_use/README.md) |
 | `conatus_context` | 上下文压缩：工具结果按内容类型结构化压缩 + CCR 可逆取回（`context_retrieve` / `context_stats`） | `conatus_core`、`conatus_foundation`、`conatus_llm` | [README](packages/conatus_context/README.md) |
 | `conatus_diff` | 文本差异内核：统一 diff 生成 / 解析、行级 LCS、hunk 应用 | — | [README](packages/conatus_diff/README.md) |
@@ -109,6 +110,7 @@ conatus_alerting ────▶ conatus_agent、conatus_tts、conatus_foundatio
 conatus_browser_use ─▶ conatus_mcp、conatus_tasks、conatus_credentials、conatus_foundation
 conatus_computer_use ▶ conatus_mcp、conatus_tasks、conatus_credentials、conatus_foundation
 conatus_context ─────▶ conatus_foundation、conatus_llm
+conatus_checkpoint ──▶ conatus_diff、conatus_foundation
 conatus_doc ─────────▶ conatus_foundation
 conatus_team ────────▶ conatus_agent、conatus_llm、conatus_foundation
 conatus_intent ──────▶ conatus_agent、conatus_foundation
@@ -146,14 +148,14 @@ conatus_ontology ──▶ conatus_agent、conatus_llm、conatus_foundation
 - 🗜️ **分层压缩与缓存度量**：`content-classifier`（内容分类器能力缝）、`layered-compaction`（按类别分层折叠：工具结果压成指针、用户偏好留原文）、`context-cache`（可缓存前缀指纹 + 命中遥测）
 - 🔭 **产品化**：`telemetry`（事件导出 + 埋点）、`evaluation`（用例评估 + 基线对比）、`approval`（高危工具审批）、`skill`（技能沉淀）、`skill-catalog`（技能加载：发现 `SKILL.md` 指令集 + 目录注入 + `skill` 工具）、`recovery`（会话快照恢复）
 - 🕹️ **实验性能力包**（API 可能破坏性变更）：`alerting`（订阅遥测按规则主动告警）、`browser_use` / `computer_use`（经 MCP 驱动浏览器与本地桌面）、`doc`（人机双写文档补丁引擎：只追加补丁序列 + supersede + fold + 游标）、`team`（多智能体协作：任务板 + 成员运行时）、`workflow`（把协作沉淀为声明式流程资产）、`observability`（span 语义 + 从 Session Log 派生 trace）、`ontology`（自进化本体层：Term / Mapping / Constraint / Evidence）
-- ✅ **完整测试覆盖**：29 个模块包 + 根包与集成测试，CI 全量执行
+- ✅ **完整测试覆盖**：30 个模块包 + 根包与集成测试，CI 全量执行
 
 ---
 
 ## 安装
 
-全部 29 个包均为 `publish_to: none`，**不经 pub.dev 分发**（也从未发布过）。
-以 git 源依赖伞包 `conatus`，一次性获得全部 29 个子包——伞包与各子包之间
+全部 30 个包均为 `publish_to: none`，**不经 pub.dev 分发**（也从未发布过）。
+以 git 源依赖伞包 `conatus`，一次性获得全部 30 个子包——伞包与各子包之间
 一律是 path 依赖，随仓库自洽解析，**不需要任何 `dependency_overrides`**：
 
 ```yaml
@@ -1223,7 +1225,7 @@ final hits = await rag.retrieve(RetrievalRequest(
 
 ## 实验性能力包
 
-以下 14 个包是实验性包（随伞包一并导出，也可只 import 各自包入口，如
+以下 15 个包是实验性包（随伞包一并导出，也可只 import 各自包入口，如
 `import 'package:conatus_alerting/conatus_alerting.dart';`）。API 可能在没有
 major 版本号变更的情况下发生破坏性改动，请勿在生产环境依赖。
 `ontology`（自进化本体层）、`doc`（人机双写文档补丁引擎）、`diff`
@@ -1284,6 +1286,29 @@ provideComputerUse(app,
 图像诊断文本（`imageSupportFor`）。要把操作记进触发它的 Session 日志，用
 `registerDesktopTools`。
 详见 [`packages/conatus_computer_use/README.md`](packages/conatus_computer_use/README.md)。
+
+### `checkpoint` — 工作区检查点（`conatus_checkpoint` 包）
+
+「改坏了能回到上一轮」的内核：每轮把工作区拍成快照（turn 0 全量 + 后续差量），
+`/rewind` 式恢复按 rsync 语义把工作区还原到目标轮，`/diff` 可按轮读取内容与
+文件级变化。磁盘布局与旧实现一致（`<projectDir>/checkpoints/...`），旧检查点
+仍可读、可恢复。
+
+```dart
+final CheckpointManager manager = CheckpointManager(
+  store: ArchiveCheckpointStore(root: workdir, projectDir: dataDir),
+  options: const CheckpointOptions(keep: 5),
+);
+await manager.bind(sessionId);   // 接管已有时间线；无历史时写 turn 0
+await manager.recordTurn();      // 每轮收口
+await manager.rewind(1);         // 回到上一轮
+```
+
+排除面由 `CheckpointPolicy` 注入（`ignore` / `excludedPrefixes` /
+`readOnlyPrefixes`）：只读目录既不进快照也不被恢复写回或删除，产品目录名不出现
+在包内。恢复遇到工作区外符号链接时 fail-closed（一个文件都不动）。undo/redo 与
+TUI 命令留在消费方。
+详见 [`packages/conatus_checkpoint/README.md`](packages/conatus_checkpoint/README.md)。
 
 ### `team` — 多智能体协作（`conatus_team`）
 
@@ -1927,7 +1952,7 @@ for d in packages/*/; do (cd "$d" && dart test); done
 
 ## 发版
 
-分发方式为 **git 源**（全部 29 个包 `publish_to: none`，不发布 pub.dev），
+分发方式为 **git 源**（全部 30 个包 `publish_to: none`，不发布 pub.dev），
 版本演进由 git tag 承载：
 
 ```bash
