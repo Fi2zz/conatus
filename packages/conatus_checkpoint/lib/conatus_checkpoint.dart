@@ -2,7 +2,8 @@
 /// 检查点时间线编排。
 ///
 /// 包内只含通用能力：排除面与只读前缀由 [CheckpointPolicy] 注入，不含任何
-/// 产品目录；undo/redo 与 TUI 命令留在消费方。
+/// 产品目录；TUI 命令留在消费方。undo/redo 依赖会话存储，经第二入口
+/// `package:conatus_checkpoint/revert.dart` 单独暴露，本入口不导出。
 ///
 /// * 归档后端 [ArchiveCheckpointStore]：自研 gzip 归档，零外部依赖。
 /// * 影子 git 后端 [GitShadowStore]：把工作区提交进独立 git dir，内容寻址

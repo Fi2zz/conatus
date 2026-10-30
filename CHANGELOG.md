@@ -8,6 +8,8 @@
 按轮差异读取）。归档后端、磁盘布局与恢复语义从 `conatus_code` 迁出保持不变；
 排除面与只读前缀改由 `CheckpointPolicy` 注入，包内不再出现产品目录名。
 `CheckpointManager` 构造改为 `CheckpointOptions`（原 nava 配置类型留在产品侧）。
+undo/redo 编排同期迁入，作为第二入口 `packages/conatus_checkpoint/lib/revert.dart`
+（`import 'package:conatus_checkpoint/revert.dart';`）暴露，主入口不导出。
 
 新增实验性包 conatus_diff：统一 diff 生成/解析/应用，零依赖。
 

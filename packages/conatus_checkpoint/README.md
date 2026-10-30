@@ -12,7 +12,8 @@ conatus 的**工作区检查点内核**：每轮工作区快照、rsync 式恢�
 
 从 nava（`packages/conatus_code`）的检查点实现迁出：磁盘布局、归档容器格式、
 影子 git 索引、恢复语义与旧目录树兼容全部保持不变；产品策略（只读目录、应用
-数据目录）改为经 `CheckpointPolicy` 注入，包内不含任何产品目录名。
+数据目录）改为经 `CheckpointPolicy` 注入，包内不含任何产品目录名。`/undo`
+`/redo` 的编排（`RevertService`）同期迁入，从第二入口 `revert.dart` 暴露。
 
 ## 安装
 
@@ -115,8 +116,32 @@ await manager.rewind(1);            // 工作区回到上一轮
 - 旧版「每轮一个可读目录」的检查点仍可读、可恢复；两种后端可并存，同一 session
   的索引互不覆盖。
 
+## undo/redo 入口
+
+主入口 `conatus_checkpoint.dart` 只管快照与恢复；`/undo` `/redo` 依赖会话存储
+（`SessionStore`），作为**第二入口**单独暴露，按需引入：
+
+```dart
+import 'package:conatus_checkpoint/revert.dart';
+
+final RevertService revert = RevertService(
+  checkpoint: manager,   // CheckpointManager
+  sessions: sessions,    // SessionStore
+  confirm: askUser,      // 可选：有交互通道时撤销前确认一次
+);
+
+final UndoResult undone = await revert.undo(session, 1); // 文件回到上次切点
+await revert.redo(undone.stage);                         // 回到撤销前
+```
+
+- 撤销先 `restoreTo` 恢复工作区文件，再把对话 `fork` 到检查点记录的切点；
+  分叉失败时用 `compensateRevertWorkspace` 把工作区退回撤销前。
+- 检查点关闭（`enabled: false`）时只分叉对话，文件一律不动。
+- 撤销点 `RevertStage` 只在内存里存活一轮，不做持久化；会话切回由调用方负责。
+- `RevertConfirmation` 在有交互通道时**始终**确认一次：最后一次快照之后的外部
+  改动不在任何清单里，静默覆盖比多问一句代价更大。
+
 ## 不在本包范围
 
-- undo/redo 的 `RevertService`（依赖会话存储，留在消费方）。
-- TUI 命令（`/rewind`、`/diff`）与产品配置解析。
+- TUI 命令（`/rewind`、`/undo`、`/redo`、`/diff`）与产品配置解析。
 - 产品目录策略：只读 / 排除前缀一律由 `CheckpointPolicy` 注入。
