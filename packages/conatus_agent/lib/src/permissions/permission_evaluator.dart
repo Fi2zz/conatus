@@ -11,7 +11,9 @@ import 'package:conatus_foundation/conatus_foundation.dart';
 import '../approval_gate.dart' show pathArguments;
 import 'permission_action.dart';
 import 'permission_decision.dart';
+import 'permission_effect.dart';
 import 'permission_engine.dart';
+import 'permission_matcher.dart';
 import 'permission_path.dart';
 import 'permission_rule.dart';
 import 'permission_scope.dart';
@@ -66,6 +68,19 @@ class PermissionEvaluator {
       );
       if (legacy.effect.index > primary.effect.index) primary = legacy;
     }
+    // 默认敏感文件规则（与 OpenCode 对齐）：没有显式规则命中时，
+    // `.env` / `.env.*` 读需要确认，`.env.example` 放行。
+    if (primary.rule == null) {
+      final PermissionRule? sensitive = _sensitiveReadRule(action, resources);
+      if (sensitive != null) {
+        primary = PermissionVerdict(
+          effect: sensitive.effect,
+          action: action,
+          resources: resources,
+          rule: sensitive,
+        );
+      }
+    }
     final List<String> targetPaths = permissionBoundaryPathsFor(call, pathArgs);
     final PermissionVerdict? external = _outsideVerdict(engine, (
       action: action,
@@ -87,6 +102,46 @@ class PermissionEvaluator {
       verdict: verdict,
       fallback: fallback,
     );
+  }
+
+  /// 默认敏感文件规则：read 的 `.env` / `.env.*` → ask，`.env.example` → allow。
+  ///
+  /// 只在没有显式规则命中时使用；显式 `read * = allow` 或更具体的 allow
+  /// 仍然可以覆盖。多资源调用中任一敏感文件需要确认即 ask。
+  PermissionRule? _sensitiveReadRule(
+    String action,
+    List<String> resources,
+  ) {
+    if (action != 'read') return null;
+    bool ask = false;
+    bool allowExample = false;
+    for (final String resource in resources) {
+      if (permissionPatternMatches('*.env.example', resource)) {
+        allowExample = true;
+        continue;
+      }
+      if (permissionPatternMatches('*.env', resource) ||
+          permissionPatternMatches('*.env.*', resource)) {
+        ask = true;
+      }
+    }
+    if (ask) {
+      return const PermissionRule(
+        action: 'read',
+        resource: '*.env',
+        effect: PermissionEffect.ask,
+        source: 'default',
+      );
+    }
+    if (allowExample) {
+      return const PermissionRule(
+        action: 'read',
+        resource: '*.env.example',
+        effect: PermissionEffect.allow,
+        source: 'default',
+      );
+    }
+    return null;
   }
 
   /// 判定结果对外只暴露调用方看到的资源（词法拼写）；内部匹配用的 workdir /
