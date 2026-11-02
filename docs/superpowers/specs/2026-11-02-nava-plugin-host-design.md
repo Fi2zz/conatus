@@ -25,7 +25,7 @@ superpowers（技能 + 上下文注入）、notification（事件）、env-prote
 - 项目 `.opencode/plugins/` 与 `opencode.json(c)` 的 `plugins` 自动发现，首次
   加载前询问；拒绝则完全不执行。
 - 插件注册的技能进 nava 技能目录；自定义工具可被模型调用。
-- `tool.execute.before` 能拒绝/改参数，`tool.execute.after` 能改结果。
+- `tool.execute.before` 能拒绝，`tool.execute.after` 能改结果。
 - `event` hook 能收到 `session.idle` / `tool.execute.*` / `file.edited`。
 - `shell.env` 能影响模型发起的 bash 命令环境。
 - 没有 `node` 时 nava 正常启动，只提示一次插件不可用。
@@ -120,7 +120,7 @@ JSON-RPC 2.0，一行一条 JSON。请求 id 为整数或字符串；超时后�
 | `config`（V1） | 只读取 `config.skills.paths` 作为技能根；其余键 warning |
 | `ctx.skill.transform`（V2） | 收集 `add/update/remove` 后的技能列表，注册到 nava 技能库 |
 | `tool`（V1） / `ctx.tool.transform`（V2） | `ctx.tools.register`；Zod schema 转常见 JSON Schema，失败退化为宽松 object |
-| `tool.execute.before` | `tools.use` 中间件；抛错 → 拒绝，返回的 `output.args` 可替换参数 |
+| `tool.execute.before` | `tools.use` 中间件；抛错 → 拒绝。P4.1 **不替换参数**：现有中间件合约的 `next()` 绑定原 `ToolCall`，替换需改框架管线（P4.2） |
 | `tool.execute.after` | 同上；返回的 `output.output` / `metadata` 可改结果 |
 | `event` | nava 事件总线通知；P4.1 发 `session.created` / `session.idle` / `session.error` / `tool.execute.before` / `tool.execute.after` / `file.edited` |
 | `shell.env` | 初始化时调用一次，合并进 bash 的 `ShellExecRequest.env` |
