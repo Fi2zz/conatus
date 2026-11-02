@@ -177,4 +177,18 @@ void main() {
       expect(result.error?.code, 'FS_NOT_TEXT');
     });
   });
+
+  group('文本模型', () {
+    test('attachImages=false 时不返回图像附件', () async {
+      final List<int> bytes = <int>[0x89, 0x50, 0x4E, 0x47];
+      File('${dir.path}/a.png').writeAsBytesSync(bytes);
+      final ReadFileTool textOnly = ReadFileTool(fs: fs, attachImages: false);
+      final ToolResult result =
+          await textOnly.call(_context(<String, Object?>{'path': 'a.png'}));
+      expect(result.isError, isFalse);
+      expect(result.images, isEmpty);
+      expect(result.content, contains('图片'));
+      expect(result.value, containsPair('bytes', bytes.length));
+    });
+  });
 }

@@ -13,6 +13,7 @@ class ReadFileTool extends Tool {
     required FileSystem fs,
     this.defaultLimit = 2000,
     this.maxChars = 200000,
+    this.attachImages = true,
   }) : _fs = fs;
 
   final FileSystem _fs;
@@ -22,6 +23,9 @@ class ReadFileTool extends Tool {
 
   /// 返回文本的最大字符数（超出截断）。
   final int maxChars;
+
+  /// 是否把图片作为图像附件返回；文本模型置 false，只返回元信息。
+  final bool attachImages;
 
   @override
   String get name => 'read';
@@ -60,9 +64,20 @@ class ReadFileTool extends Tool {
         return _error('FS_NOT_REGULAR_FILE', '不是普通文件："$path"');
       }
       final String? imageMime = ReadFileAttachments.imageMime(path);
-      if (imageMime != null) {
+      if (imageMime != null && attachImages) {
         return await ReadFileAttachments(_fs)
             .readImage(target, imageMime, path);
+      }
+      if (imageMime != null) {
+        final int bytes = info.size ?? 0;
+        return ToolResult.success(
+          '图片文件："$path"（$bytes 字节）。当前模型不支持图像，未读取内容。',
+          value: <String, Object?>{
+            'path': target.displayPath,
+            'mimeType': imageMime,
+            'bytes': bytes,
+          },
+        );
       }
       if (path.toLowerCase().endsWith('.pdf')) {
         return await ReadFileAttachments(_fs).readPdf(target, path);

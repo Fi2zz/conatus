@@ -40,6 +40,7 @@ class FsToolOptions {
     this.enableSearch = true,
     this.enableList = true,
     this.enablePatch = false,
+    this.attachImages = true,
     this.skipDirs = kDefaultSkipDirs,
   });
 
@@ -90,6 +91,9 @@ class FsToolOptions {
   /// 是否注册 `apply_patch`（高风险补丁工具，默认关闭，由宿主显式开启）。
   final bool enablePatch;
 
+  /// 是否让 `read` 把图片作为附件返回（文本模型置 false）。
+  final bool attachImages;
+
   /// 遍历 / 列举时跳过的目录（按 basename）。
   final Set<String> skipDirs;
 }
@@ -112,6 +116,7 @@ List<Tool> provideFsTools(
       fs: resolvedFs,
       defaultLimit: options.defaultReadLimit,
       maxChars: options.maxReadChars,
+      attachImages: options.attachImages,
     ),
     WriteFileTool(fs: resolvedFs),
     EditFileTool(fs: resolvedFs),
