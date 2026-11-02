@@ -23,7 +23,7 @@ void main() {
     final MspDirectoryPresence presence = MspDirectoryPresence(
       nodeId: 'node_a',
       directory: directory,
-      clock: () => now,
+      config: MspDirectoryPresenceConfig(clock: () => now),
     );
     const MspEndpoint endpoint = MspEndpoint(nodeId: 'node_a', port: 45678);
 

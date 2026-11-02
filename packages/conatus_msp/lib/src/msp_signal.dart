@@ -18,10 +18,10 @@ class MspSignal {
 
   factory MspSignal.fromJson(Map<String, Object?> json) {
     final MspSignalOptions options = MspSignalOptions(
-      pattern: json['pattern'] as String?,
-      target: json['target'] as String?,
-      path: json['path'] as String?,
-      reqid: json['reqid'] as String?,
+      pattern: _readOptionalString(json, 'pattern'),
+      target: _readOptionalString(json, 'target'),
+      path: _readOptionalString(json, 'path'),
+      reqid: _readOptionalString(json, 'reqid'),
     )
       ..payload = _readPayload(json['payload'])
       ..timestamp = _readTimestamp(json['timestamp']);
@@ -53,6 +53,14 @@ class MspSignal {
         'payload': payload,
         'timestamp': options.timestamp ?? _nowSeconds(),
       };
+}
+
+String? _readOptionalString(Map<String, Object?> json, String key) {
+  final Object? value = json[key];
+  if (value != null && value is! String) {
+    throw FormatException('Signal.$key 必须为字符串或 null');
+  }
+  return value as String?;
 }
 
 String _readRequiredString(Map<String, Object?> json, String key) {

@@ -9,6 +9,13 @@ class MspToolResult {
 
   factory MspToolResult.fromValue(Object? value) {
     if (value == null) return const MspToolResult();
+    if (value is MspToolResult) return value;
+    if (_contentBlocks(value)) {
+      final List<Object?> values = value as List<Object?>;
+      return MspToolResult(
+        content: values.whereType<Map<String, Object?>>().toList(),
+      );
+    }
     if (value is String) return _structured(value, value);
     return _structured(value, jsonEncode(value));
   }
@@ -24,7 +31,7 @@ class MspToolResult {
     return MspToolResult(
       content: content,
       structured: payload['structuredContent'],
-      error: payload['error'] as String? ?? '',
+      error: _readError(payload['error']),
     );
   }
 
@@ -48,6 +55,19 @@ class MspToolResult {
           'content': content,
           'structuredContent': structured,
         };
+}
+
+bool _contentBlocks(Object? value) =>
+    value is List &&
+    value.isNotEmpty &&
+    value.every((Object? item) => item is Map && item.containsKey('type'));
+
+String _readError(Object? value) {
+  if (value == null) return '';
+  if (value is! String) {
+    throw const FormatException('ToolResult.error 必须为字符串');
+  }
+  return value;
 }
 
 MspToolResult _structured(Object? value, String text) => MspToolResult(

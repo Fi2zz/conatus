@@ -26,8 +26,11 @@ class MspPendingCalls {
   void complete(MspSignal signal) {
     final String? id = signal.reqid;
     if (id == null) return;
-    final MspPendingRequest? request = _requests.remove(id);
-    request?.completer.complete(MspToolResult.fromPayload(signal.payload));
+    final MspPendingRequest? request = _requests[id];
+    if (request == null) return;
+    final MspToolResult result = MspToolResult.fromPayload(signal.payload);
+    _requests.remove(id);
+    request.completer.complete(result);
   }
 
   void remove(String id) => _requests.remove(id);

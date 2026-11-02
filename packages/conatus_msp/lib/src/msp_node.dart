@@ -20,6 +20,8 @@ export 'msp_node_state.dart' show MspNodeTimings;
 
 part 'msp_node_lifecycle.dart';
 part 'msp_node_messages.dart';
+part 'msp_node_calls.dart';
+part 'msp_node_heartbeat.dart';
 
 class MspNode {
   MspNode({

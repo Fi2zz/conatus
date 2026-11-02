@@ -13,6 +13,7 @@ void handleMspFrame(
       _handleHandshake(state, channel, signal);
       return;
     }
+    state.lastSeen[channel.peerId!] = DateTime.now();
     _dispatchSignal(state, channel, signal);
   } on FormatException catch (error) {
     _sendProtocolError(connection, state.nodeId, null, '$error');
@@ -29,11 +30,27 @@ void _handleHandshake(
     unawaited(channel.connection.close());
     return;
   }
+  final MspManifest? manifest = _peerManifest(signal);
+  if (manifest == null) {
+    unawaited(channel.connection.close());
+    return;
+  }
   channel.peerId = signal.source;
+  state.peerManifests[signal.source] = manifest;
   if (!channel.outbound) {
     sendMspSignal(channel.connection, _handshake(state, 'ack'));
   }
   registerMspPeer(state, channel);
+}
+
+MspManifest? _peerManifest(MspSignal signal) {
+  try {
+    final Object? raw = signal.payload['manifest'];
+    if (raw is! Map) return null;
+    return MspManifest.fromJson(Map<String, Object?>.from(raw));
+  } on Object {
+    return null;
+  }
 }
 
 void _dispatchSignal(
@@ -97,38 +114,6 @@ Future<void> _runTool(
   _sendBestEffort(channel.connection, reply);
 }
 
-Future<MspToolResult> callMspTool(
-  MspNodeState state,
-  String peerId,
-  String tool,
-  Map<String, Object?> args,
-) async {
-  final MspConnection connection;
-  try {
-    connection = await _ensureConnection(state, peerId);
-  } on Object catch (error) {
-    return MspToolResult.failure('$error');
-  }
-  final MspPendingRequest request = state.pending.create(peerId);
-  final MspSignalOptions options =
-      MspSignalOptions(target: peerId, reqid: request.id)
-        ..payload = <String, Object?>{'tool': tool, 'args': args};
-  sendMspSignal(connection,
-      MspSignal(type: 'tool_call', source: state.nodeId, options: options));
-  try {
-    return await request.completer.future.timeout(state.timings.callTimeout);
-  } on TimeoutException {
-    state.pending.remove(request.id);
-    return MspToolResult.failure('调用 $tool 超时');
-  }
-}
-
-Future<MspConnection> _ensureConnection(MspNodeState state, String peerId) {
-  final MspConnection? existing = state.connections[peerId];
-  if (existing != null) return Future<MspConnection>.value(existing);
-  return connectMspPeer(state, peerId);
-}
-
 Future<void> publishMspSignal(
   MspNodeState state,
   String path,
@@ -143,19 +128,6 @@ Future<void> publishMspSignal(
   );
   for (final MspConnection connection in state.connections.values.toList()) {
     _sendBestEffort(connection, signal);
-  }
-}
-
-void pingMspPeers(MspNodeState state) {
-  if (!state.running) return;
-  for (final MapEntry<String, MspConnection> entry
-      in state.connections.entries.toList()) {
-    final MspSignal ping = MspSignal(
-      type: 'ping',
-      source: state.nodeId,
-      options: MspSignalOptions(target: entry.key),
-    );
-    _sendBestEffort(entry.value, ping);
   }
 }
 

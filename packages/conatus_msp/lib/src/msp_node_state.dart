@@ -48,6 +48,10 @@ class MspNodeState {
   final Map<String, MspToolHandler> tools = <String, MspToolHandler>{};
   final Map<String, MspEndpoint> endpoints = <String, MspEndpoint>{};
   final Map<String, MspConnection> connections = <String, MspConnection>{};
+  final Map<String, MspManifest> peerManifests = <String, MspManifest>{};
+  final Map<String, DateTime> lastSeen = <String, DateTime>{};
+  final Map<String, Future<MspConnection>> dials =
+      <String, Future<MspConnection>>{};
   final Map<MspConnection, MspPeerChannel> channels =
       <MspConnection, MspPeerChannel>{};
   final MspPendingCalls pending = MspPendingCalls();
@@ -57,6 +61,7 @@ class MspNodeState {
   MspDirectoryPresence? presence;
   Timer? heartbeat;
   bool running = false;
+  int generation = 0;
 }
 
 MspManifest _createManifest() => MspManifest()
