@@ -11,9 +11,9 @@
 /// 子代理现在也走本中间件的子作用域，不再产生 `approval.*`。
 ///
 /// 零配置兼容：没有任何规则命中时按 [PermissionScope.askThreshold] 回退到旧
-/// 审批行为，且（仅在交互模式下）声明了 `Tool.pathParams` 的低风险工具仍会
-/// 询问——这正是目录信任的落点，由 [Approval.preapproved] 决定是否免打扰。
-/// headless 没人可问，路径兜底不触发（旧行为也不拦）。
+/// 审批行为。路径参数不再单独触发询问——低风险 read/list/glob/grep 按阈值
+/// 直接放行；需要目录信任时由真正被 ask 的工具（高危或显式 ask 规则）提供。
+/// headless 没人可问，ask 一律拒绝。
 library;
 
 import 'dart:async';

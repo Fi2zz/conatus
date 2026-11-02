@@ -11,7 +11,6 @@ import 'package:conatus_foundation/conatus_foundation.dart';
 import '../approval_gate.dart' show pathArguments;
 import 'permission_action.dart';
 import 'permission_decision.dart';
-import 'permission_effect.dart';
 import 'permission_engine.dart';
 import 'permission_path.dart';
 import 'permission_rule.dart';
@@ -80,13 +79,8 @@ class PermissionEvaluator {
             : primary;
     final bool fallback =
         primary.rule == null && (external == null || external.rule == null);
-    final bool pathFallback = interactive &&
-        verdict.effect == PermissionEffect.allow &&
-        fallback &&
-        pathArgs.isNotEmpty &&
-        scope.askThreshold != null;
     return PermissionDecision(
-      effect: pathFallback ? PermissionEffect.ask : verdict.effect,
+      effect: verdict.effect,
       action: action,
       resources: resources,
       pathArgs: pathArgs,
