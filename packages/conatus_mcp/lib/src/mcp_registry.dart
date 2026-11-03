@@ -21,8 +21,17 @@ class McpRegistry {
   final Map<String, _McpBinding> _bindings = <String, _McpBinding>{};
   final Map<String, String> _errors = <String, String>{};
 
-  /// 已装配且连接仍活着的 server 名（按装配顺序）。
-  List<String> get servers => _bindings.keys.toList(growable: false);
+  /// `attach` 的调用顺序（含尚在握手、以及曾断连的 server）。
+  ///
+  /// 并发装配时 `_bindings` 的插入顺序是完成顺序，对外仍按调用顺序报——
+  /// 否则 server 列表与工具表顺序会随网络快慢抖动（提示词缓存也会跟着变）。
+  final List<String> _order = <String>[];
+
+  /// 已装配且连接仍活着的 server 名（按 `attach` 调用顺序）。
+  List<String> get servers => <String>[
+        for (final String name in _order)
+          if (_bindings.containsKey(name)) name,
+      ];
 
   /// 按 server 记录最近一次目录请求失败原因（成功一次即清除），供工具层在
   /// 聚合结果为空时给出可诊断提示。
@@ -50,6 +59,9 @@ class McpRegistry {
     if (_bindings.containsKey(name)) {
       throw StateError('MCP server "$name" 已装配');
     }
+    _order
+      ..remove(name)
+      ..add(name);
     try {
       await client.initialize();
       final List<McpTool> tools = await client.listTools();
@@ -60,6 +72,7 @@ class McpRegistry {
       }
       binding.watchDisconnect(ctx, () => _drop(name));
     } catch (error) {
+      _order.remove(name);
       _bindings.remove(name);
       await client.close();
       rethrow;
@@ -149,6 +162,7 @@ class McpRegistry {
   Future<void> close() async {
     final List<_McpBinding> bindings = _bindings.values.toList(growable: false);
     _bindings.clear();
+    _order.clear();
     _errors.clear();
     for (final _McpBinding binding in bindings) {
       await binding.close();
