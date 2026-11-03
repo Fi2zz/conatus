@@ -151,13 +151,17 @@ SearchService provideSearch(
   SearchService? search,
   http.Client? client,
 }) {
+  // 未注入 client 时自建一个并交给上下文释放：provider 各自 `http.Client()`
+  // 且没有 close 方法，超时/中断时在途请求会把进程吊住。
+  final http.Client? owned = client == null ? http.Client() : null;
+  if (owned != null) ctx.onDispose(owned.close);
   final SearchProviderSet set = _resolveSearchProviders(
     ctx: ctx,
     order: order,
     credentials: credentials,
     providers: providers,
     existing: search,
-    client: client,
+    client: client ?? owned,
   );
   final SearchService service = search ?? SearchService(statuses: set.statuses);
   ctx.provide('search', service);

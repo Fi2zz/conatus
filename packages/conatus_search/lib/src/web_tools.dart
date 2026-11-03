@@ -187,10 +187,12 @@ List<Tool> provideWebTools(
   final SearchService service = search ?? ctx.search;
   final Credentials? resolved =
       credentials ?? ctx.get<Credentials>('credentials');
+  final http.Client? owned = client == null ? http.Client() : null;
+  if (owned != null) ctx.onDispose(owned.close);
   final List<Tool> registered = <Tool>[
     WebSearchTool(search: service),
     FetchUrlTool(
-      fetcher: fetcher ?? resolveFetcher(resolved, client, backend),
+      fetcher: fetcher ?? resolveFetcher(resolved, client ?? owned, backend),
     ),
   ];
   for (final Tool tool in registered) {
