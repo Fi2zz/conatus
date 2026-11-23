@@ -20,6 +20,7 @@
 - 包内用相对导入、单引号、`final` 局部变量、显式返回类型（`dart analyze --fatal-infos`）。
 - 面向用户的文案用中文；配置键用 snake_case。
 - 测试用真实临时目录 + `LocalFileSystem`，与 `test/fs_tools/` 现有风格一致。
+- 测试里的 Fake `Tool` 必须实现 `name` / `description` / `params` / `call`（基类抽象成员）。
 - 每项功能独立可关；全关时现有测试与行为零变化。
 
 ## Review Focus
@@ -962,6 +963,7 @@ git commit -m "feat(safety): 敏感文件硬阻断"
 // test/safety/safety_assembly_test.dart
 import 'dart:io';
 import 'package:conatus_code/conatus_code.dart';
+import 'package:conatus_code/fs_tools.dart';
 import 'package:conatus_code/safety.dart';
 import 'package:conatus_core/conatus_core.dart';
 import 'package:conatus_foundation/conatus_foundation.dart';
