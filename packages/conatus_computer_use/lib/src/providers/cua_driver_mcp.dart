@@ -165,7 +165,7 @@ class _CuaDriverDesktopSession implements DesktopSession {
           result.isError) {
         return result;
       }
-      return _bringLaunchedToFront(result, launchedPid(raw));
+      return await _bringLaunchedToFront(result, launchedPid(raw));
     } on McpException catch (error) {
       return ToolResult.failure(
         error.message,
