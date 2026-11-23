@@ -25,3 +25,5 @@ coverage/
 .refs/
 *.log
 .audits/
+# superpowers 执行台账（本地 scratch）
+.superpowers/
