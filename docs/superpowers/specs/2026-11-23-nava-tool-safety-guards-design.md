@@ -292,7 +292,8 @@ deny_dotenv_writes = true       # .env 族写入硬拒
 extra_sensitive_paths = []      # 追加路径/名称
 ```
 
-关闭 `protect_private_keys` 后只保留既有 `.env` 读 ask，不做任何硬拒。
+关闭 `protect_private_keys` 后只剩 `.env` 写闸门（若 `deny_dotenv_writes` 仍开）
+与既有的 `.env` 读 ask，不再拦私钥/凭据/追加路径。
 
 ## 7. 配置汇总
 
